@@ -6,7 +6,9 @@ const LOCATIONS = ["Jaipur", "Kolkata"];
 export default function SalesVoucher() {
   const user = JSON.parse(localStorage.getItem("kf_user"));
 
-  // lookups
+  // -----------------------------
+  // lookups (normalized)
+  // -----------------------------
   const [products, setProducts] = useState([]);
   const [seriesList, setSeriesList] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -17,7 +19,7 @@ export default function SalesVoucher() {
   const [customer, setCustomer] = useState("");
   const [voucherNo, setVoucherNo] = useState("");
 
-  // row
+  // row inputs
   const [item, setItem] = useState("");
   const [series, setSeries] = useState("");
   const [category, setCategory] = useState("");
@@ -25,48 +27,71 @@ export default function SalesVoucher() {
 
   const [rows, setRows] = useState([]);
 
+  // suggestions
   const [itemSuggestions, setItemSuggestions] = useState([]);
   const [seriesSuggestions, setSeriesSuggestions] = useState([]);
   const [showItemSug, setShowItemSug] = useState(false);
   const [showSeriesSug, setShowSeriesSug] = useState(false);
 
-  const itemRef = useRef();
-  const seriesRef = useRef();
+  const itemRef = useRef(null);
+  const seriesRef = useRef(null);
 
   // --------------------------------------------------
-  // LOAD LOOKUPS (SAFE)
+  // LOAD LOOKUPS (NORMALIZED)
   // --------------------------------------------------
   useEffect(() => {
-    async function load() {
-      const p = await api.get("/products");
-      const s = await api.get("/series");
-      const c = await api.get("/categories");
-      const cu = await api.get("/customers");
+    (async () => {
+      try {
+        const p = await api.get("/products");
+        const s = await api.get("/series");
+        const c = await api.get("/categories");
+        const cu = await api.get("/customers");
 
-      setProducts(p.data || []);
-      setSeriesList((s.data || []).map(r => r.SeriesName));
-      setCategories((c.data || []).map(r => r.CategoryName));
-      setCustomers(cu.data || []);
-    }
-    load().catch(err => {
-      console.error("LOOKUP ERROR:", err);
-      alert("Failed to load sales lookups");
-    });
+        const normalizedProducts = (p.data || []).map(r => ({
+          productid: r.ProductID,
+          item: r.Item,
+          seriesname: r.SeriesName,
+          categoryname: r.CategoryName
+        }));
+
+        const normalizedCustomers = (cu.data || []).map(r => ({
+          customerid: r.CustomerID,
+          customername: r.CustomerName
+        }));
+
+        setProducts(normalizedProducts);
+        setSeriesList((s.data || []).map(r => r.SeriesName));
+        setCategories((c.data || []).map(r => r.CategoryName));
+        setCustomers(normalizedCustomers);
+
+        console.log("SALES LOOKUPS LOADED", {
+          products: normalizedProducts.length,
+          customers: normalizedCustomers.length
+        });
+
+      } catch (err) {
+        console.error("LOOKUP ERROR:", err);
+        alert("Failed to load sales lookups");
+      }
+    })();
   }, []);
 
   // --------------------------------------------------
-  // ITEM
+  // ITEM INPUT
   // --------------------------------------------------
   const onItemChange = (val) => {
     setItem(val);
     setSeries("");
     setCategory("");
 
-    if (!val) return setShowItemSug(false);
+    if (!val.trim()) {
+      setShowItemSug(false);
+      return;
+    }
 
     const q = val.toLowerCase();
     const matches = products
-      .filter(p => p.Item.toLowerCase().includes(q))
+      .filter(p => p.item.toLowerCase().includes(q))
       .slice(0, 10);
 
     setItemSuggestions(matches);
@@ -74,52 +99,64 @@ export default function SalesVoucher() {
   };
 
   const selectProduct = (p) => {
-    setItem(p.Item);
-    setSeries(p.SeriesName);
-    setCategory(p.CategoryName);
+    setItem(p.item);
+    setSeries(p.seriesname);
+    setCategory(p.categoryname);
     setShowItemSug(false);
   };
 
   // --------------------------------------------------
-  // SERIES
+  // SERIES INPUT
   // --------------------------------------------------
   const onSeriesChange = (val) => {
     setSeries(val);
     setCategory("");
 
-    if (!val) return setShowSeriesSug(false);
+    if (!val.trim()) {
+      setShowSeriesSug(false);
+      return;
+    }
 
     const q = val.toLowerCase();
     const matches = seriesList.filter(s => s.toLowerCase().startsWith(q));
     setSeriesSuggestions(matches);
     setShowSeriesSug(matches.length > 0);
 
-    const prod = products.find(p => p.SeriesName === val);
-    if (prod) setCategory(prod.CategoryName);
+    const prod = products.find(p => p.seriesname === val);
+    if (prod) setCategory(prod.categoryname);
   };
 
   const selectSeries = (s) => {
     setSeries(s);
     setShowSeriesSug(false);
 
-    const prod = products.find(p => p.SeriesName === s);
-    if (prod) setCategory(prod.CategoryName);
+    const prod = products.find(p => p.seriesname === s);
+    if (prod) setCategory(prod.categoryname);
   };
 
   // --------------------------------------------------
   // ADD ROW
   // --------------------------------------------------
   const onAddRow = () => {
-    if (!item || !qty) return alert("Enter item & qty");
+    if (!item || !qty) {
+      alert("Enter Item and Quantity");
+      return;
+    }
 
-    setRows(r => [...r, {
-      Item: item,
-      SeriesName: series,
-      CategoryName: category,
-      Quantity: Number(qty)
-    }]);
+    setRows(r => [
+      ...r,
+      {
+        Item: item,
+        SeriesName: series,
+        CategoryName: category,
+        Quantity: Number(qty)
+      }
+    ]);
 
-    setItem(""); setSeries(""); setCategory(""); setQty("");
+    setItem("");
+    setSeries("");
+    setCategory("");
+    setQty("");
   };
 
   const removeRow = i => setRows(rows.filter((_, x) => x !== i));
@@ -128,11 +165,14 @@ export default function SalesVoucher() {
   // SUBMIT
   // --------------------------------------------------
   const onSubmit = async () => {
-    if (!rows.length) return alert("No rows");
+    if (!rows.length) {
+      alert("No rows");
+      return;
+    }
 
     const payload = {
-      UserName: user.Username,
       UserID: user.userid,
+      UserName: user.username,
       Location: location,
       Customer: customer,
       VoucherNo: voucherNo,
@@ -146,10 +186,12 @@ export default function SalesVoucher() {
         setRows([]);
         setCustomer("");
         setVoucherNo("");
+      } else {
+        alert("Sales failed");
       }
     } catch (e) {
-      console.error(e);
-      alert("Sales failed");
+      console.error(e.response?.data || e);
+      alert("Sales failed — check console");
     }
   };
 
@@ -176,7 +218,7 @@ export default function SalesVoucher() {
         />
         <datalist id="customerList">
           {customers.map(c =>
-            <option key={c.CustomerID} value={c.CustomerName} />
+            <option key={c.customerid} value={c.customername} />
           )}
         </datalist>
 
@@ -190,16 +232,36 @@ export default function SalesVoucher() {
 
       <div style={{ display: "flex", gap: 8 }}>
         <div ref={itemRef} style={{ position: "relative" }}>
-          <input value={item} onChange={e => onItemChange(e.target.value)} placeholder="Item" />
-          {showItemSug && itemSuggestions.map((p,i) =>
-            <div key={i} onClick={() => selectProduct(p)}>{p.Item}</div>
+          <input
+            value={item}
+            onChange={e => onItemChange(e.target.value)}
+            placeholder="Item"
+          />
+          {showItemSug && (
+            <div style={{ position: "absolute", background: "#fff", border: "1px solid #ccc" }}>
+              {itemSuggestions.map((p, i) =>
+                <div key={i} onClick={() => selectProduct(p)} style={{ padding: 6, cursor: "pointer" }}>
+                  {p.item} — {p.seriesname}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
         <div ref={seriesRef} style={{ position: "relative" }}>
-          <input value={series} onChange={e => onSeriesChange(e.target.value)} placeholder="Series" />
-          {showSeriesSug && seriesSuggestions.map((s,i) =>
-            <div key={i} onClick={() => selectSeries(s)}>{s}</div>
+          <input
+            value={series}
+            onChange={e => onSeriesChange(e.target.value)}
+            placeholder="Series"
+          />
+          {showSeriesSug && (
+            <div style={{ position: "absolute", background: "#fff", border: "1px solid #ccc" }}>
+              {seriesSuggestions.map((s, i) =>
+                <div key={i} onClick={() => selectSeries(s)} style={{ padding: 6, cursor: "pointer" }}>
+                  {s}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -210,19 +272,21 @@ export default function SalesVoucher() {
 
       <table border="1" width="100%" style={{ marginTop: 12 }}>
         <tbody>
-          {rows.map((r,i) =>
+          {rows.map((r, i) =>
             <tr key={i}>
               <td>{r.Item}</td>
               <td>{r.SeriesName}</td>
               <td>{r.CategoryName}</td>
-              <td>{r.Quantity}</td>
+              <td align="right">{r.Quantity}</td>
               <td><button onClick={() => removeRow(i)}>X</button></td>
             </tr>
           )}
         </tbody>
       </table>
 
-      <button onClick={onSubmit} style={{ marginTop: 12 }}>Submit Sales</button>
+      <button onClick={onSubmit} style={{ marginTop: 12 }}>
+        Submit Sales
+      </button>
     </div>
   );
 }
