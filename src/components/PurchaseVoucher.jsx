@@ -4,11 +4,9 @@ import { api, postIncoming } from "../services/api";
 const LOCATIONS = ["Jaipur", "Kolkata"];
 
 export default function PurchaseVoucher() {
-  console.log("PurchaseVoucher mounted");
-
   const user = JSON.parse(localStorage.getItem("kf_user"));
 
-  // lookups
+  // lookups (normalized)
   const [products, setProducts] = useState([]);
   const [seriesList, setSeriesList] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -31,30 +29,33 @@ export default function PurchaseVoucher() {
   const itemRef = useRef(null);
   const seriesRef = useRef(null);
 
-  // LOAD LOOKUPS
+  // ----------------------------------------------------------
+  // LOAD LOOKUPS (NORMALIZED)
+  // ----------------------------------------------------------
   useEffect(() => {
-    console.log("Loading lookups...");
-
     (async () => {
       try {
         const p = await api.get("/products");
-
-const normalized = (p.data || []).map(r => ({
-  ProductID: r.productid,
-  Item: r.item,
-  SeriesName: r.seriesname,
-  CategoryName: r.categoryname
-}));
-
-setProducts(normalized);
-
         const s = await api.get("/series");
-        setSeriesList((s.data || []).map(r => r.seriesname));
-
-
         const c = await api.get("/categories");
-        setCategories((c.data || []).map(r => r.categoryname));
 
+        // 🔴 normalize ONCE
+        const normalizedProducts = (p.data || []).map(r => ({
+          productid: r.ProductID,
+          item: r.Item,
+          seriesname: r.SeriesName,
+          categoryname: r.CategoryName
+        }));
+
+        setProducts(normalizedProducts);
+        setSeriesList((s.data || []).map(r => r.SeriesName));
+        setCategories((c.data || []).map(r => r.CategoryName));
+
+        console.log("LOOKUPS LOADED:", {
+          products: normalizedProducts.length,
+          series: s.data?.length,
+          categories: c.data?.length
+        });
 
       } catch (err) {
         console.error("Lookup fetch error", err);
@@ -63,7 +64,9 @@ setProducts(normalized);
     })();
   }, []);
 
-  // Hide suggestions when clicking outside
+  // ----------------------------------------------------------
+  // Hide suggestions on outside click
+  // ----------------------------------------------------------
   useEffect(() => {
     const handler = e => {
       if (itemRef.current && !itemRef.current.contains(e.target)) setShowItemSug(false);
@@ -73,7 +76,9 @@ setProducts(normalized);
     return () => document.removeEventListener("click", handler);
   }, []);
 
+  // ----------------------------------------------------------
   // ITEM INPUT
+  // ----------------------------------------------------------
   const onItemChange = val => {
     setItem(val);
     setSeries("");
@@ -101,7 +106,9 @@ setProducts(normalized);
     setShowItemSug(false);
   };
 
+  // ----------------------------------------------------------
   // SERIES INPUT
+  // ----------------------------------------------------------
   const onSeriesChange = val => {
     setSeries(val);
     setCategory("");
@@ -130,14 +137,18 @@ setProducts(normalized);
     if (p) setCategory(p.categoryname);
   };
 
+  // ----------------------------------------------------------
   // ADD ROW
+  // ----------------------------------------------------------
   const onAddRow = () => {
     if (!item || !qty) {
       alert("Enter Item and Quantity");
       return;
     }
 
-    const existing = products.find(p => p.item === item && p.seriesname === series);
+    const existing = products.find(
+      p => p.item === item && p.seriesname === series
+    );
 
     if (!existing && !series.trim()) {
       alert("New item — enter Series");
@@ -167,19 +178,21 @@ setProducts(normalized);
 
   const removeRow = i => setRows(rows.filter((_, idx) => idx !== i));
 
+  // ----------------------------------------------------------
   // SUBMIT
+  // ----------------------------------------------------------
   const onSubmit = async () => {
     if (!rows.length) {
       alert("No rows to post");
       return;
     }
 
-const payload = {
-  UserID: user.userid,
-  UserName: user.username,
-  Location: location,
-  Rows: rows
-};
+    const payload = {
+      UserID: user.userid,
+      UserName: user.username,
+      Location: location,
+      Rows: rows
+    };
 
     try {
       const res = await postIncoming(payload);
@@ -197,6 +210,9 @@ const payload = {
 
   const small = { padding: "6px 8px", marginRight: 8 };
 
+  // ----------------------------------------------------------
+  // UI
+  // ----------------------------------------------------------
   return (
     <div style={{ padding: 18 }}>
       <h2>Purchase Voucher (Incoming)</h2>
