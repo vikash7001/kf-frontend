@@ -202,11 +202,6 @@ export default function SalesVoucher() {
           <button onClick={onAddRow}>Add</button>
         </div>
 
-        {/* LINE 2 */}
-        <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-          <input value={series} placeholder="Series" readOnly />
-          <input value={category} placeholder="Category" readOnly />
-        </div>
 
       </div>
 
