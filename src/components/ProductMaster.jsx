@@ -20,33 +20,35 @@ export default function ProductMaster({ onExit }) {
   }, []);
 
   // Save product (NAME-BASED)
-  const save = async () => {
-    if (!item || !seriesName) {
-      alert("Enter item and select series");
-      return;
-    }
+const save = async () => {
+  if (!item || !seriesName) {
+    alert("Enter item and select series");
+    return;
+  }
 
-    const selectedSeries = seriesList.find(
-      s => s.SeriesName === seriesName
-    );
+  // derive category from existing products of same series
+  const existing = productList.find(
+    p => p.SeriesName === seriesName
+  );
 
-    if (!selectedSeries) {
-      alert("Invalid series selected");
-      return;
-    }
+  if (!existing) {
+    alert("Category not found for this series. Add at least one product first.");
+    return;
+  }
 
-    await api.post("/products", {
-      Item: item,
-      SeriesName: selectedSeries.SeriesName,
-      CategoryName: selectedSeries.CategoryName
-    });
+  await api.post("/products", {
+    Item: item,
+    SeriesName: seriesName,
+    CategoryName: existing.CategoryName
+  });
 
-    setItem("");
-    setSeriesName("");
+  setItem("");
+  setSeriesName("");
 
-    const p = await api.get("/products");
-    setProductList(p.data || []);
-  };
+  const p = await api.get("/products");
+  setProductList(p.data || []);
+};
+
 
   return (
     <div style={{ padding: 16 }}>
