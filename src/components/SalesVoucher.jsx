@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { api, postSales } from "../services/api";
 
 const LOCATIONS = ["Jaipur", "Kolkata"];
@@ -8,6 +8,8 @@ export default function SalesVoucher() {
 
   // lookups
   const [products, setProducts] = useState([]);
+  const [seriesList, setSeriesList] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [customers, setCustomers] = useState([]);
 
   // header
@@ -15,41 +17,52 @@ export default function SalesVoucher() {
   const [customer, setCustomer] = useState("");
   const [voucherNo, setVoucherNo] = useState("");
 
-  // row input
+  // row
   const [item, setItem] = useState("");
+  const [series, setSeries] = useState("");
+  const [category, setCategory] = useState("");
   const [qty, setQty] = useState("");
 
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const [rows, setRows] = useState([]);
 
   const [itemSuggestions, setItemSuggestions] = useState([]);
+  const [seriesSuggestions, setSeriesSuggestions] = useState([]);
   const [showItemSug, setShowItemSug] = useState(false);
+  const [showSeriesSug, setShowSeriesSug] = useState(false);
+
+  const itemRef = useRef();
+  const seriesRef = useRef();
 
   // --------------------------------------------------
-  // LOAD LOOKUPS
+  // LOAD LOOKUPS (SAFE)
   // --------------------------------------------------
   useEffect(() => {
     async function load() {
       const p = await api.get("/products");
+      const s = await api.get("/series");
+      const c = await api.get("/categories");
       const cu = await api.get("/customers");
+
       setProducts(p.data || []);
+      setSeriesList((s.data || []).map(r => r.SeriesName));
+      setCategories((c.data || []).map(r => r.CategoryName));
       setCustomers(cu.data || []);
     }
-    load().catch(() => alert("Failed to load sales data"));
+    load().catch(err => {
+      console.error("LOOKUP ERROR:", err);
+      alert("Failed to load sales lookups");
+    });
   }, []);
 
   // --------------------------------------------------
-  // ITEM SEARCH
+  // ITEM
   // --------------------------------------------------
   const onItemChange = (val) => {
     setItem(val);
-    setQty("");
-    setSelectedProduct(null);
+    setSeries("");
+    setCategory("");
 
-    if (!val) {
-      setShowItemSug(false);
-      return;
-    }
+    if (!val) return setShowItemSug(false);
 
     const q = val.toLowerCase();
     const matches = products
@@ -61,54 +74,71 @@ export default function SalesVoucher() {
   };
 
   const selectProduct = (p) => {
-    setSelectedProduct(p);
     setItem(p.Item);
+    setSeries(p.SeriesName);
+    setCategory(p.CategoryName);
     setShowItemSug(false);
+  };
+
+  // --------------------------------------------------
+  // SERIES
+  // --------------------------------------------------
+  const onSeriesChange = (val) => {
+    setSeries(val);
+    setCategory("");
+
+    if (!val) return setShowSeriesSug(false);
+
+    const q = val.toLowerCase();
+    const matches = seriesList.filter(s => s.toLowerCase().startsWith(q));
+    setSeriesSuggestions(matches);
+    setShowSeriesSug(matches.length > 0);
+
+    const prod = products.find(p => p.SeriesName === val);
+    if (prod) setCategory(prod.CategoryName);
+  };
+
+  const selectSeries = (s) => {
+    setSeries(s);
+    setShowSeriesSug(false);
+
+    const prod = products.find(p => p.SeriesName === s);
+    if (prod) setCategory(prod.CategoryName);
   };
 
   // --------------------------------------------------
   // ADD ROW
   // --------------------------------------------------
   const onAddRow = () => {
-    if (!selectedProduct || !qty) {
-      alert("Select item and quantity");
-      return;
-    }
+    if (!item || !qty) return alert("Enter item & qty");
 
-    setRows(r => [
-      ...r,
-      {
-        ProductID: selectedProduct.ProductID,
-        Item: selectedProduct.Item,
-        SeriesName: selectedProduct.SeriesName,
-        CategoryName: selectedProduct.CategoryName,
-        Quantity: Number(qty)
-      }
-    ]);
+    setRows(r => [...r, {
+      Item: item,
+      SeriesName: series,
+      CategoryName: category,
+      Quantity: Number(qty)
+    }]);
 
     setItem("");
+    setSeries("");
+    setCategory("");
     setQty("");
-    setSelectedProduct(null);
   };
 
-  const removeRow = (i) =>
-    setRows(rows.filter((_, x) => x !== i));
+  const removeRow = i => setRows(rows.filter((_, x) => x !== i));
 
   // --------------------------------------------------
   // SUBMIT
   // --------------------------------------------------
   const onSubmit = async () => {
-    if (!rows.length) {
-      alert("No items added");
-      return;
-    }
+    if (!rows.length) return alert("No rows");
 
     const payload = {
       UserName: user.Username,
       UserID: user.userid,
       Location: location,
       Customer: customer,
-      VoucherNo: voucherNo || null,
+      VoucherNo: voucherNo,
       Rows: rows
     };
 
@@ -120,7 +150,8 @@ export default function SalesVoucher() {
         setCustomer("");
         setVoucherNo("");
       }
-    } catch {
+    } catch (e) {
+      console.error(e);
       alert("Sales failed");
     }
   };
@@ -132,12 +163,9 @@ export default function SalesVoucher() {
     <div style={{ padding: 18 }}>
       <h2>Sales Voucher</h2>
 
-      {/* HEADER */}
       <div style={{ marginBottom: 12 }}>
         <select value={location} onChange={e => setLocation(e.target.value)}>
-          {LOCATIONS.map(l => (
-            <option key={l}>{l}</option>
-          ))}
+          {LOCATIONS.map(l => <option key={l}>{l}</option>)}
         </select>
 
         <input
@@ -148,9 +176,9 @@ export default function SalesVoucher() {
           style={{ marginLeft: 8 }}
         />
         <datalist id="customerList">
-          {customers.map(c => (
+          {customers.map(c =>
             <option key={c.CustomerID} value={c.CustomerName} />
-          ))}
+          )}
         </datalist>
 
         <input
@@ -161,65 +189,41 @@ export default function SalesVoucher() {
         />
       </div>
 
-      {/* ROW ENTRY */}
       <div style={{ display: "flex", gap: 8 }}>
-        <div style={{ position: "relative" }}>
-          <input
-            value={item}
-            onChange={e => onItemChange(e.target.value)}
-            placeholder="Item"
-          />
-          {showItemSug &&
-            itemSuggestions.map((p, i) => (
-              <div
-                key={i}
-                onClick={() => selectProduct(p)}
-                style={{ cursor: "pointer", background: "#eee" }}
-              >
-                {p.Item}
-              </div>
-            ))}
+        <div ref={itemRef} style={{ position: "relative" }}>
+          <input value={item} onChange={e => onItemChange(e.target.value)} placeholder="Item" />
+          {showItemSug && itemSuggestions.map((p,i) =>
+            <div key={i} onClick={() => selectProduct(p)}>{p.Item}</div>
+          )}
         </div>
 
-        <input
-          type="number"
-          value={qty}
-          onChange={e => setQty(e.target.value)}
-          placeholder="Qty"
-        />
+        <div ref={seriesRef} style={{ position: "relative" }}>
+          <input value={series} onChange={e => onSeriesChange(e.target.value)} placeholder="Series" />
+          {showSeriesSug && seriesSuggestions.map((s,i) =>
+            <div key={i} onClick={() => selectSeries(s)}>{s}</div>
+          )}
+        </div>
 
+        <input value={category} placeholder="Category" readOnly />
+        <input type="number" value={qty} onChange={e => setQty(e.target.value)} placeholder="Qty" />
         <button onClick={onAddRow}>Add</button>
       </div>
 
-      {/* ROWS */}
       <table border="1" width="100%" style={{ marginTop: 12 }}>
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Series</th>
-            <th>Category</th>
-            <th>Qty</th>
-            <th></th>
-          </tr>
-        </thead>
         <tbody>
-          {rows.map((r, i) => (
+          {rows.map((r,i) =>
             <tr key={i}>
               <td>{r.Item}</td>
               <td>{r.SeriesName}</td>
               <td>{r.CategoryName}</td>
               <td>{r.Quantity}</td>
-              <td>
-                <button onClick={() => removeRow(i)}>X</button>
-              </td>
+              <td><button onClick={() => removeRow(i)}>X</button></td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
 
-      <button onClick={onSubmit} style={{ marginTop: 12 }}>
-        Submit Sales
-      </button>
+      <button onClick={onSubmit} style={{ marginTop: 12 }}>Submit Sales</button>
     </div>
   );
 }
