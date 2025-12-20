@@ -3,7 +3,7 @@ import { api } from "../services/api";
 
 export default function SeriesMaster({ onExit }) {
   const [seriesName, setSeriesName] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [categoryName, setCategoryName] = useState("");
 
   const [categories, setCategories] = useState([]);
   const [seriesList, setSeriesList] = useState([]);
@@ -19,20 +19,20 @@ export default function SeriesMaster({ onExit }) {
     load();
   }, []);
 
-  // Save series
+  // Save series (NAME-BASED)
   const saveSeries = async () => {
-    if (!seriesName || !categoryId) {
+    if (!seriesName || !categoryName) {
       alert("Enter series name and select category");
       return;
     }
 
     await api.post("/series", {
       SeriesName: seriesName,
-      CategoryID: categoryId
+      CategoryName: categoryName
     });
 
     setSeriesName("");
-    setCategoryId("");
+    setCategoryName("");
 
     const s = await api.get("/series");
     setSeriesList(s.data || []);
@@ -42,39 +42,38 @@ export default function SeriesMaster({ onExit }) {
     <div style={{ padding: 16 }}>
       <h3>Series Master</h3>
 
-      <div style={{ marginBottom: 8 }}>
-        <input
-          placeholder="Series name"
-          value={seriesName}
-          onChange={e => setSeriesName(e.target.value)}
-        />
-      </div>
+      <input
+        placeholder="Series name"
+        value={seriesName}
+        onChange={e => setSeriesName(e.target.value)}
+      />
 
-      <div style={{ marginBottom: 8 }}>
-        <select
-          value={categoryId}
-          onChange={e => setCategoryId(e.target.value)}
-        >
-          <option value="">Select Category</option>
-          {categories.map(c => (
-            <option key={c.CategoryID} value={c.CategoryID}>
-              {c.CategoryName}
-            </option>
-          ))}
-        </select>
-      </div>
+      <select
+        value={categoryName}
+        onChange={e => setCategoryName(e.target.value)}
+        style={{ marginLeft: 8 }}
+      >
+        <option value="">Select Category</option>
+        {categories.map(c => (
+          <option key={c.CategoryName} value={c.CategoryName}>
+            {c.CategoryName}
+          </option>
+        ))}
+      </select>
 
-      <button onClick={saveSeries}>Save</button>
-      <button onClick={onExit} style={{ marginLeft: 8 }}>
-        Back
-      </button>
+      <div style={{ marginTop: 8 }}>
+        <button onClick={saveSeries}>Save</button>
+        <button onClick={onExit} style={{ marginLeft: 8 }}>
+          Back
+        </button>
+      </div>
 
       <hr />
 
       <ul>
         {seriesList.map(s => (
-          <li key={s.SeriesID}>
-            {s.SeriesName} ({s.CategoryName})
+          <li key={s.SeriesName}>
+            {s.SeriesName}
           </li>
         ))}
       </ul>
