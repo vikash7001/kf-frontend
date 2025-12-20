@@ -15,11 +15,9 @@ export default function SalesVoucher() {
   const [customer, setCustomer] = useState("");
   const [voucherNo, setVoucherNo] = useState("");
 
-  // row
+  // row input
   const [item, setItem] = useState("");
   const [qty, setQty] = useState("");
-  const [series, setSeries] = useState("");
-  const [category, setCategory] = useState("");
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [rows, setRows] = useState([]);
@@ -46,8 +44,6 @@ export default function SalesVoucher() {
   const onItemChange = (val) => {
     setItem(val);
     setQty("");
-    setSeries("");
-    setCategory("");
     setSelectedProduct(null);
 
     if (!val) {
@@ -67,8 +63,6 @@ export default function SalesVoucher() {
   const selectProduct = (p) => {
     setSelectedProduct(p);
     setItem(p.Item);
-    setSeries(p.SeriesName);
-    setCategory(p.CategoryName);
     setShowItemSug(false);
   };
 
@@ -86,16 +80,14 @@ export default function SalesVoucher() {
       {
         ProductID: selectedProduct.ProductID,
         Item: selectedProduct.Item,
-        Series: selectedProduct.SeriesName,
-        Category: selectedProduct.CategoryName,
+        SeriesName: selectedProduct.SeriesName,
+        CategoryName: selectedProduct.CategoryName,
         Quantity: Number(qty)
       }
     ]);
 
     setItem("");
     setQty("");
-    setSeries("");
-    setCategory("");
     setSelectedProduct(null);
   };
 
@@ -170,49 +162,52 @@ export default function SalesVoucher() {
       </div>
 
       {/* ROW ENTRY */}
-      <div style={{ marginTop: 10 }}>
-
-        {/* LINE 1 */}
-        <div style={{ display: "flex", gap: 8 }}>
-          <div style={{ position: "relative" }}>
-            <input
-              value={item}
-              onChange={e => onItemChange(e.target.value)}
-              placeholder="Item"
-            />
-            {showItemSug &&
-              itemSuggestions.map((p, i) => (
-                <div
-                  key={i}
-                  onClick={() => selectProduct(p)}
-                  style={{ cursor: "pointer", background: "#eee" }}
-                >
-                  {p.Item}
-                </div>
-              ))}
-          </div>
-
+      <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ position: "relative" }}>
           <input
-            type="number"
-            value={qty}
-            onChange={e => setQty(e.target.value)}
-            placeholder="Qty"
+            value={item}
+            onChange={e => onItemChange(e.target.value)}
+            placeholder="Item"
           />
-
-          <button onClick={onAddRow}>Add</button>
+          {showItemSug &&
+            itemSuggestions.map((p, i) => (
+              <div
+                key={i}
+                onClick={() => selectProduct(p)}
+                style={{ cursor: "pointer", background: "#eee" }}
+              >
+                {p.Item}
+              </div>
+            ))}
         </div>
 
+        <input
+          type="number"
+          value={qty}
+          onChange={e => setQty(e.target.value)}
+          placeholder="Qty"
+        />
 
+        <button onClick={onAddRow}>Add</button>
       </div>
 
       {/* ROWS */}
       <table border="1" width="100%" style={{ marginTop: 12 }}>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Series</th>
+            <th>Category</th>
+            <th>Qty</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>
               <td>{r.Item}</td>
-              <td>{r.Series}</td>
-              <td>{r.Category}</td>
+              <td>{r.SeriesName}</td>
+              <td>{r.CategoryName}</td>
               <td>{r.Quantity}</td>
               <td>
                 <button onClick={() => removeRow(i)}>X</button>
