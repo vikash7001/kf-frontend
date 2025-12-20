@@ -4,52 +4,82 @@ import PurchaseVoucher from './PurchaseVoucher';
 import SalesVoucher from './SalesVoucher';
 import StockView from './StockView';
 import ImageViewer from './ImageViewer';
-import ManageImages from './ManageImages';   // ✅ NEW
+import ManageImages from './ManageImages';
+
+// 🔹 NEW MASTER SCREENS
+import CategoryMaster from './CategoryMaster';
+import SeriesMaster from './SeriesMaster';
+import ProductMaster from './ProductMaster';
+import CustomerMaster from './CustomerMaster';
 
 export default function AdminDashboard({ user }) {
 
-  // purchase | sales | stock | images | manageImages
-  const [screen, setScreen] = useState("purchase");
+  // purchase | sales | stock | images | manageImages | category | series | product | customer
+  const [screen, setScreen] = useState('purchase');
 
   useEffect(() => {
-    setScreen("purchase");
+    setScreen('purchase');
   }, []);
 
   return (
     <div style={{ padding: 15 }}>
 
       {/* ---------- TOP BUTTON BAR ---------- */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 15 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 15, flexWrap: 'wrap' }}>
+
+        {/* Core Operations */}
         <button onClick={() => setScreen('purchase')}>Purchase</button>
         <button onClick={() => setScreen('sales')}>Sales</button>
         <button onClick={() => setScreen('stock')}>Stock</button>
-        <button onClick={() => setScreen('images')}>Images</button>
 
-        {/* ✅ NEW → MANAGE IMAGES BUTTON */}
+        {/* Images */}
+        <button onClick={() => setScreen('images')}>Images</button>
         <button onClick={() => setScreen('manageImages')}>Manage Images</button>
+
+        {/* Masters (Admin Only) */}
+        <button onClick={() => setScreen('category')}>Add Category</button>
+        <button onClick={() => setScreen('series')}>Add Series</button>
+        <button onClick={() => setScreen('product')}>Add Product</button>
+        <button onClick={() => setScreen('customer')}>Add Customer</button>
+
       </div>
 
       {/* ---------- MAIN SCREEN AREA ---------- */}
 
       {screen === 'purchase' && <PurchaseVoucher user={user} />}
-
       {screen === 'sales' && <SalesVoucher user={user} />}
-
       {screen === 'stock' && <StockView user={user} />}
 
       {screen === 'images' && (
         <ImageViewer
           user={user}
-          onExit={() => setScreen("purchase")}
+          onExit={() => setScreen('purchase')}
         />
       )}
 
-      {/* ✅ NEW — MANAGE IMAGES PAGE */}
       {screen === 'manageImages' && (
         <ManageImages
           user={user}
-          onExit={() => setScreen("purchase")}
+          onExit={() => setScreen('purchase')}
         />
+      )}
+
+      {/* ---------- MASTER SCREENS ---------- */}
+
+      {screen === 'category' && (
+        <CategoryMaster onExit={() => setScreen('purchase')} />
+      )}
+
+      {screen === 'series' && (
+        <SeriesMaster onExit={() => setScreen('purchase')} />
+      )}
+
+      {screen === 'product' && (
+        <ProductMaster onExit={() => setScreen('purchase')} />
+      )}
+
+      {screen === 'customer' && (
+        <CustomerMaster onExit={() => setScreen('purchase')} />
       )}
 
     </div>
