@@ -6,7 +6,7 @@ const LOCATIONS = ["Jaipur", "Kolkata"];
 export default function SalesVoucher() {
   const user = JSON.parse(localStorage.getItem("kf_user"));
 
-  // lookups
+  // lookups (NORMALIZED LIKE PURCHASE)
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
 
@@ -26,20 +26,29 @@ export default function SalesVoucher() {
   const [showItemSug, setShowItemSug] = useState(false);
 
   // --------------------------------------------------
-  // LOAD LOOKUPS
+  // LOAD LOOKUPS (NORMALIZED)
   // --------------------------------------------------
   useEffect(() => {
     async function load() {
       const p = await api.get("/products");
       const cu = await api.get("/customers");
-      setProducts(p.data || []);
+
+      const normalizedProducts = (p.data || []).map(r => ({
+        productid: r.ProductID,
+        item: r.Item,
+        seriesname: r.SeriesName,
+        categoryname: r.CategoryName
+      }));
+
+      setProducts(normalizedProducts);
       setCustomers(cu.data || []);
     }
+
     load().catch(() => alert("Failed to load sales data"));
   }, []);
 
   // --------------------------------------------------
-  // ITEM SEARCH
+  // ITEM SEARCH (SAME AS PURCHASE)
   // --------------------------------------------------
   const onItemChange = (val) => {
     setItem(val);
@@ -52,7 +61,7 @@ export default function SalesVoucher() {
 
     const q = val.toLowerCase();
     const matches = products
-      .filter(p => p.Item.toLowerCase().includes(q))
+      .filter(p => p.item.toLowerCase().includes(q))
       .slice(0, 10);
 
     setItemSuggestions(matches);
@@ -61,7 +70,7 @@ export default function SalesVoucher() {
 
   const selectProduct = (p) => {
     setSelectedProduct(p);
-    setItem(p.Item);
+    setItem(p.item);
     setShowItemSug(false);
   };
 
@@ -77,9 +86,9 @@ export default function SalesVoucher() {
     setRows(r => [
       ...r,
       {
-        Item: selectedProduct.Item,
-        SeriesName: selectedProduct.SeriesName,
-        CategoryName: selectedProduct.CategoryName,
+        Item: selectedProduct.item,
+        SeriesName: selectedProduct.seriesname,
+        CategoryName: selectedProduct.categoryname,
         Quantity: Number(qty)
       }
     ]);
@@ -102,7 +111,7 @@ export default function SalesVoucher() {
     }
 
     const payload = {
-      UserName: user.username, // ✅ FIXED HERE
+      UserName: user.username,
       Location: location,
       Customer: customer,
       VoucherNo: voucherNo || null,
@@ -174,7 +183,7 @@ export default function SalesVoucher() {
                 onClick={() => selectProduct(p)}
                 style={{ cursor: "pointer", background: "#eee" }}
               >
-                {p.Item}
+                {p.item}
               </div>
             ))}
         </div>
