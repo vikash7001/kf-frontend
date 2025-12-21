@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import axios from '../api/axios';
+import React, { useEffect, useState } from "react";
+import { api, postSales } from "../services/api";
 
 export default function ItemDetails({ onExit }) {
 
