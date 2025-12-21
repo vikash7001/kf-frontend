@@ -60,7 +60,7 @@ export default function ItemDetails({ onExit }) {
     setFiltered([]);
 
     try {
-      const res = await api.get(`/stockledger/${p.ProductID}`);
+      const res = await api.get(`/stockledger/${p.Item}`);
       setLedger(res.data || []);
     } catch (e) {
       console.error("Failed to load ledger", e);
