@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { api, postSales } from "../services/api";
+import { api } from "../services/api";
 
 export default function ItemDetails({ onExit }) {
 
   const [products, setProducts] = useState([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [filtered, setFiltered] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
-
   const [ledger, setLedger] = useState([]);
 
   /* ---------- LOAD PRODUCTS ---------- */
@@ -16,8 +15,12 @@ export default function ItemDetails({ onExit }) {
   }, []);
 
   const loadProducts = async () => {
-    const res = await axios.get('/products');
-    setProducts(res.data || []);
+    try {
+      const res = await api.get("/products");
+      setProducts(res.data || []);
+    } catch (e) {
+      console.error("Failed to load products", e);
+    }
   };
 
   /* ---------- AUTOCOMPLETE ---------- */
@@ -39,21 +42,25 @@ export default function ItemDetails({ onExit }) {
     setSearch(p.Item);
     setFiltered([]);
 
-    // 🔹 FETCH LEDGER FOR ITEM
-    const res = await axios.get(`/stockledger/${p.ProductID}`);
-    setLedger(res.data || []);
+    try {
+      const res = await api.get(`/stockledger/${p.ProductID}`);
+      setLedger(res.data || []);
+    } catch (e) {
+      console.error("Failed to load stock ledger", e);
+      setLedger([]);
+    }
   };
 
   /* ---------- SPLIT IN / OUT ---------- */
-  const incoming = ledger.filter(r => r.movementtype === 'Incoming');
-  const outgoing = ledger.filter(r => r.movementtype === 'OUT');
+  const incoming = ledger.filter(r => r.movementtype === "Incoming");
+  const outgoing = ledger.filter(r => r.movementtype === "OUT");
 
   return (
-    <div style={{ padding: 20, background: '#f8f8f8', minHeight: '80vh' }}>
+    <div style={{ padding: 20, background: "#f8f8f8", minHeight: "80vh" }}>
       <h2>Item Details</h2>
 
       {/* ---------- ITEM SEARCH ---------- */}
-      <div style={{ position: 'relative', width: 300 }}>
+      <div style={{ position: "relative", width: 300 }}>
         <label>Item</label>
         <input
           value={search}
@@ -63,24 +70,32 @@ export default function ItemDetails({ onExit }) {
             setLedger([]);
           }}
           placeholder="Search item..."
-          style={{ width: '100%', padding: 6 }}
+          style={{ width: "100%", padding: 6 }}
         />
 
         {filtered.length > 0 && (
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            background: '#fff',
-            border: '1px solid #ccc',
-            zIndex: 10
-          }}>
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              background: "#fff",
+              border: "1px solid #ccc",
+              zIndex: 10,
+              maxHeight: 200,
+              overflowY: "auto"
+            }}
+          >
             {filtered.map(p => (
               <div
                 key={p.ProductID}
                 onClick={() => selectProduct(p)}
-                style={{ padding: 6, cursor: 'pointer' }}
+                style={{
+                  padding: 6,
+                  cursor: "pointer",
+                  borderBottom: "1px solid #eee"
+                }}
               >
                 {p.Item}
               </div>
@@ -89,7 +104,7 @@ export default function ItemDetails({ onExit }) {
         )}
       </div>
 
-      {/* ---------- INCOMING ---------- */}
+      {/* ---------- LEDGER TABLES ---------- */}
       {selectedProduct && (
         <>
           <h3 style={{ marginTop: 20 }}>Incoming</h3>
@@ -110,7 +125,11 @@ export default function ItemDetails({ onExit }) {
 /* ---------- TABLE ---------- */
 function LedgerTable({ rows }) {
   return (
-    <table border="1" cellPadding="6" style={{ width: '100%', background: '#fff' }}>
+    <table
+      border="1"
+      cellPadding="6"
+      style={{ width: "100%", background: "#fff" }}
+    >
       <thead>
         <tr>
           <th>Date</th>
@@ -130,9 +149,12 @@ function LedgerTable({ rows }) {
             <td>{r.username}</td>
           </tr>
         ))}
+
         {rows.length === 0 && (
           <tr>
-            <td colSpan="5" align="center">No records</td>
+            <td colSpan="5" align="center">
+              No records
+            </td>
           </tr>
         )}
       </tbody>
