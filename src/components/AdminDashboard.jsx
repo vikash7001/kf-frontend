@@ -6,15 +6,19 @@ import StockView from './StockView';
 import ImageViewer from './ImageViewer';
 import ManageImages from './ManageImages';
 
-// 🔹 NEW MASTER SCREENS
+// 🔹 MASTER SCREENS
 import CategoryMaster from './CategoryMaster';
 import SeriesMaster from './SeriesMaster';
 import ProductMaster from './ProductMaster';
 import CustomerMaster from './CustomerMaster';
 
+// 🔹 NEW SCREEN
+import ItemDetails from './ItemDetails';
+
 export default function AdminDashboard({ user }) {
 
-  // purchase | sales | stock | images | manageImages | category | series | product | customer
+  // purchase | sales | stock | images | manageImages
+  // category | series | product | customer | itemDetails
   const [screen, setScreen] = useState('purchase');
 
   useEffect(() => {
@@ -25,7 +29,14 @@ export default function AdminDashboard({ user }) {
     <div style={{ padding: 15 }}>
 
       {/* ---------- TOP BUTTON BAR ---------- */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 15, flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: 8,
+          marginBottom: 15,
+          flexWrap: 'wrap'
+        }}
+      >
 
         {/* Core Operations */}
         <button onClick={() => setScreen('purchase')}>Purchase</button>
@@ -36,11 +47,16 @@ export default function AdminDashboard({ user }) {
         <button onClick={() => setScreen('images')}>Images</button>
         <button onClick={() => setScreen('manageImages')}>Manage Images</button>
 
-        {/* Masters (Admin Only) */}
+        {/* Masters */}
         <button onClick={() => setScreen('category')}>Add Category</button>
         <button onClick={() => setScreen('series')}>Add Series</button>
         <button onClick={() => setScreen('product')}>Add Product</button>
         <button onClick={() => setScreen('customer')}>Add Customer</button>
+
+        {/* ✅ NEW BUTTON (AFTER Add Customer) */}
+        <button onClick={() => setScreen('itemDetails')}>
+          Item Details
+        </button>
 
       </div>
 
@@ -80,6 +96,12 @@ export default function AdminDashboard({ user }) {
 
       {screen === 'customer' && (
         <CustomerMaster onExit={() => setScreen('purchase')} />
+      )}
+
+      {/* ---------- ITEM DETAILS SCREEN ---------- */}
+
+      {screen === 'itemDetails' && (
+        <ItemDetails onExit={() => setScreen('purchase')} />
       )}
 
     </div>
