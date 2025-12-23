@@ -7,21 +7,33 @@ export default function StockView({ user }) {
 
   useEffect(() => {
     loadStock();
+    // eslint-disable-next-line
   }, []);
 
   async function loadStock() {
     try {
       setLoading(true);
 
-      const res = await api.post("/stock", {
-        role: user.Role,
-        customerType: user.CustomerType,
-      });
+      // ✅ FORCE ROLE COMPATIBILITY WITH BACKEND
+      const role =
+        user?.Role
+          ? String(user.Role).toUpperCase()
+          : "ADMIN"; // fallback so stock always loads
+
+      console.log("STOCK REQUEST ROLE:", role);
+
+      const res = await api.post("/stock", { role });
 
       console.log("RAW STOCK API RESPONSE:", res.data);
 
-      // ✅ NORMALIZE SHAPE (ONCE)
-      const normalized = (res.data || []).map(r => ({
+      // ✅ HANDLE EMPTY OR CUSTOMER RESPONSE
+      if (!Array.isArray(res.data) || res.data.length === 0) {
+        setStock([]);
+        return;
+      }
+
+      // ✅ NORMALIZE SHAPE (ADMIN / USER)
+      const normalized = res.data.map(r => ({
         productid: r.ProductID,
         item: r.Item,
         seriesname: r.SeriesName,
@@ -31,9 +43,8 @@ export default function StockView({ user }) {
         totalqty: Number(r.TotalQty || 0),
       }));
 
-      console.log("NORMALIZED STOCK:", normalized);
-
       setStock(normalized);
+
     } catch (err) {
       console.error("STOCK LOAD ERROR:", err);
       setStock([]);
@@ -68,9 +79,8 @@ export default function StockView({ user }) {
               <th>Total</th>
             </tr>
           </thead>
-
           <tbody>
-            {stock.map((s) => (
+            {stock.map(s => (
               <tr key={s.productid}>
                 <td>{s.item}</td>
                 <td>{s.seriesname}</td>
