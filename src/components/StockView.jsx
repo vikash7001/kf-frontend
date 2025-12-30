@@ -19,18 +19,45 @@ function saveFilters(filters) {
 }
 
 /* ------------------------------
-   Collapsible filter section
+   Excel-like filter section
 -------------------------------- */
-function FilterSection({ title, open, onToggle, children }) {
+function FilterSection({ title, open, onToggle, activeCount, children }) {
   return (
-    <div style={{ border: "1px solid #ccc", padding: 6 }}>
+    <div style={{ border: "1px solid #ccc", width: 220 }}>
       <div
-        style={{ cursor: "pointer", fontWeight: "bold" }}
         onClick={onToggle}
+        style={{
+          cursor: "pointer",
+          padding: "6px 8px",
+          background: "#f2f2f2",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontWeight: "bold"
+        }}
       >
-        {open ? "▼" : "▶"} {title}
+        <span>
+          {title}
+          {activeCount > 0 && (
+            <span style={{ color: "green", marginLeft: 6 }}>
+              ({activeCount})
+            </span>
+          )}
+        </span>
+        <span>{open ? "▲" : "▼"}</span>
       </div>
-      {open && <div style={{ marginTop: 6 }}>{children}</div>}
+
+      {open && (
+        <div
+          style={{
+            maxHeight: 10 * 26,   // show ~10 items
+            overflowY: "auto",
+            padding: 6
+          }}
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -40,7 +67,7 @@ export default function StockView({ user }) {
   const [loading, setLoading] = useState(true);
 
   /* ------------------------------
-     Filters + sorting state
+     Filters & sorting state
   -------------------------------- */
   const saved = loadSavedFilters();
 
@@ -48,9 +75,9 @@ export default function StockView({ user }) {
   const [seriesFilter, setSeriesFilter] = useState(saved.series || []);
   const [categoryFilter, setCategoryFilter] = useState(saved.category || []);
 
-  const [showProduct, setShowProduct] = useState(true);
-  const [showSeries, setShowSeries] = useState(true);
-  const [showCategory, setShowCategory] = useState(true);
+  const [showProduct, setShowProduct] = useState(false);
+  const [showSeries, setShowSeries] = useState(false);
+  const [showCategory, setShowCategory] = useState(false);
 
   const [sortBy, setSortBy] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -72,7 +99,7 @@ export default function StockView({ user }) {
   }, [productFilter, seriesFilter, categoryFilter]);
 
   /* ------------------------------
-     Toggle filter helper
+     Helpers
   -------------------------------- */
   function toggleFilter(setter, value) {
     setter(prev =>
@@ -82,9 +109,6 @@ export default function StockView({ user }) {
     );
   }
 
-  /* ------------------------------
-     Sorting handler
-  -------------------------------- */
   function handleSort(column) {
     if (sortBy === column) {
       setSortDir(prev => (prev === "asc" ? "desc" : "asc"));
@@ -95,7 +119,7 @@ export default function StockView({ user }) {
   }
 
   /* ------------------------------
-     Load stock (UNCHANGED LOGIC)
+     Load stock (UNCHANGED)
   -------------------------------- */
   async function loadStock() {
     try {
@@ -134,7 +158,7 @@ export default function StockView({ user }) {
   }
 
   /* ------------------------------
-     Filter + sort result
+     Filter + sort
   -------------------------------- */
   const filteredAndSortedStock = [...stock]
     .filter(s =>
@@ -148,9 +172,8 @@ export default function StockView({ user }) {
       const x = a[sortBy];
       const y = b[sortBy];
 
-      if (typeof x === "number") {
+      if (typeof x === "number")
         return sortDir === "asc" ? x - y : y - x;
-      }
 
       return sortDir === "asc"
         ? String(x).localeCompare(String(y))
@@ -169,12 +192,13 @@ export default function StockView({ user }) {
 
       {!loading && stock.length > 0 && (
         <>
-          {/* FILTERS */}
-          <div style={{ display: "flex", gap: 16, marginBottom: 10 }}>
+          {/* FILTER BAR */}
+          <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
             <FilterSection
               title="Products"
               open={showProduct}
               onToggle={() => setShowProduct(v => !v)}
+              activeCount={productFilter.length}
             >
               {[...new Set(stock.map(s => s.item))].map(p => (
                 <label key={p} style={{ display: "block" }}>
@@ -192,6 +216,7 @@ export default function StockView({ user }) {
               title="Series"
               open={showSeries}
               onToggle={() => setShowSeries(v => !v)}
+              activeCount={seriesFilter.length}
             >
               {[...new Set(stock.map(s => s.seriesname))].map(s => (
                 <label key={s} style={{ display: "block" }}>
@@ -209,6 +234,7 @@ export default function StockView({ user }) {
               title="Category"
               open={showCategory}
               onToggle={() => setShowCategory(v => !v)}
+              activeCount={categoryFilter.length}
             >
               {[...new Set(stock.map(s => s.categoryname))].map(c => (
                 <label key={c} style={{ display: "block" }}>
@@ -223,23 +249,7 @@ export default function StockView({ user }) {
             </FilterSection>
           </div>
 
-          {/* SELECTED FILTER CHIPS */}
-          <div style={{ marginBottom: 10 }}>
-            {[...productFilter, ...seriesFilter, ...categoryFilter].map(v => (
-              <span
-                key={v}
-                style={{
-                  padding: "4px 10px",
-                  marginRight: 6,
-                  background: "#e0e0e0",
-                  borderRadius: 12
-                }}
-              >
-                {v}
-              </span>
-            ))}
-          </div>
-
+          {/* RESET */}
           <button
             onClick={() => {
               setProductFilter([]);
@@ -255,7 +265,11 @@ export default function StockView({ user }) {
           <table
             border="1"
             cellPadding="6"
-            style={{ borderCollapse: "collapse", width: "100%", marginTop: 10 }}
+            style={{
+              borderCollapse: "collapse",
+              width: "100%",
+              marginTop: 10
+            }}
           >
             <thead>
               <tr>
@@ -273,9 +287,9 @@ export default function StockView({ user }) {
                   <td>{s.item}</td>
                   <td>{s.seriesname}</td>
                   <td>{s.categoryname}</td>
-                  <td style={{ textAlign: "right" }}>{s.jaipurqty}</td>
-                  <td style={{ textAlign: "right" }}>{s.kolkataqty}</td>
-                  <td style={{ textAlign: "right" }}>{s.totalqty}</td>
+                  <td align="right">{s.jaipurqty}</td>
+                  <td align="right">{s.kolkataqty}</td>
+                  <td align="right">{s.totalqty}</td>
                 </tr>
               ))}
             </tbody>
