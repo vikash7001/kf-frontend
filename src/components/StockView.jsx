@@ -182,6 +182,12 @@ export default function StockView({ user }) {
         : String(y).localeCompare(String(x));
     });
 
+  /* ------------------------------
+     Sorted series list (A → Z)
+  -------------------------------- */
+  const seriesList = [...new Set(stock.map(s => s.seriesname))]
+    .sort((a, b) => a.localeCompare(b));
+
   return (
     <div style={{ padding: 16 }}>
       <h3>Stock Summary</h3>
@@ -220,7 +226,7 @@ export default function StockView({ user }) {
               onToggle={() => setShowSeries(v => !v)}
               activeCount={seriesFilter.length}
             >
-              {[...new Set(stock.map(s => s.seriesname))].map(s => (
+              {seriesList.map(s => (
                 <label key={s} style={{ display: "block" }}>
                   <input
                     type="checkbox"
