@@ -50,7 +50,7 @@ function FilterSection({ title, open, onToggle, activeCount, children }) {
       {open && (
         <div
           style={{
-            maxHeight: 10 * 26,   // show ~10 items
+            maxHeight: 10 * 26,
             overflowY: "auto",
             padding: 6
           }}
@@ -87,9 +87,6 @@ export default function StockView({ user }) {
     // eslint-disable-next-line
   }, []);
 
-  /* ------------------------------
-     Persist filters
-  -------------------------------- */
   useEffect(() => {
     saveFilters({
       product: productFilter,
@@ -116,6 +113,11 @@ export default function StockView({ user }) {
       setSortBy(column);
       setSortDir("asc");
     }
+  }
+
+  function sortArrow(column) {
+    if (sortBy !== column) return "";
+    return sortDir === "asc" ? " ▲" : " ▼";
   }
 
   /* ------------------------------
@@ -249,7 +251,6 @@ export default function StockView({ user }) {
             </FilterSection>
           </div>
 
-          {/* RESET */}
           <button
             onClick={() => {
               setProductFilter([]);
@@ -273,12 +274,24 @@ export default function StockView({ user }) {
           >
             <thead>
               <tr>
-                <th onClick={() => handleSort("item")}>Product</th>
-                <th onClick={() => handleSort("seriesname")}>Series</th>
-                <th onClick={() => handleSort("categoryname")}>Category</th>
-                <th onClick={() => handleSort("jaipurqty")}>Jaipur</th>
-                <th onClick={() => handleSort("kolkataqty")}>Kolkata</th>
-                <th onClick={() => handleSort("totalqty")}>Total</th>
+                <th onClick={() => handleSort("item")}>
+                  Product{sortArrow("item")}
+                </th>
+                <th onClick={() => handleSort("seriesname")}>
+                  Series{sortArrow("seriesname")}
+                </th>
+                <th onClick={() => handleSort("categoryname")}>
+                  Category{sortArrow("categoryname")}
+                </th>
+                <th onClick={() => handleSort("jaipurqty")}>
+                  Jaipur{sortArrow("jaipurqty")}
+                </th>
+                <th onClick={() => handleSort("kolkataqty")}>
+                  Kolkata{sortArrow("kolkataqty")}
+                </th>
+                <th onClick={() => handleSort("totalqty")}>
+                  Total{sortArrow("totalqty")}
+                </th>
               </tr>
             </thead>
             <tbody>
