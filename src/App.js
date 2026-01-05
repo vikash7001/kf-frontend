@@ -6,6 +6,7 @@ import CustomerView from './components/CustomerView';
 
 import PurchaseVoucher from './components/PurchaseVoucher';
 import SalesVoucher from './components/SalesVoucher';
+import StockTransfer from './components/StockTransfer';
 
 import { api } from './services/api';
 
@@ -14,7 +15,7 @@ export default function App() {
   const [user, setUser] = useState(null);
 
   // Modes:
-  // admin | customer | purchase | sales
+  // admin | customer | purchase | sales | transfer
   const [mode, setMode] = useState(null);
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function App() {
 
     // Tally-style shortcuts
     function onKeyDown(e) {
+
       if (e.key === 'F9') {
         setMode("purchase");
         e.preventDefault();
@@ -37,6 +39,11 @@ export default function App() {
 
       if (e.key === 'F8') {
         setMode("sales");
+        e.preventDefault();
+      }
+
+      if (e.key === 'F7') {
+        setMode("transfer");
         e.preventDefault();
       }
 
@@ -51,7 +58,7 @@ export default function App() {
 
   }, []);
 
-  // LOGIN SCREEN
+  // ---------------- LOGIN ----------------
   if (!user) {
     return (
       <Login
@@ -79,6 +86,7 @@ export default function App() {
       <div className="toolbar">
         <div className="kbd">F9</div><div>Purchase</div>
         <div className="kbd">F8</div><div>Sales</div>
+        <div className="kbd">F7</div><div>Transfer</div>
         <div className="kbd">Ctrl+A</div><div>Save</div>
 
         <div style={{ marginLeft: 'auto' }}>
@@ -99,7 +107,7 @@ export default function App() {
       <div className="container">
         <div className="panel">
 
-          {/* MAIN ROLE SCREENS */}
+          {/* DASHBOARDS */}
           {mode === "admin" && (
             <AdminDashboard user={user} />
           )}
@@ -121,6 +129,16 @@ export default function App() {
           {/* SALES */}
           {mode === "sales" && (
             <SalesVoucher
+              user={user}
+              onExit={() =>
+                setMode(user.Role === "Customer" ? "customer" : "admin")
+              }
+            />
+          )}
+
+          {/* STOCK TRANSFER */}
+          {mode === "transfer" && (
+            <StockTransfer
               user={user}
               onExit={() =>
                 setMode(user.Role === "Customer" ? "customer" : "admin")
