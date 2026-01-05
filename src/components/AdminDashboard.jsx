@@ -5,6 +5,7 @@ import SalesVoucher from './SalesVoucher';
 import StockView from './StockView';
 import ImageViewer from './ImageViewer';
 import ManageImages from './ManageImages';
+import StockTransfer from './StockTransfer';
 
 // 🔹 MASTER SCREENS
 import CategoryMaster from './CategoryMaster';
@@ -42,7 +43,7 @@ export default function AdminDashboard({ user }) {
         <button onClick={() => setScreen('purchase')}>Purchase</button>
         <button onClick={() => setScreen('sales')}>Sales</button>
         <button onClick={() => setScreen('stock')}>Stock</button>
-
+        <button onClick={() => setScreen('transfer')}>Stock Transfer</button>
         {/* Images */}
         <button onClick={() => setScreen('images')}>Images</button>
         <button onClick={() => setScreen('manageImages')}>Manage Images</button>
@@ -65,6 +66,12 @@ export default function AdminDashboard({ user }) {
       {screen === 'purchase' && <PurchaseVoucher user={user} />}
       {screen === 'sales' && <SalesVoucher user={user} />}
       {screen === 'stock' && <StockView user={user} />}
+{screen === 'transfer' && (
+  <StockTransfer
+    user={user}
+    onExit={() => setScreen('purchase')}
+  />
+)}
 
       {screen === 'images' && (
         <ImageViewer
