@@ -6,6 +6,9 @@ import StockView from './StockView';
 import ImageViewer from './ImageViewer';
 import ManageImages from './ManageImages';
 import StockTransfer from './StockTransfer';
+import ViewIncoming from './ViewIncoming';
+import ViewSales from './ViewSales';
+import ViewTransfers from './ViewTransfers';
 
 // 🔹 MASTER SCREENS
 import CategoryMaster from './CategoryMaster';
@@ -53,6 +56,10 @@ export default function AdminDashboard({ user }) {
         <button onClick={() => setScreen('series')}>Add Series</button>
         <button onClick={() => setScreen('product')}>Add Product</button>
         <button onClick={() => setScreen('customer')}>Add Customer</button>
+	{/* View Lists */}
+	<button onClick={() => setScreen('viewIncoming')}>View Purchase</button>
+	<button onClick={() => setScreen('viewSales')}>View Sales</button>
+	<button onClick={() => setScreen('viewTransfers')}>View Stock Transfers</button>
 
         {/* ✅ NEW BUTTON (AFTER Add Customer) */}
         <button onClick={() => setScreen('itemDetails')}>
@@ -110,6 +117,17 @@ export default function AdminDashboard({ user }) {
       {screen === 'itemDetails' && (
         <ItemDetails onExit={() => setScreen('purchase')} />
       )}
+{screen === 'viewIncoming' && (
+  <ViewIncoming onExit={() => setScreen('purchase')} />
+)}
+
+{screen === 'viewSales' && (
+  <ViewSales onExit={() => setScreen('purchase')} />
+)}
+
+{screen === 'viewTransfers' && (
+  <ViewTransfers onExit={() => setScreen('purchase')} />
+)}
 
     </div>
   );
