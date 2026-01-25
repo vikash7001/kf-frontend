@@ -23,6 +23,7 @@ import ItemDetails from './ItemDetails';
 import OnlineEnablement from './OnlineEnablement';
 // 🔹 ONLINE STOCK VIEW (READ ONLY)
 import OnlineStockView from './OnlineStockView';
+import OnlineSkuFlipkart from './OnlineSkuFlipkart';
 
 export default function AdminDashboard({ user }) {
 
@@ -78,6 +79,9 @@ export default function AdminDashboard({ user }) {
         </button>
 <button onClick={() => setScreen('onlineStock')}>
   Online Stock
+</button>
+<button onClick={() => setScreen('onlineSkuFlipkart')}>
+  Online SKU (Flipkart)
 </button>
 
       </div>
@@ -140,6 +144,9 @@ export default function AdminDashboard({ user }) {
       )}
 {screen === 'onlineStock' && (
   <OnlineStockView onExit={() => setScreen('purchase')} />
+)}
+{screen === 'onlineSkuFlipkart' && (
+  <OnlineSkuFlipkart onExit={() => setScreen('purchase')} />
 )}
 
       {/* ---------- VIEW SCREENS ---------- */}
