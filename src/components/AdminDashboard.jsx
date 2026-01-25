@@ -21,6 +21,8 @@ import ItemDetails from './ItemDetails';
 
 // 🔹 NEW ONLINE ENABLEMENT SCREEN
 import OnlineEnablement from './OnlineEnablement';
+// 🔹 ONLINE STOCK VIEW (READ ONLY)
+import OnlineStockView from './OnlineStockView';
 
 export default function AdminDashboard({ user }) {
 
@@ -74,6 +76,9 @@ export default function AdminDashboard({ user }) {
         <button onClick={() => setScreen('onlineEnablement')}>
           Online Enablement
         </button>
+<button onClick={() => setScreen('onlineStock')}>
+  Online Stock
+</button>
 
       </div>
 
