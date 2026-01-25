@@ -16,13 +16,19 @@ import SeriesMaster from './SeriesMaster';
 import ProductMaster from './ProductMaster';
 import CustomerMaster from './CustomerMaster';
 
-// 🔹 NEW SCREEN
+// 🔹 EXISTING NEW SCREEN
 import ItemDetails from './ItemDetails';
+
+// 🔹 NEW ONLINE ENABLEMENT SCREEN
+import OnlineEnablement from './OnlineEnablement';
 
 export default function AdminDashboard({ user }) {
 
-  // purchase | sales | stock | images | manageImages
-  // category | series | product | customer | itemDetails
+  // purchase | sales | stock | transfer
+  // images | manageImages
+  // category | series | product | customer
+  // itemDetails | onlineEnablement
+  // viewIncoming | viewSales | viewTransfers
   const [screen, setScreen] = useState('purchase');
 
   useEffect(() => {
@@ -47,6 +53,7 @@ export default function AdminDashboard({ user }) {
         <button onClick={() => setScreen('sales')}>Sales</button>
         <button onClick={() => setScreen('stock')}>Stock</button>
         <button onClick={() => setScreen('transfer')}>Stock Transfer</button>
+
         {/* Images */}
         <button onClick={() => setScreen('images')}>Images</button>
         <button onClick={() => setScreen('manageImages')}>Manage Images</button>
@@ -56,14 +63,16 @@ export default function AdminDashboard({ user }) {
         <button onClick={() => setScreen('series')}>Add Series</button>
         <button onClick={() => setScreen('product')}>Add Product</button>
         <button onClick={() => setScreen('customer')}>Add Customer</button>
-	{/* View Lists */}
-	<button onClick={() => setScreen('viewIncoming')}>View Purchase</button>
-	<button onClick={() => setScreen('viewSales')}>View Sales</button>
-	<button onClick={() => setScreen('viewTransfers')}>View Stock Transfers</button>
 
-        {/* ✅ NEW BUTTON (AFTER Add Customer) */}
-        <button onClick={() => setScreen('itemDetails')}>
-          Item Details
+        {/* View Lists */}
+        <button onClick={() => setScreen('viewIncoming')}>View Purchase</button>
+        <button onClick={() => setScreen('viewSales')}>View Sales</button>
+        <button onClick={() => setScreen('viewTransfers')}>View Stock Transfers</button>
+
+        {/* Config Screens */}
+        <button onClick={() => setScreen('itemDetails')}>Item Details</button>
+        <button onClick={() => setScreen('onlineEnablement')}>
+          Online Enablement
         </button>
 
       </div>
@@ -71,14 +80,17 @@ export default function AdminDashboard({ user }) {
       {/* ---------- MAIN SCREEN AREA ---------- */}
 
       {screen === 'purchase' && <PurchaseVoucher user={user} />}
+
       {screen === 'sales' && <SalesVoucher user={user} />}
+
       {screen === 'stock' && <StockView user={user} />}
-{screen === 'transfer' && (
-  <StockTransfer
-    user={user}
-    onExit={() => setScreen('purchase')}
-  />
-)}
+
+      {screen === 'transfer' && (
+        <StockTransfer
+          user={user}
+          onExit={() => setScreen('purchase')}
+        />
+      )}
 
       {screen === 'images' && (
         <ImageViewer
@@ -112,22 +124,29 @@ export default function AdminDashboard({ user }) {
         <CustomerMaster onExit={() => setScreen('purchase')} />
       )}
 
-      {/* ---------- ITEM DETAILS SCREEN ---------- */}
+      {/* ---------- CONFIG SCREENS ---------- */}
 
       {screen === 'itemDetails' && (
         <ItemDetails onExit={() => setScreen('purchase')} />
       )}
-{screen === 'viewIncoming' && (
-  <ViewIncoming onExit={() => setScreen('purchase')} />
-)}
 
-{screen === 'viewSales' && (
-  <ViewSales onExit={() => setScreen('purchase')} />
-)}
+      {screen === 'onlineEnablement' && (
+        <OnlineEnablement onExit={() => setScreen('purchase')} />
+      )}
 
-{screen === 'viewTransfers' && (
-  <ViewTransfers onExit={() => setScreen('purchase')} />
-)}
+      {/* ---------- VIEW SCREENS ---------- */}
+
+      {screen === 'viewIncoming' && (
+        <ViewIncoming onExit={() => setScreen('purchase')} />
+      )}
+
+      {screen === 'viewSales' && (
+        <ViewSales onExit={() => setScreen('purchase')} />
+      )}
+
+      {screen === 'viewTransfers' && (
+        <ViewTransfers onExit={() => setScreen('purchase')} />
+      )}
 
     </div>
   );
