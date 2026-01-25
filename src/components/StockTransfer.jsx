@@ -80,7 +80,7 @@ export default function StockTransfer() {
     setShowItemSug(false);
 
     try {
-      const res = await api.get(`/online/status/${p.item}`);
+      const res = await api.get(`/online/status-by-item/${p.item}`);
       if (res.data?.is_online) {
         setIsOnlineEnabled(true);
         setEnabledSizes(res.data.sizes || []);
