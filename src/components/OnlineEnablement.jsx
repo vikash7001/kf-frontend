@@ -54,7 +54,7 @@ export default function OnlineEnablement({ onExit }) {
     setOnlineEnabled(p.is_online);
     setEnabledSizes(p.enabledSizes || []);
     setSizeQty(p.sizeQty || {});
-    setJaipurQty(p.jaipurqty);
+    setJaipurQty(Number(p.jaipurqty));
   };
 
   // -----------------------------
@@ -68,7 +68,10 @@ export default function OnlineEnablement({ onExit }) {
     );
   };
 
-  const totalSizeQty = Object.values(sizeQty).reduce((a,b) => a + b, 0);
+  const totalSizeQty = Object.values(sizeQty)
+  .map(Number)
+  .reduce((a,b) => a + b, 0);
+
 
   // -----------------------------
   // SAVE
