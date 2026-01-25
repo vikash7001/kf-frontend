@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 
 const LOCATIONS = ["Jaipur", "Kolkata"];
+const ALL_SIZES = ["S","M","L","XL","XXL","3XL","4XL","5XL","6XL","7XL"];
 
 export default function StockTransfer() {
   const user = JSON.parse(localStorage.getItem("kf_user"));
@@ -21,6 +22,11 @@ export default function StockTransfer() {
 
   const [itemSuggestions, setItemSuggestions] = useState([]);
   const [showItemSug, setShowItemSug] = useState(false);
+
+  // 🔹 online size logic
+  const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
+  const [enabledSizes, setEnabledSizes] = useState([]);
+  const [sizeQty, setSizeQty] = useState({});
 
   // --------------------------------------------------
   // LOAD PRODUCTS
@@ -47,6 +53,9 @@ export default function StockTransfer() {
   const onItemChange = (val) => {
     setItem(val);
     setSelectedProduct(null);
+    setIsOnlineEnabled(false);
+    setEnabledSizes([]);
+    setSizeQty({});
 
     if (!val) {
       setShowItemSug(false);
@@ -62,11 +71,38 @@ export default function StockTransfer() {
     setShowItemSug(matches.length > 0);
   };
 
-  const selectProduct = (p) => {
+  // --------------------------------------------------
+  // SELECT PRODUCT
+  // --------------------------------------------------
+  const selectProduct = async (p) => {
     setSelectedProduct(p);
     setItem(p.item);
     setShowItemSug(false);
+
+    try {
+      const res = await api.get(`/online/status/${p.item}`);
+      if (res.data?.is_online) {
+        setIsOnlineEnabled(true);
+        setEnabledSizes(res.data.sizes || []);
+        setSizeQty({});
+      } else {
+        setIsOnlineEnabled(false);
+        setEnabledSizes([]);
+        setSizeQty({});
+      }
+    } catch {
+      setIsOnlineEnabled(false);
+      setEnabledSizes([]);
+      setSizeQty({});
+    }
   };
+
+  // --------------------------------------------------
+  // SIZE TOTAL
+  // --------------------------------------------------
+  const totalSizeQty = Object.values(sizeQty)
+    .map(Number)
+    .reduce((a, b) => a + b, 0);
 
   // --------------------------------------------------
   // ADD ROW
@@ -77,19 +113,37 @@ export default function StockTransfer() {
       return;
     }
 
+    const jaipurInvolved =
+      fromLocation === "Jaipur" || toLocation === "Jaipur";
+
+    if (isOnlineEnabled && jaipurInvolved) {
+      if (!enabledSizes.length) {
+        alert("Online-enabled item needs size details");
+        return;
+      }
+      if (totalSizeQty !== Number(qty)) {
+        alert("Size total must equal transfer quantity");
+        return;
+      }
+    }
+
     setRows(r => [
       ...r,
       {
         Item: selectedProduct.item,
         SeriesName: selectedProduct.seriesname,
         CategoryName: selectedProduct.categoryname,
-        Quantity: Number(qty)
+        Quantity: Number(qty),
+        SizeQty: isOnlineEnabled && jaipurInvolved ? sizeQty : null
       }
     ]);
 
     setItem("");
     setQty("");
     setSelectedProduct(null);
+    setIsOnlineEnabled(false);
+    setEnabledSizes([]);
+    setSizeQty({});
   };
 
   const removeRow = (i) =>
@@ -177,6 +231,30 @@ export default function StockTransfer() {
 
         <button onClick={onAddRow}>Add</button>
       </div>
+
+      {/* SIZE INPUT */}
+      {isOnlineEnabled &&
+        (fromLocation === "Jaipur" || toLocation === "Jaipur") && (
+          <div style={{ marginTop: 12 }}>
+            <b>Size-wise Quantity (Jaipur)</b>
+            {enabledSizes.map(sz => (
+              <div key={sz}>
+                {sz}
+                <input
+                  type="number"
+                  value={sizeQty[sz] || ""}
+                  onChange={e =>
+                    setSizeQty({ ...sizeQty, [sz]: Number(e.target.value) })
+                  }
+                  style={{ marginLeft: 8 }}
+                />
+              </div>
+            ))}
+            <div>
+              <b>Total:</b> {totalSizeQty} / {qty || 0}
+            </div>
+          </div>
+        )}
 
       {/* ROWS */}
       <table border="1" width="100%" style={{ marginTop: 12 }}>
