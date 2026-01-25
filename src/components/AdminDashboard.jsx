@@ -138,6 +138,9 @@ export default function AdminDashboard({ user }) {
       {screen === 'onlineEnablement' && (
         <OnlineEnablement onExit={() => setScreen('purchase')} />
       )}
+{screen === 'onlineStock' && (
+  <OnlineStockView onExit={() => setScreen('purchase')} />
+)}
 
       {/* ---------- VIEW SCREENS ---------- */}
 
