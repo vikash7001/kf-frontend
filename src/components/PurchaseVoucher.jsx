@@ -6,12 +6,12 @@ const LOCATIONS = ["Jaipur", "Kolkata"];
 export default function PurchaseVoucher() {
   const user = JSON.parse(localStorage.getItem("kf_user"));
 
-  // lookups (normalized)
+  // lookups
   const [products, setProducts] = useState([]);
   const [seriesList, setSeriesList] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  // form inputs
+  // form
   const [location, setLocation] = useState(LOCATIONS[0]);
   const [item, setItem] = useState("");
   const [series, setSeries] = useState("");
@@ -26,11 +26,16 @@ export default function PurchaseVoucher() {
 
   const [rows, setRows] = useState([]);
 
+  // 🔹 online size logic
+  const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
+  const [enabledSizes, setEnabledSizes] = useState([]);
+  const [sizeQty, setSizeQty] = useState({});
+
   const itemRef = useRef(null);
   const seriesRef = useRef(null);
 
   // ----------------------------------------------------------
-  // LOAD LOOKUPS (NORMALIZED)
+  // LOAD LOOKUPS
   // ----------------------------------------------------------
   useEffect(() => {
     (async () => {
@@ -39,38 +44,31 @@ export default function PurchaseVoucher() {
         const s = await api.get("/series");
         const c = await api.get("/categories");
 
-        // 🔴 normalize ONCE
-        const normalizedProducts = (p.data || []).map(r => ({
-          productid: r.ProductID,
-          item: r.Item,
-          seriesname: r.SeriesName,
-          categoryname: r.CategoryName
-        }));
+        setProducts(
+          (p.data || []).map(r => ({
+            item: r.Item,
+            seriesname: r.SeriesName,
+            categoryname: r.CategoryName
+          }))
+        );
 
-        setProducts(normalizedProducts);
         setSeriesList((s.data || []).map(r => r.SeriesName));
         setCategories((c.data || []).map(r => r.CategoryName));
-
-        console.log("LOOKUPS LOADED:", {
-          products: normalizedProducts.length,
-          series: s.data?.length,
-          categories: c.data?.length
-        });
-
-      } catch (err) {
-        console.error("Lookup fetch error", err);
+      } catch {
         alert("Failed to load lookups");
       }
     })();
   }, []);
 
   // ----------------------------------------------------------
-  // Hide suggestions on outside click
+  // HIDE SUGGESTIONS
   // ----------------------------------------------------------
   useEffect(() => {
     const handler = e => {
-      if (itemRef.current && !itemRef.current.contains(e.target)) setShowItemSug(false);
-      if (seriesRef.current && !seriesRef.current.contains(e.target)) setShowSeriesSug(false);
+      if (itemRef.current && !itemRef.current.contains(e.target))
+        setShowItemSug(false);
+      if (seriesRef.current && !seriesRef.current.contains(e.target))
+        setShowSeriesSug(false);
     };
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
@@ -83,6 +81,9 @@ export default function PurchaseVoucher() {
     setItem(val);
     setSeries("");
     setCategory("");
+    setIsOnlineEnabled(false);
+    setEnabledSizes([]);
+    setSizeQty({});
 
     if (!val.trim()) {
       setShowItemSug(false);
@@ -91,19 +92,34 @@ export default function PurchaseVoucher() {
 
     const q = val.toLowerCase();
     const matches = products.filter(p =>
-      (p.item && p.item.toLowerCase().includes(q)) ||
-      (p.productid && p.productid.toString().includes(q))
+      p.item.toLowerCase().includes(q)
     );
 
     setItemSuggestions(matches);
     setShowItemSug(matches.length > 0);
   };
 
-  const selectProduct = p => {
+  const selectProduct = async p => {
     setItem(p.item);
     setSeries(p.seriesname);
     setCategory(p.categoryname);
     setShowItemSug(false);
+
+    if (location === "Jaipur") {
+      try {
+        const res = await api.get(`/online/status-by-item/${p.item}`);
+        if (res.data?.is_online) {
+          setIsOnlineEnabled(true);
+          setEnabledSizes(res.data.sizes || []);
+          setSizeQty({});
+          return;
+        }
+      } catch {}
+    }
+
+    setIsOnlineEnabled(false);
+    setEnabledSizes([]);
+    setSizeQty({});
   };
 
   // ----------------------------------------------------------
@@ -119,7 +135,10 @@ export default function PurchaseVoucher() {
     }
 
     const q = val.toLowerCase();
-    const matches = seriesList.filter(s => s.toLowerCase().startsWith(q));
+    const matches = seriesList.filter(s =>
+      s.toLowerCase().startsWith(q)
+    );
+
     setSeriesSuggestions(matches);
     setShowSeriesSug(matches.length > 0);
 
@@ -138,6 +157,13 @@ export default function PurchaseVoucher() {
   };
 
   // ----------------------------------------------------------
+  // SIZE TOTAL
+  // ----------------------------------------------------------
+  const totalSizeQty = Object.values(sizeQty)
+    .map(Number)
+    .reduce((a, b) => a + b, 0);
+
+  // ----------------------------------------------------------
   // ADD ROW
   // ----------------------------------------------------------
   const onAddRow = () => {
@@ -146,18 +172,15 @@ export default function PurchaseVoucher() {
       return;
     }
 
-    const existing = products.find(
-      p => p.item === item && p.seriesname === series
-    );
-
-    if (!existing && !series.trim()) {
-      alert("New item — enter Series");
-      return;
-    }
-
-    if (!seriesList.includes(series) && !category.trim()) {
-      alert("New series — select Category");
-      return;
+    if (isOnlineEnabled && location === "Jaipur") {
+      if (!enabledSizes.length) {
+        alert("Size details required");
+        return;
+      }
+      if (totalSizeQty !== Number(qty)) {
+        alert("Size total must equal quantity");
+        return;
+      }
     }
 
     setRows(prev => [
@@ -166,7 +189,8 @@ export default function PurchaseVoucher() {
         Item: item,
         SeriesName: series,
         CategoryName: category,
-        Quantity: Number(qty)
+        Quantity: Number(qty),
+        SizeQty: isOnlineEnabled ? sizeQty : null
       }
     ]);
 
@@ -174,9 +198,13 @@ export default function PurchaseVoucher() {
     setSeries("");
     setCategory("");
     setQty("");
+    setIsOnlineEnabled(false);
+    setEnabledSizes([]);
+    setSizeQty({});
   };
 
-  const removeRow = i => setRows(rows.filter((_, idx) => idx !== i));
+  const removeRow = i =>
+    setRows(rows.filter((_, idx) => idx !== i));
 
   // ----------------------------------------------------------
   // SUBMIT
@@ -199,16 +227,11 @@ export default function PurchaseVoucher() {
       if (res.data?.success) {
         alert("Posted successfully");
         setRows([]);
-      } else {
-        alert("Post failed");
       }
-    } catch (err) {
-      console.error(err.response?.data || err);
-      alert("Submit failed — check console");
+    } catch {
+      alert("Submit failed");
     }
   };
-
-  const small = { padding: "6px 8px", marginRight: 8 };
 
   // ----------------------------------------------------------
   // UI
@@ -227,16 +250,15 @@ export default function PurchaseVoucher() {
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         <div ref={itemRef} style={{ position: "relative" }}>
           <input
-            style={{ ...small, width: 220 }}
             placeholder="Item"
             value={item}
             onChange={e => onItemChange(e.target.value)}
           />
           {showItemSug && (
-            <div style={{ position: "absolute", top: 36, background: "#fff", border: "1px solid #ccc" }}>
+            <div style={{ position: "absolute", background: "#fff", border: "1px solid #ccc" }}>
               {itemSuggestions.map((p, i) => (
                 <div key={i} onClick={() => selectProduct(p)} style={{ padding: 8, cursor: "pointer" }}>
-                  <b>{p.item}</b> — {p.seriesname} ({p.categoryname})
+                  {p.item}
                 </div>
               ))}
             </div>
@@ -245,13 +267,12 @@ export default function PurchaseVoucher() {
 
         <div ref={seriesRef} style={{ position: "relative" }}>
           <input
-            style={{ ...small, width: 180 }}
             placeholder="Series"
             value={series}
             onChange={e => onSeriesChange(e.target.value)}
           />
           {showSeriesSug && (
-            <div style={{ position: "absolute", top: 36, background: "#fff", border: "1px solid #ccc" }}>
+            <div style={{ position: "absolute", background: "#fff", border: "1px solid #ccc" }}>
               {seriesSuggestions.map((s, i) => (
                 <div key={i} onClick={() => selectSeries(s)} style={{ padding: 8, cursor: "pointer" }}>
                   {s}
@@ -263,7 +284,6 @@ export default function PurchaseVoucher() {
 
         <input
           list="catList"
-          style={{ ...small, width: 180 }}
           placeholder="Category"
           value={category}
           onChange={e => setCategory(e.target.value)}
@@ -273,7 +293,6 @@ export default function PurchaseVoucher() {
         </datalist>
 
         <input
-          style={{ ...small, width: 80 }}
           type="number"
           placeholder="Qty"
           value={qty}
@@ -282,6 +301,29 @@ export default function PurchaseVoucher() {
 
         <button onClick={onAddRow}>Add</button>
       </div>
+
+      {/* SIZE INPUT */}
+      {isOnlineEnabled && location === "Jaipur" && (
+        <div style={{ marginBottom: 12 }}>
+          <b>Size-wise Quantity (Jaipur)</b>
+          {enabledSizes.map(sz => (
+            <div key={sz}>
+              {sz}
+              <input
+                type="number"
+                value={sizeQty[sz] || ""}
+                onChange={e =>
+                  setSizeQty({ ...sizeQty, [sz]: Number(e.target.value) })
+                }
+                style={{ marginLeft: 8, width: 80 }}
+              />
+            </div>
+          ))}
+          <div>
+            <b>Total:</b> {totalSizeQty} / {qty || 0}
+          </div>
+        </div>
+      )}
 
       <table border="1" width="100%">
         <thead>
@@ -294,22 +336,23 @@ export default function PurchaseVoucher() {
           </tr>
         </thead>
         <tbody>
-          {rows.length === 0 && (
+          {rows.length === 0 ? (
             <tr>
               <td colSpan="5" align="center">No rows added</td>
             </tr>
+          ) : (
+            rows.map((r, i) => (
+              <tr key={i}>
+                <td>{r.Item}</td>
+                <td>{r.SeriesName}</td>
+                <td>{r.CategoryName}</td>
+                <td align="right">{r.Quantity}</td>
+                <td>
+                  <button onClick={() => removeRow(i)}>Remove</button>
+                </td>
+              </tr>
+            ))
           )}
-          {rows.map((r, i) => (
-            <tr key={i}>
-              <td>{r.Item}</td>
-              <td>{r.SeriesName}</td>
-              <td>{r.CategoryName}</td>
-              <td align="right">{r.Quantity}</td>
-              <td>
-                <button onClick={() => removeRow(i)}>Remove</button>
-              </td>
-            </tr>
-          ))}
         </tbody>
       </table>
 
