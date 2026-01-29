@@ -2,7 +2,7 @@ import axios from "axios";
 
 const BASE =
   process.env.REACT_APP_API_URL ||
-  "https://kf-backend-gvsc.onrender.com"; // ✅ CORRECT URL
+  "https://kf-backend-production-1634.up.railway.app/" // ✅ CORRECT URL
 
 const apiInstance = axios.create({
   baseURL: BASE,
