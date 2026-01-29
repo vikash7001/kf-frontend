@@ -4,68 +4,57 @@ import axios from "axios";
 const API = process.env.REACT_APP_API_URL;
 
 export default function ManageImages({ onExit }) {
-  const [rows, setRows] = useState([]);
-  const [savingIndex, setSavingIndex] = useState(null);
 
-  // Load designs + fabric + rate + image URL
+  const [rows, setRows] = useState([]);
+  const [saving, setSaving] = useState(null);
+
+  // Load data
   useEffect(() => {
-    loadData();
+    axios.get(`${API}/images/list`)
+      .then(res => setRows(res.data))
+      .catch(err => console.error(err));
   }, []);
 
-  const loadData = async () => {
-    try {
-      const res = await axios.get(`${API}/images/list`);
-      setRows(res.data);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to load image list");
-    }
-  };
-
-  const handleChange = (index, value) => {
+  // Generic change handler
+  const handleChange = (index, field, value) => {
     const updated = [...rows];
     updated[index] = {
       ...updated[index],
-      ImageURL: value
+      [field]: value
     };
     setRows(updated);
   };
 
-  const saveImage = async (row, index) => {
-    setSavingIndex(index);
+  // Save row
+  const saveRow = async (row, index) => {
+    setSaving(index);
     try {
       await axios.post(`${API}/image/save`, {
         Item: row.Item,
-        ImageURL: row.ImageURL
+        ImageURL: row.ImageURL,
+        Fabric: row.Fabric,
+        Rate: row.Rate
       });
 
       alert("Saved successfully");
     } catch (err) {
       console.error(err);
-      alert("Error saving image");
+      alert("Error saving");
     }
-    setSavingIndex(null);
+    setSaving(null);
   };
 
   return (
     <div style={{ padding: 20 }}>
       <h2>Manage Images</h2>
 
-      {/* EXIT */}
-      <button
-        onClick={onExit}
-        style={{ marginBottom: 15 }}
-      >
+      <button onClick={onExit} style={{ marginBottom: 15 }}>
         Exit
       </button>
 
-      <table
-        border="1"
-        cellPadding="6"
-        style={{ width: "100%", borderCollapse: "collapse" }}
-      >
+      <table border="1" cellPadding="6" style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
-          <tr style={{ background: "#f0f0f0" }}>
+          <tr>
             <th>Design</th>
             <th>Fabric</th>
             <th>Rate</th>
@@ -79,16 +68,34 @@ export default function ManageImages({ onExit }) {
             <tr key={row.ProductID}>
               <td><b>{row.Item}</b></td>
 
-              <td>{row.Fabric}</td>
+              <td>
+                <input
+                  type="text"
+                  value={row.Fabric || ""}
+                  onChange={(e) =>
+                    handleChange(index, "Fabric", e.target.value)
+                  }
+                  style={{ width: "100%" }}
+                />
+              </td>
 
-              <td>{row.Rate}</td>
+              <td>
+                <input
+                  type="text"
+                  value={row.Rate || ""}
+                  onChange={(e) =>
+                    handleChange(index, "Rate", e.target.value)
+                  }
+                  style={{ width: "100%" }}
+                />
+              </td>
 
               <td>
                 <input
                   type="text"
                   value={row.ImageURL || ""}
                   onChange={(e) =>
-                    handleChange(index, e.target.value)
+                    handleChange(index, "ImageURL", e.target.value)
                   }
                   style={{ width: "100%" }}
                 />
@@ -96,10 +103,10 @@ export default function ManageImages({ onExit }) {
 
               <td>
                 <button
-                  onClick={() => saveImage(row, index)}
-                  disabled={savingIndex === index}
+                  onClick={() => saveRow(row, index)}
+                  disabled={saving === index}
                 >
-                  {savingIndex === index ? "Saving..." : "Save"}
+                  {saving === index ? "Saving..." : "Save"}
                 </button>
               </td>
             </tr>
