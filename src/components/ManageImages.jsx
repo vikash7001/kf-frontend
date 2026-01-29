@@ -4,44 +4,54 @@ import axios from "axios";
 const API = process.env.REACT_APP_API_URL;
 
 export default function ManageImages({ onExit }) {
-
   const [rows, setRows] = useState([]);
-  const [saving, setSaving] = useState(null);
+  const [savingIndex, setSavingIndex] = useState(null);
 
-  // load all items + URLs
+  // Load designs + fabric + rate + image URL
   useEffect(() => {
-    axios.get(`${API}/images/list`)
-      .then(res => setRows(res.data))
-      .catch(err => console.error(err));
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      const res = await axios.get(`${API}/images/list`);
+      setRows(res.data);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load image list");
+    }
+  };
 
   const handleChange = (index, value) => {
     const updated = [...rows];
-    updated[index].ImageURL = value;
+    updated[index] = {
+      ...updated[index],
+      ImageURL: value
+    };
     setRows(updated);
   };
 
-  const saveImage = async (item, url, index) => {
-    setSaving(index);
+  const saveImage = async (row, index) => {
+    setSavingIndex(index);
     try {
       await axios.post(`${API}/image/save`, {
-        Item: item,
-        ImageURL: url
+        Item: row.Item,
+        ImageURL: row.ImageURL
       });
 
       alert("Saved successfully");
     } catch (err) {
       console.error(err);
-      alert("Error saving");
+      alert("Error saving image");
     }
-    setSaving(null);
+    setSavingIndex(null);
   };
 
   return (
     <div style={{ padding: 20 }}>
       <h2>Manage Images</h2>
 
-      {/* EXIT BUTTON */}
+      {/* EXIT */}
       <button
         onClick={onExit}
         style={{ marginBottom: 15 }}
@@ -49,10 +59,16 @@ export default function ManageImages({ onExit }) {
         Exit
       </button>
 
-      <table border="1" cellPadding="6" style={{ width: "100%", borderCollapse: "collapse" }}>
+      <table
+        border="1"
+        cellPadding="6"
+        style={{ width: "100%", borderCollapse: "collapse" }}
+      >
         <thead>
-          <tr>
-            <th>Item</th>
+          <tr style={{ background: "#f0f0f0" }}>
+            <th>Design</th>
+            <th>Fabric</th>
+            <th>Rate</th>
             <th>Image URL</th>
             <th>Save</th>
           </tr>
@@ -61,23 +77,29 @@ export default function ManageImages({ onExit }) {
         <tbody>
           {rows.map((row, index) => (
             <tr key={row.ProductID}>
-              <td>{row.Item}</td>
+              <td><b>{row.Item}</b></td>
+
+              <td>{row.Fabric}</td>
+
+              <td>{row.Rate}</td>
 
               <td>
                 <input
                   type="text"
-                  value={row.ImageURL}
-                  onChange={(e) => handleChange(index, e.target.value)}
+                  value={row.ImageURL || ""}
+                  onChange={(e) =>
+                    handleChange(index, e.target.value)
+                  }
                   style={{ width: "100%" }}
                 />
               </td>
 
               <td>
                 <button
-                  onClick={() => saveImage(row.Item, row.ImageURL, index)}
-                  disabled={saving === index}
+                  onClick={() => saveImage(row, index)}
+                  disabled={savingIndex === index}
                 >
-                  {saving === index ? "Saving..." : "Save"}
+                  {savingIndex === index ? "Saving..." : "Save"}
                 </button>
               </td>
             </tr>
