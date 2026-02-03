@@ -33,7 +33,6 @@ export default function ManageImages({ onExit }) {
         Item: row.Item,
         ImageURL: row.ImageURL,
         Fabric: row.Fabric,
-        Rate: row.Rate
       });
 
       alert("Saved successfully");
@@ -57,7 +56,13 @@ export default function ManageImages({ onExit }) {
           <tr>
             <th>Design</th>
             <th>Fabric</th>
-            <th>Rate</th>
+            <th>
+  Rate
+  <div style={{ fontSize: 11, color: "#777" }}>
+    (Edit via Rate List)
+  </div>
+</th>
+
             <th>Image URL</th>
             <th>Save</th>
           </tr>
@@ -79,16 +84,9 @@ export default function ManageImages({ onExit }) {
                 />
               </td>
 
-              <td>
-                <input
-                  type="text"
-                  value={row.Rate || ""}
-                  onChange={(e) =>
-                    handleChange(index, "Rate", e.target.value)
-                  }
-                  style={{ width: "100%" }}
-                />
-              </td>
+<td style={{ color: "#777", textAlign: "right" }}>
+  {row.Rate ?? ""}
+</td>
 
               <td>
                 <input

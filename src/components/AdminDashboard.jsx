@@ -9,6 +9,7 @@ import StockTransfer from './StockTransfer';
 import ViewIncoming from './ViewIncoming';
 import ViewSales from './ViewSales';
 import ViewTransfers from './ViewTransfers';
+import RateList from './RateList';
 
 // 🔹 MASTER SCREENS
 import CategoryMaster from './CategoryMaster';
@@ -66,6 +67,7 @@ export default function AdminDashboard({ user }) {
         <button onClick={() => setScreen('series')}>Add Series</button>
         <button onClick={() => setScreen('product')}>Add Product</button>
         <button onClick={() => setScreen('customer')}>Add Customer</button>
+        <button onClick={() => setScreen('rateList')}>Rate List</button>
 
         {/* View Lists */}
         <button onClick={() => setScreen('viewIncoming')}>View Purchase</button>
@@ -132,6 +134,9 @@ export default function AdminDashboard({ user }) {
       {screen === 'customer' && (
         <CustomerMaster onExit={() => setScreen('purchase')} />
       )}
+{screen === 'rateList' && (
+  <RateList onExit={() => setScreen('purchase')} />
+)}
 
       {/* ---------- CONFIG SCREENS ---------- */}
 
