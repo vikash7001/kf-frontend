@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
+const API = process.env.REACT_APP_API_URL;
+
 export default function RateList({ onExit }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -9,14 +11,14 @@ export default function RateList({ onExit }) {
   }, []);
 
   async function loadSeries() {
-    const res = await fetch('/series');
+   const res = await fetch(`${API}/series`);
     const data = await res.json();
     setRows(data);
   }
 
   async function saveRate(seriesName, rate) {
     setLoading(true);
-    await fetch('/series/rate', {
+   await fetch(`${API}/series/rate`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -26,6 +28,7 @@ export default function RateList({ onExit }) {
     });
     setLoading(false);
   }
+
 
   return (
     <div>
