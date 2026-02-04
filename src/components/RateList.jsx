@@ -4,43 +4,47 @@ const API = process.env.REACT_APP_API_URL;
 
 export default function RateList({ onExit }) {
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [savingSeries, setSavingSeries] = useState(null);
 
   useEffect(() => {
     loadSeries();
   }, []);
 
   async function loadSeries() {
-   const res = await fetch(`${API}/series`);
+    const res = await fetch(`${API}/series`);
     const data = await res.json();
     setRows(data);
   }
 
-async function saveRate(seriesName, rate) {
-  setLoading(true);
+  async function saveRate(seriesName, rate) {
+    setSavingSeries(seriesName);
 
-  await fetch(`${API}/series/rate`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      SeriesName: seriesName,
-      Rate: rate === '' ? null : Number(rate)
-    })
-  });
+    const finalRate =
+      rate === '' || rate === null ? null : Number(rate);
 
-  // 🔹 FORCE LOCAL STATE TO HOLD SAVED VALUE
-  setRows(prev =>
-    prev.map(r =>
-      r.SeriesName === seriesName
-        ? { ...r, Rate: rate === '' ? null : Number(rate) }
-        : r
-    )
-  );
+    try {
+      await fetch(`${API}/series/rate`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          SeriesName: seriesName,
+          Rate: finalRate
+        })
+      });
 
-  setLoading(false);
-}
+      // ✅ lock saved value into state
+      setRows(prev =>
+        prev.map(r =>
+          r.SeriesName === seriesName
+            ? { ...r, Rate: finalRate }
+            : r
+        )
+      );
 
-
+    } finally {
+      setSavingSeries(null);
+    }
+  }
 
   return (
     <div>
@@ -54,10 +58,12 @@ async function saveRate(seriesName, rate) {
             <th></th>
           </tr>
         </thead>
+
         <tbody>
           {rows.map(r => (
             <tr key={r.SeriesName}>
               <td>{r.SeriesName}</td>
+
               <td>
                 <input
                   type="number"
@@ -65,8 +71,8 @@ async function saveRate(seriesName, rate) {
                   value={r.Rate ?? ''}
                   onChange={e => {
                     const val = e.target.value;
-                    setRows(rows =>
-                      rows.map(x =>
+                    setRows(prev =>
+                      prev.map(x =>
                         x.SeriesName === r.SeriesName
                           ? { ...x, Rate: val }
                           : x
@@ -75,12 +81,13 @@ async function saveRate(seriesName, rate) {
                   }}
                 />
               </td>
+
               <td>
                 <button
-                  disabled={loading}
+                  disabled={savingSeries === r.SeriesName}
                   onClick={() => saveRate(r.SeriesName, r.Rate)}
                 >
-                  Save
+                  {savingSeries === r.SeriesName ? 'Saving...' : 'Save'}
                 </button>
               </td>
             </tr>
