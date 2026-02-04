@@ -16,18 +16,30 @@ export default function RateList({ onExit }) {
     setRows(data);
   }
 
-  async function saveRate(seriesName, rate) {
-    setLoading(true);
-   await fetch(`${API}/series/rate`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        SeriesName: seriesName,
-        Rate: rate === '' ? null : Number(rate)
-      })
-    });
-    setLoading(false);
-  }
+async function saveRate(seriesName, rate) {
+  setLoading(true);
+
+  await fetch(`${API}/series/rate`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      SeriesName: seriesName,
+      Rate: rate === '' ? null : Number(rate)
+    })
+  });
+
+  // 🔹 FORCE LOCAL STATE TO HOLD SAVED VALUE
+  setRows(prev =>
+    prev.map(r =>
+      r.SeriesName === seriesName
+        ? { ...r, Rate: rate === '' ? null : Number(rate) }
+        : r
+    )
+  );
+
+  setLoading(false);
+}
+
 
 
   return (
