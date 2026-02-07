@@ -2,122 +2,133 @@ import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 
 export default function OnlineSkuPendingAmazon({ onExit }) {
-  const [pending, setPending] = useState([]);
+  const [rows, setRows] = useState([]);
   const [designs, setDesigns] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [productid, setProductid] = useState("");
-  const [size, setSize] = useState("");
+  const [mapping, setMapping] = useState({});
 
-  // -----------------------------
-  // LOAD PENDING AMAZON SKUs
-  // -----------------------------
+  // -------------------------------
+  // LOAD DATA
+  // -------------------------------
   useEffect(() => {
-    async function load() {
-      const p = await api.get("/online/sku/pending/AMAZON");
-      setPending(p.data || []);
-
-      const d = await api.get("/online/config");
-      setDesigns(d.data || []);
-    }
-
-    load().catch(() => alert("Failed to load pending SKUs"));
+    loadPending();
+    loadDesigns();
   }, []);
 
-  // -----------------------------
-  // CONFIRM SKU
-  // -----------------------------
-  const confirmSku = async () => {
-    if (!selected || !productid || !size) {
-      alert("Select design and size");
-      return;
+  const loadPending = async () => {
+    try {
+      const res = await api.get("/online/sku/pending/amazon");
+      setRows(res.data || []);
+    } catch {
+      alert("Failed to load pending SKUs");
     }
-
-    await api.post("/online/sku/confirm", {
-      pending_id: selected.id,
-      marketplace: "AMAZON",
-      productid,
-      size_code: size
-    });
-
-    alert("SKU mapped successfully");
-
-    setPending(pending.filter(p => p.id !== selected.id));
-    setSelected(null);
-    setProductid("");
-    setSize("");
   };
 
-  // -----------------------------
+  const loadDesigns = async () => {
+    const res = await api.get("/online/config");
+    setDesigns(res.data || []);
+  };
+
+  // -------------------------------
+  // HANDLE SELECT
+  // -------------------------------
+  const setMap = (id, key, val) => {
+    setMapping(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [key]: val
+      }
+    }));
+  };
+
+  // -------------------------------
+  // APPROVE SKU
+  // -------------------------------
+  const approve = async row => {
+    const map = mapping[row.id];
+    if (!map?.productid || !map?.size_code) {
+      return alert("Select design and size");
+    }
+
+    await api.post("/online/sku/pending/amazon/approve", {
+      pending_id: row.id,
+      productid: map.productid,
+      size_code: map.size_code,
+      sku_code: row.sku_code
+    });
+
+    loadPending();
+  };
+
+  // -------------------------------
   // RENDER
-  // -----------------------------
+  // -------------------------------
   return (
-    <div style={{ padding: 20, display: "flex", gap: 20 }}>
-      {/* LEFT: PENDING SKU LIST */}
-      <div style={{ width: 320 }}>
-        <h3>Pending Amazon SKUs</h3>
-        {pending.map(p => (
-          <div
-            key={p.id}
-            onClick={() => setSelected(p)}
-            style={{
-              padding: 6,
-              cursor: "pointer",
-              background:
-                selected?.id === p.id ? "#fee" : "#fff",
-              borderBottom: "1px solid #ddd"
-            }}
-          >
-            <b>{p.sku_code}</b>
-            <div style={{ fontSize: 12 }}>{p.name}</div>
-          </div>
-        ))}
-      </div>
+    <div style={{ padding: 20 }}>
+      <h3>Pending Amazon SKUs</h3>
 
-      {/* RIGHT: MAP SKU */}
-      {selected && (
-        <div style={{ flex: 1 }}>
-          <h3>Map Amazon SKU</h3>
+      <table border="1" cellPadding="6" width="100%">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>ASIN</th>
+            <th>Name</th>
+            <th>Design</th>
+            <th>Size</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.id}>
+              <td>{r.sku_code}</td>
+              <td>{r.asin}</td>
+              <td style={{ maxWidth: 300 }}>{r.name}</td>
 
-          <p>
-            <b>SKU:</b> {selected.sku_code}<br />
-            <b>ASIN:</b> {selected.asin}
-          </p>
+              {/* DESIGN */}
+              <td>
+                <select
+                  onChange={e =>
+                    setMap(r.id, "productid", e.target.value)
+                  }
+                >
+                  <option value="">Select</option>
+                  {designs.map(d => (
+                    <option key={d.productid} value={d.productid}>
+                      {d.item}
+                    </option>
+                  ))}
+                </select>
+              </td>
 
-          {/* DESIGN SELECT */}
-          <div style={{ marginBottom: 8 }}>
-            <label>Design</label><br />
-            <select
-              value={productid}
-              onChange={e => setProductid(e.target.value)}
-            >
-              <option value="">-- Select Design --</option>
-              {designs.map(d => (
-                <option key={d.productid} value={d.productid}>
-                  {d.productid} — {d.item}
-                </option>
-              ))}
-            </select>
-          </div>
+              {/* SIZE */}
+              <td>
+                <select
+                  onChange={e =>
+                    setMap(r.id, "size_code", e.target.value)
+                  }
+                >
+                  <option value="">Select</option>
+                  {["XS","S","M","L","XL","XXL","3XL"].map(sz => (
+                    <option key={sz}>{sz}</option>
+                  ))}
+                </select>
+              </td>
 
-          {/* SIZE INPUT */}
-          <div style={{ marginBottom: 8 }}>
-            <label>Size</label><br />
-            <input
-              value={size}
-              placeholder="M / L / FREE"
-              onChange={e => setSize(e.target.value.toUpperCase())}
-            />
-          </div>
+              {/* ACTION */}
+              <td>
+                <button onClick={() => approve(r)}>
+                  Approve
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
-          <button onClick={confirmSku}>
-            Confirm Mapping
-          </button>
-
-          <button onClick={onExit} style={{ marginLeft: 8 }}>
-            Back
-          </button>
-        </div>
-      )}
+      <button onClick={onExit} style={{ marginTop: 12 }}>
+        Back
+      </button>
     </div>
   );
 }
