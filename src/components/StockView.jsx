@@ -48,13 +48,7 @@ function FilterSection({ title, open, onToggle, activeCount, children }) {
       </div>
 
       {open && (
-        <div
-          style={{
-            maxHeight: 10 * 26,
-            overflowY: "auto",
-            padding: 6
-          }}
-        >
+        <div style={{ maxHeight: 260, overflowY: "auto", padding: 6 }}>
           {children}
         </div>
       )}
@@ -121,36 +115,30 @@ export default function StockView({ user }) {
   }
 
   /* ------------------------------
-     Load stock (UNCHANGED)
+     Load stock
   -------------------------------- */
   async function loadStock() {
     try {
       setLoading(true);
 
-      const role =
-        user?.Role
-          ? String(user.Role).toUpperCase()
-          : "ADMIN";
+      const role = user?.Role
+        ? String(user.Role).toUpperCase()
+        : "ADMIN";
 
       const res = await api.post("/stock", { role });
 
-      if (!Array.isArray(res.data) || res.data.length === 0) {
-        setStock([]);
-        return;
-      }
-
-      const normalized = res.data.map(r => ({
+      const normalized = (res.data || []).map(r => ({
         productid: r.ProductID,
         item: r.Item,
         seriesname: r.SeriesName,
         categoryname: r.CategoryName,
         jaipurqty: Number(r.JaipurQty || 0),
         kolkataqty: Number(r.KolkataQty || 0),
-        totalqty: Number(r.TotalQty || 0),
+        ahmedabadqty: Number(r.AhmedabadQty || 0),
+        totalqty: Number(r.TotalQty || 0)
       }));
 
       setStock(normalized);
-
     } catch (err) {
       console.error("STOCK LOAD ERROR:", err);
       setStock([]);
@@ -182,21 +170,14 @@ export default function StockView({ user }) {
         : String(y).localeCompare(String(x));
     });
 
-  /* ------------------------------
-     Sorted series list (A → Z)
-  -------------------------------- */
-  const seriesList = [...new Set(stock.map(s => s.seriesname))]
-    .sort((a, b) => a.localeCompare(b));
+  const seriesList = [...new Set(stock.map(s => s.seriesname))].sort();
 
   return (
     <div style={{ padding: 16 }}>
       <h3>Stock Summary</h3>
 
       {loading && <div>Loading...</div>}
-
-      {!loading && stock.length === 0 && (
-        <div>No stock available</div>
-      )}
+      {!loading && stock.length === 0 && <div>No stock available</div>}
 
       {!loading && stock.length > 0 && (
         <>
@@ -280,24 +261,13 @@ export default function StockView({ user }) {
           >
             <thead>
               <tr>
-                <th onClick={() => handleSort("item")}>
-                  Product{sortArrow("item")}
-                </th>
-                <th onClick={() => handleSort("seriesname")}>
-                  Series{sortArrow("seriesname")}
-                </th>
-                <th onClick={() => handleSort("categoryname")}>
-                  Category{sortArrow("categoryname")}
-                </th>
-                <th onClick={() => handleSort("jaipurqty")}>
-                  Jaipur{sortArrow("jaipurqty")}
-                </th>
-                <th onClick={() => handleSort("kolkataqty")}>
-                  Kolkata{sortArrow("kolkataqty")}
-                </th>
-                <th onClick={() => handleSort("totalqty")}>
-                  Total{sortArrow("totalqty")}
-                </th>
+                <th onClick={() => handleSort("item")}>Product{sortArrow("item")}</th>
+                <th onClick={() => handleSort("seriesname")}>Series{sortArrow("seriesname")}</th>
+                <th onClick={() => handleSort("categoryname")}>Category{sortArrow("categoryname")}</th>
+                <th onClick={() => handleSort("jaipurqty")}>Jaipur{sortArrow("jaipurqty")}</th>
+                <th onClick={() => handleSort("kolkataqty")}>Kolkata{sortArrow("kolkataqty")}</th>
+                <th onClick={() => handleSort("ahmedabadqty")}>Ahmedabad{sortArrow("ahmedabadqty")}</th>
+                <th onClick={() => handleSort("totalqty")}>Total{sortArrow("totalqty")}</th>
               </tr>
             </thead>
             <tbody>
@@ -308,6 +278,7 @@ export default function StockView({ user }) {
                   <td>{s.categoryname}</td>
                   <td align="right">{s.jaipurqty}</td>
                   <td align="right">{s.kolkataqty}</td>
+                  <td align="right">{s.ahmedabadqty}</td>
                   <td align="right">{s.totalqty}</td>
                 </tr>
               ))}

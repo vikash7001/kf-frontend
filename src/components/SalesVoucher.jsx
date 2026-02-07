@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { api, postSales } from "../services/api";
 
-const LOCATIONS = ["Jaipur", "Kolkata"];
+const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
+
 
 export default function SalesVoucher() {
   const user = JSON.parse(localStorage.getItem("kf_user"));
