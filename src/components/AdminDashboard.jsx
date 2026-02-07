@@ -24,7 +24,8 @@ import ItemDetails from './ItemDetails';
 import OnlineEnablement from './OnlineEnablement';
 // 🔹 ONLINE STOCK VIEW (READ ONLY)
 import OnlineStockView from './OnlineStockView';
-import OnlineSkuFlipkart from './OnlineSkuFlipkart';
+import OnlineSkuPendingAmazon from './OnlineSkuPendingAmazon';
+import OnlineSkuManager from './OnlineSkuManager';
 
 export default function AdminDashboard({ user }) {
 
@@ -76,14 +77,21 @@ export default function AdminDashboard({ user }) {
 
         {/* Config Screens */}
         <button onClick={() => setScreen('itemDetails')}>Item Details</button>
-        <button onClick={() => setScreen('onlineEnablement')}>
-          Online Enablement
-        </button>
+        {/* Online Configuration */}
+<button onClick={() => setScreen('onlineEnablement')}>
+  Online Enablement
+</button>
+
 <button onClick={() => setScreen('onlineStock')}>
   Online Stock
 </button>
-<button onClick={() => setScreen('onlineSkuFlipkart')}>
-  Online SKU (Flipkart)
+
+<button onClick={() => setScreen('onlineSkuAmazon')}>
+  Online SKU (Amazon)
+</button>
+
+<button onClick={() => setScreen('onlineSkuPendingAmazon')}>
+  Pending Amazon SKUs
 </button>
 
       </div>
@@ -144,14 +152,25 @@ export default function AdminDashboard({ user }) {
         <ItemDetails onExit={() => setScreen('purchase')} />
       )}
 
-      {screen === 'onlineEnablement' && (
-        <OnlineEnablement onExit={() => setScreen('purchase')} />
-      )}
+{screen === 'onlineEnablement' && (
+  <OnlineEnablement onExit={() => setScreen('purchase')} />
+)}
+
 {screen === 'onlineStock' && (
   <OnlineStockView onExit={() => setScreen('purchase')} />
 )}
-{screen === 'onlineSkuFlipkart' && (
-  <OnlineSkuFlipkart onExit={() => setScreen('purchase')} />
+
+{screen === 'onlineSkuAmazon' && (
+  <OnlineSkuManager
+    marketplace="AMAZON"
+    onExit={() => setScreen('purchase')}
+  />
+)}
+
+{screen === 'onlineSkuPendingAmazon' && (
+  <OnlineSkuPendingAmazon
+    onExit={() => setScreen('purchase')}
+  />
 )}
 
       {/* ---------- VIEW SCREENS ---------- */}
