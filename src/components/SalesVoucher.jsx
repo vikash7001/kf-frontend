@@ -3,7 +3,6 @@ import { api, postSales } from "../services/api";
 
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
 
-
 export default function SalesVoucher() {
   const user = JSON.parse(localStorage.getItem("kf_user"));
 
@@ -25,10 +24,13 @@ export default function SalesVoucher() {
   const [itemSuggestions, setItemSuggestions] = useState([]);
   const [showItemSug, setShowItemSug] = useState(false);
 
-  // 🔹 online size logic (SAME AS TRANSFER)
+  // 🔹 online size logic
   const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
   const [enabledSizes, setEnabledSizes] = useState([]);
   const [sizeQty, setSizeQty] = useState({});
+
+  // 🔒 loading freeze state
+  const [loading, setLoading] = useState(false);
 
   // --------------------------------------------------
   // LOAD LOOKUPS
@@ -152,7 +154,7 @@ export default function SalesVoucher() {
     setRows(rows.filter((_, x) => x !== i));
 
   // --------------------------------------------------
-  // SUBMIT
+  // SUBMIT (FREEZE SCREEN)
   // --------------------------------------------------
   const onSubmit = async () => {
     if (!rows.length) {
@@ -169,16 +171,23 @@ export default function SalesVoucher() {
     };
 
     try {
+      setLoading(true); // 🔒 freeze UI
+
       const res = await postSales(payload);
+
       if (res.data?.success) {
         alert("Sales saved");
         setRows([]);
         setCustomer("");
         setVoucherNo("");
+      } else {
+        alert("Sales failed");
       }
     } catch (e) {
       console.error(e);
       alert("Sales failed");
+    } finally {
+      setLoading(false); // 🔓 unfreeze UI
     }
   };
 
@@ -191,7 +200,11 @@ export default function SalesVoucher() {
 
       {/* HEADER */}
       <div style={{ marginBottom: 12 }}>
-        <select value={location} onChange={e => setLocation(e.target.value)}>
+        <select
+          value={location}
+          onChange={e => setLocation(e.target.value)}
+          disabled={loading}
+        >
           {LOCATIONS.map(l => <option key={l}>{l}</option>)}
         </select>
 
@@ -201,6 +214,7 @@ export default function SalesVoucher() {
           value={customer}
           onChange={e => setCustomer(e.target.value)}
           style={{ marginLeft: 8 }}
+          disabled={loading}
         />
 
         <datalist id="customerList">
@@ -214,6 +228,7 @@ export default function SalesVoucher() {
           value={voucherNo}
           onChange={e => setVoucherNo(e.target.value)}
           style={{ marginLeft: 8 }}
+          disabled={loading}
         />
       </div>
 
@@ -224,6 +239,7 @@ export default function SalesVoucher() {
             value={item}
             onChange={e => onItemChange(e.target.value)}
             placeholder="Item"
+            disabled={loading}
           />
           {showItemSug &&
             itemSuggestions.map((p, i) => (
@@ -242,9 +258,12 @@ export default function SalesVoucher() {
           value={qty}
           onChange={e => setQty(e.target.value)}
           placeholder="Qty"
+          disabled={loading}
         />
 
-        <button onClick={onAddRow}>Add</button>
+        <button onClick={onAddRow} disabled={loading}>
+          Add
+        </button>
       </div>
 
       {/* SIZE INPUT */}
@@ -261,6 +280,7 @@ export default function SalesVoucher() {
                   setSizeQty({ ...sizeQty, [sz]: Number(e.target.value) })
                 }
                 style={{ marginLeft: 8 }}
+                disabled={loading}
               />
             </div>
           ))}
@@ -280,16 +300,41 @@ export default function SalesVoucher() {
               <td>{r.CategoryName}</td>
               <td>{r.Quantity}</td>
               <td>
-                <button onClick={() => removeRow(i)}>X</button>
+                <button onClick={() => removeRow(i)} disabled={loading}>
+                  X
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <button onClick={onSubmit} style={{ marginTop: 12 }}>
-        Submit Sales
+      <button onClick={onSubmit} style={{ marginTop: 12 }} disabled={loading}>
+        {loading ? "Posting..." : "Submit Sales"}
       </button>
+
+      {/* 🔒 FULL SCREEN FREEZE OVERLAY */}
+      {loading && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.4)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+            color: "#fff",
+            fontSize: 22,
+            fontWeight: "bold"
+          }}
+        >
+          Posting... Please wait
+        </div>
+      )}
     </div>
   );
 }

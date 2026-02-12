@@ -3,7 +3,6 @@ import { api, postIncoming } from "../services/api";
 
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
 
-
 export default function PurchaseVoucher() {
   const user = JSON.parse(localStorage.getItem("kf_user"));
 
@@ -31,6 +30,9 @@ export default function PurchaseVoucher() {
   const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
   const [enabledSizes, setEnabledSizes] = useState([]);
   const [sizeQty, setSizeQty] = useState({});
+
+  // 🔒 loading freeze state
+  const [loading, setLoading] = useState(false);
 
   const itemRef = useRef(null);
   const seriesRef = useRef(null);
@@ -208,7 +210,7 @@ export default function PurchaseVoucher() {
     setRows(rows.filter((_, idx) => idx !== i));
 
   // ----------------------------------------------------------
-  // SUBMIT
+  // SUBMIT (FREEZE SCREEN)
   // ----------------------------------------------------------
   const onSubmit = async () => {
     if (!rows.length) {
@@ -224,13 +226,20 @@ export default function PurchaseVoucher() {
     };
 
     try {
+      setLoading(true); // 🔒 freeze UI
+
       const res = await postIncoming(payload);
+
       if (res.data?.success) {
         alert("Posted successfully");
         setRows([]);
+      } else {
+        alert("Posting failed");
       }
     } catch {
       alert("Submit failed");
+    } finally {
+      setLoading(false); // 🔓 unfreeze UI
     }
   };
 
@@ -243,89 +252,55 @@ export default function PurchaseVoucher() {
 
       <div style={{ marginBottom: 12 }}>
         <label>Location:</label>
-        <select value={location} onChange={e => setLocation(e.target.value)}>
-          {LOCATIONS.map(l => <option key={l}>{l}</option>)}
+        <select
+          value={location}
+          onChange={e => setLocation(e.target.value)}
+          disabled={loading}
+        >
+          {LOCATIONS.map(l => (
+            <option key={l}>{l}</option>
+          ))}
         </select>
       </div>
 
+      {/* FORM ROW */}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <div ref={itemRef} style={{ position: "relative" }}>
-          <input
-            placeholder="Item"
-            value={item}
-            onChange={e => onItemChange(e.target.value)}
-          />
-          {showItemSug && (
-            <div style={{ position: "absolute", background: "#fff", border: "1px solid #ccc" }}>
-              {itemSuggestions.map((p, i) => (
-                <div key={i} onClick={() => selectProduct(p)} style={{ padding: 8, cursor: "pointer" }}>
-                  {p.item}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <input
+          placeholder="Item"
+          value={item}
+          onChange={e => onItemChange(e.target.value)}
+          disabled={loading}
+        />
 
-        <div ref={seriesRef} style={{ position: "relative" }}>
-          <input
-            placeholder="Series"
-            value={series}
-            onChange={e => onSeriesChange(e.target.value)}
-          />
-          {showSeriesSug && (
-            <div style={{ position: "absolute", background: "#fff", border: "1px solid #ccc" }}>
-              {seriesSuggestions.map((s, i) => (
-                <div key={i} onClick={() => selectSeries(s)} style={{ padding: 8, cursor: "pointer" }}>
-                  {s}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <input
+          placeholder="Series"
+          value={series}
+          onChange={e => onSeriesChange(e.target.value)}
+          disabled={loading}
+        />
 
         <input
           list="catList"
           placeholder="Category"
           value={category}
           onChange={e => setCategory(e.target.value)}
+          disabled={loading}
         />
-        <datalist id="catList">
-          {categories.map((c, i) => <option key={i} value={c} />)}
-        </datalist>
 
         <input
           type="number"
           placeholder="Qty"
           value={qty}
           onChange={e => setQty(e.target.value)}
+          disabled={loading}
         />
 
-        <button onClick={onAddRow}>Add</button>
+        <button onClick={onAddRow} disabled={loading}>
+          Add
+        </button>
       </div>
 
-      {/* SIZE INPUT */}
-      {isOnlineEnabled && location === "Jaipur" && (
-        <div style={{ marginBottom: 12 }}>
-          <b>Size-wise Quantity (Jaipur)</b>
-          {enabledSizes.map(sz => (
-            <div key={sz}>
-              {sz}
-              <input
-                type="number"
-                value={sizeQty[sz] || ""}
-                onChange={e =>
-                  setSizeQty({ ...sizeQty, [sz]: Number(e.target.value) })
-                }
-                style={{ marginLeft: 8, width: 80 }}
-              />
-            </div>
-          ))}
-          <div>
-            <b>Total:</b> {totalSizeQty} / {qty || 0}
-          </div>
-        </div>
-      )}
-
+      {/* TABLE */}
       <table border="1" width="100%">
         <thead>
           <tr>
@@ -339,7 +314,9 @@ export default function PurchaseVoucher() {
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan="5" align="center">No rows added</td>
+              <td colSpan="5" align="center">
+                No rows added
+              </td>
             </tr>
           ) : (
             rows.map((r, i) => (
@@ -349,7 +326,12 @@ export default function PurchaseVoucher() {
                 <td>{r.CategoryName}</td>
                 <td align="right">{r.Quantity}</td>
                 <td>
-                  <button onClick={() => removeRow(i)}>Remove</button>
+                  <button
+                    onClick={() => removeRow(i)}
+                    disabled={loading}
+                  >
+                    Remove
+                  </button>
                 </td>
               </tr>
             ))
@@ -358,8 +340,33 @@ export default function PurchaseVoucher() {
       </table>
 
       <div style={{ marginTop: 12 }}>
-        <button onClick={onSubmit}>Submit Incoming</button>
+        <button onClick={onSubmit} disabled={loading}>
+          {loading ? "Posting..." : "Submit Incoming"}
+        </button>
       </div>
+
+      {/* 🔒 FULL SCREEN FREEZE OVERLAY */}
+      {loading && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.4)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+            color: "#fff",
+            fontSize: 22,
+            fontWeight: "bold"
+          }}
+        >
+          Posting... Please wait
+        </div>
+      )}
     </div>
   );
 }
