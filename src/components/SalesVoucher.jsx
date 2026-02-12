@@ -29,11 +29,11 @@ export default function SalesVoucher() {
   const [enabledSizes, setEnabledSizes] = useState([]);
   const [sizeQty, setSizeQty] = useState({});
 
-  // 🔒 loading freeze state
+  // 🔒 loading state (NEW)
   const [loading, setLoading] = useState(false);
 
   // --------------------------------------------------
-  // LOAD LOOKUPS
+  // LOAD LOOKUPS (UNCHANGED)
   // --------------------------------------------------
   useEffect(() => {
     async function load() {
@@ -55,7 +55,7 @@ export default function SalesVoucher() {
   }, []);
 
   // --------------------------------------------------
-  // ITEM SEARCH
+  // ITEM SEARCH (UNCHANGED)
   // --------------------------------------------------
   const onItemChange = (val) => {
     setItem(val);
@@ -79,7 +79,7 @@ export default function SalesVoucher() {
   };
 
   // --------------------------------------------------
-  // SELECT PRODUCT
+  // SELECT PRODUCT (UNCHANGED)
   // --------------------------------------------------
   const selectProduct = async (p) => {
     setSelectedProduct(p);
@@ -104,15 +104,12 @@ export default function SalesVoucher() {
     }
   };
 
-  // --------------------------------------------------
-  // SIZE TOTAL
-  // --------------------------------------------------
   const totalSizeQty = Object.values(sizeQty)
     .map(Number)
     .reduce((a, b) => a + b, 0);
 
   // --------------------------------------------------
-  // ADD ROW
+  // ADD ROW (UNCHANGED)
   // --------------------------------------------------
   const onAddRow = () => {
     if (!selectedProduct || !qty) {
@@ -154,7 +151,7 @@ export default function SalesVoucher() {
     setRows(rows.filter((_, x) => x !== i));
 
   // --------------------------------------------------
-  // SUBMIT (FREEZE SCREEN)
+  // SUBMIT (UPDATED ONLY HERE)
   // --------------------------------------------------
   const onSubmit = async () => {
     if (!rows.length) {
@@ -171,7 +168,7 @@ export default function SalesVoucher() {
     };
 
     try {
-      setLoading(true); // 🔒 freeze UI
+      setLoading(true); // 🔒 Freeze
 
       const res = await postSales(payload);
 
@@ -180,25 +177,22 @@ export default function SalesVoucher() {
         setRows([]);
         setCustomer("");
         setVoucherNo("");
-      } else {
-        alert("Sales failed");
       }
     } catch (e) {
       console.error(e);
       alert("Sales failed");
     } finally {
-      setLoading(false); // 🔓 unfreeze UI
+      setLoading(false); // 🔓 Unfreeze
     }
   };
 
   // --------------------------------------------------
-  // RENDER
+  // RENDER (STRUCTURE UNCHANGED)
   // --------------------------------------------------
   return (
     <div style={{ padding: 18 }}>
       <h2>Sales Voucher</h2>
 
-      {/* HEADER */}
       <div style={{ marginBottom: 12 }}>
         <select
           value={location}
@@ -232,7 +226,6 @@ export default function SalesVoucher() {
         />
       </div>
 
-      {/* ROW ENTRY */}
       <div style={{ display: "flex", gap: 8 }}>
         <div style={{ position: "relative" }}>
           <input
@@ -266,7 +259,6 @@ export default function SalesVoucher() {
         </button>
       </div>
 
-      {/* SIZE INPUT */}
       {isOnlineEnabled && location === "Jaipur" && (
         <div style={{ marginTop: 12 }}>
           <b>Size-wise Quantity (Jaipur)</b>
@@ -290,7 +282,6 @@ export default function SalesVoucher() {
         </div>
       )}
 
-      {/* ROWS */}
       <table border="1" width="100%" style={{ marginTop: 12 }}>
         <tbody>
           {rows.map((r, i) => (
@@ -313,7 +304,7 @@ export default function SalesVoucher() {
         {loading ? "Posting..." : "Submit Sales"}
       </button>
 
-      {/* 🔒 FULL SCREEN FREEZE OVERLAY */}
+      {/* 🔒 Overlay */}
       {loading && (
         <div
           style={{
