@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 import PurchaseVoucher from './PurchaseVoucher';
 import SalesVoucher from './SalesVoucher';
@@ -11,182 +11,168 @@ import ViewSales from './ViewSales';
 import ViewTransfers from './ViewTransfers';
 import RateList from './RateList';
 
-// 🔹 MASTER SCREENS
 import CategoryMaster from './CategoryMaster';
 import SeriesMaster from './SeriesMaster';
 import ProductMaster from './ProductMaster';
 import CustomerMaster from './CustomerMaster';
 
-// 🔹 EXISTING NEW SCREEN
 import ItemDetails from './ItemDetails';
-
-// 🔹 NEW ONLINE ENABLEMENT SCREEN
 import OnlineEnablement from './OnlineEnablement';
-// 🔹 ONLINE STOCK VIEW (READ ONLY)
 import OnlineStockView from './OnlineStockView';
 import OnlineSkuPendingAmazon from './OnlineSkuPendingAmazon';
 import OnlineSkuManager from './OnlineSkuManager';
 
 export default function AdminDashboard({ user }) {
 
-  // purchase | sales | stock | transfer
-  // images | manageImages
-  // category | series | product | customer
-  // itemDetails | onlineEnablement
-  // viewIncoming | viewSales | viewTransfers
   const [screen, setScreen] = useState('purchase');
 
-  useEffect(() => {
-    setScreen('purchase');
-  }, []);
+  /* ---------- SCREEN MAPPING ---------- */
+
+  const screens = {
+    purchase: <PurchaseVoucher user={user} />,
+    sales: <SalesVoucher user={user} />,
+    stock: <StockView user={user} />,
+    transfer: <StockTransfer user={user} />,
+    images: <ImageViewer user={user} />,
+    manageImages: <ManageImages user={user} />,
+    category: <CategoryMaster />,
+    series: <SeriesMaster />,
+    product: <ProductMaster />,
+    customer: <CustomerMaster />,
+    rateList: <RateList />,
+    itemDetails: <ItemDetails />,
+    onlineEnablement: <OnlineEnablement />,
+    onlineStock: <OnlineStockView />,
+    onlineSkuAmazon: <OnlineSkuManager marketplace="AMAZON" />,
+    onlineSkuPendingAmazon: <OnlineSkuPendingAmazon />,
+    viewIncoming: <ViewIncoming />,
+    viewSales: <ViewSales />,
+    viewTransfers: <ViewTransfers />
+  };
+
+  /* ---------- SIDEBAR SECTIONS ---------- */
+
+  const sections = [
+    {
+      title: "CORE",
+      items: [
+        { key: 'purchase', label: 'Purchase' },
+        { key: 'sales', label: 'Sales' },
+        { key: 'stock', label: 'Stock' },
+        { key: 'transfer', label: 'Stock Transfer' },
+      ]
+    },
+    {
+      title: "IMAGES",
+      items: [
+        { key: 'images', label: 'Images' },
+        { key: 'manageImages', label: 'Manage Images' },
+      ]
+    },
+    {
+      title: "MASTERS",
+      items: [
+        { key: 'category', label: 'Category' },
+        { key: 'series', label: 'Series' },
+        { key: 'product', label: 'Product' },
+        { key: 'customer', label: 'Customer' },
+        { key: 'rateList', label: 'Rate List' },
+      ]
+    },
+    {
+      title: "REPORTS",
+      items: [
+        { key: 'viewIncoming', label: 'View Purchase' },
+        { key: 'viewSales', label: 'View Sales' },
+        { key: 'viewTransfers', label: 'Stock Transfers' },
+      ]
+    },
+    {
+      title: "ONLINE",
+      items: [
+        { key: 'onlineEnablement', label: 'Online Enablement' },
+        { key: 'onlineStock', label: 'Online Stock' },
+        { key: 'onlineSkuAmazon', label: 'Amazon SKU' },
+        { key: 'onlineSkuPendingAmazon', label: 'Pending SKUs' },
+      ]
+    }
+  ];
 
   return (
-    <div style={{ padding: 15 }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
 
-      {/* ---------- TOP BUTTON BAR ---------- */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          marginBottom: 15,
-          flexWrap: 'wrap'
-        }}
-      >
-
-        {/* Core Operations */}
-        <button onClick={() => setScreen('purchase')}>Purchase</button>
-        <button onClick={() => setScreen('sales')}>Sales</button>
-        <button onClick={() => setScreen('stock')}>Stock</button>
-        <button onClick={() => setScreen('transfer')}>Stock Transfer</button>
-
-        {/* Images */}
-        <button onClick={() => setScreen('images')}>Images</button>
-        <button onClick={() => setScreen('manageImages')}>Manage Images</button>
-
-        {/* Masters */}
-        <button onClick={() => setScreen('category')}>Add Category</button>
-        <button onClick={() => setScreen('series')}>Add Series</button>
-        <button onClick={() => setScreen('product')}>Add Product</button>
-        <button onClick={() => setScreen('customer')}>Add Customer</button>
-        <button onClick={() => setScreen('rateList')}>Rate List</button>
-
-        {/* View Lists */}
-        <button onClick={() => setScreen('viewIncoming')}>View Purchase</button>
-        <button onClick={() => setScreen('viewSales')}>View Sales</button>
-        <button onClick={() => setScreen('viewTransfers')}>View Stock Transfers</button>
-
-        {/* Config Screens */}
-        <button onClick={() => setScreen('itemDetails')}>Item Details</button>
-        {/* Online Configuration */}
-<button onClick={() => setScreen('onlineEnablement')}>
-  Online Enablement
-</button>
-
-<button onClick={() => setScreen('onlineStock')}>
-  Online Stock
-</button>
-
-<button onClick={() => setScreen('onlineSkuAmazon')}>
-  Online SKU (Amazon)
-</button>
-
-<button onClick={() => setScreen('onlineSkuPendingAmazon')}>
-  Pending Amazon SKUs
-</button>
-
+      {/* ---------- TOP HEADER ---------- */}
+      <div style={{
+        height: 50,
+        background: '#0f3c8a',
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 20px',
+        fontWeight: 'bold'
+      }}>
+        <div>KARNI FASHIONS ERP</div>
+        <div>
+          Welcome {user?.username || 'Admin'}
+        </div>
       </div>
 
-      {/* ---------- MAIN SCREEN AREA ---------- */}
+      {/* ---------- MAIN BODY ---------- */}
+      <div style={{ display: 'flex', flex: 1 }}>
 
-      {screen === 'purchase' && <PurchaseVoucher user={user} />}
+        {/* ---------- SIDEBAR ---------- */}
+        <div style={{
+          width: 230,
+          background: '#f4f4f4',
+          padding: 15,
+          borderRight: '1px solid #ccc',
+          overflowY: 'auto'
+        }}>
+          {sections.map(section => (
+            <div key={section.title} style={{ marginBottom: 25 }}>
 
-      {screen === 'sales' && <SalesVoucher user={user} />}
+              <div style={{
+                fontSize: 12,
+                fontWeight: 'bold',
+                marginBottom: 8,
+                color: '#666'
+              }}>
+                {section.title}
+              </div>
 
-      {screen === 'stock' && <StockView user={user} />}
+              {section.items.map(item => (
+                <div
+                  key={item.key}
+                  onClick={() => setScreen(item.key)}
+                  style={{
+                    padding: '8px 10px',
+                    cursor: 'pointer',
+                    borderRadius: 4,
+                    marginBottom: 5,
+                    background: screen === item.key ? '#d9e2ff' : 'transparent',
+                    fontWeight: screen === item.key ? 'bold' : 'normal'
+                  }}
+                >
+                  {item.label}
+                </div>
+              ))}
 
-      {screen === 'transfer' && (
-        <StockTransfer
-          user={user}
-          onExit={() => setScreen('purchase')}
-        />
-      )}
+            </div>
+          ))}
+        </div>
 
-      {screen === 'images' && (
-        <ImageViewer
-          user={user}
-          onExit={() => setScreen('purchase')}
-        />
-      )}
+        {/* ---------- CONTENT AREA ---------- */}
+        <div style={{
+          flex: 1,
+          padding: 20,
+          overflowY: 'auto',
+          background: '#fafafa'
+        }}>
+          {screens[screen]}
+        </div>
 
-      {screen === 'manageImages' && (
-        <ManageImages
-          user={user}
-          onExit={() => setScreen('purchase')}
-        />
-      )}
-
-      {/* ---------- MASTER SCREENS ---------- */}
-
-      {screen === 'category' && (
-        <CategoryMaster onExit={() => setScreen('purchase')} />
-      )}
-
-      {screen === 'series' && (
-        <SeriesMaster onExit={() => setScreen('purchase')} />
-      )}
-
-      {screen === 'product' && (
-        <ProductMaster onExit={() => setScreen('purchase')} />
-      )}
-
-      {screen === 'customer' && (
-        <CustomerMaster onExit={() => setScreen('purchase')} />
-      )}
-{screen === 'rateList' && (
-  <RateList onExit={() => setScreen('purchase')} />
-)}
-
-      {/* ---------- CONFIG SCREENS ---------- */}
-
-      {screen === 'itemDetails' && (
-        <ItemDetails onExit={() => setScreen('purchase')} />
-      )}
-
-{screen === 'onlineEnablement' && (
-  <OnlineEnablement onExit={() => setScreen('purchase')} />
-)}
-
-{screen === 'onlineStock' && (
-  <OnlineStockView onExit={() => setScreen('purchase')} />
-)}
-
-{screen === 'onlineSkuAmazon' && (
-  <OnlineSkuManager
-    marketplace="AMAZON"
-    onExit={() => setScreen('purchase')}
-  />
-)}
-
-{screen === 'onlineSkuPendingAmazon' && (
-  <OnlineSkuPendingAmazon
-    onExit={() => setScreen('purchase')}
-  />
-)}
-
-      {/* ---------- VIEW SCREENS ---------- */}
-
-      {screen === 'viewIncoming' && (
-        <ViewIncoming onExit={() => setScreen('purchase')} />
-      )}
-
-      {screen === 'viewSales' && (
-        <ViewSales onExit={() => setScreen('purchase')} />
-      )}
-
-      {screen === 'viewTransfers' && (
-        <ViewTransfers onExit={() => setScreen('purchase')} />
-      )}
-
+      </div>
     </div>
   );
 }
