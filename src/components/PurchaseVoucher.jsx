@@ -8,8 +8,6 @@ export default function PurchaseVoucher() {
 
   // lookups
   const [products, setProducts] = useState([]);
-  const [seriesList, setSeriesList] = useState([]);
-  const [categories, setCategories] = useState([]);
 
   // form
   const [location, setLocation] = useState(LOCATIONS[0]);
@@ -20,33 +18,22 @@ export default function PurchaseVoucher() {
 
   // suggestions
   const [itemSuggestions, setItemSuggestions] = useState([]);
-  const [seriesSuggestions, setSeriesSuggestions] = useState([]);
   const [showItemSug, setShowItemSug] = useState(false);
-  const [showSeriesSug, setShowSeriesSug] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
 
   const [rows, setRows] = useState([]);
-
-  // 🔹 online size logic
-  const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
-  const [enabledSizes, setEnabledSizes] = useState([]);
-  const [sizeQty, setSizeQty] = useState({});
-
-  // 🔒 loading state (ONLY NEW ADDITION)
   const [loading, setLoading] = useState(false);
 
   const itemRef = useRef(null);
-  const seriesRef = useRef(null);
+  const itemInputRef = useRef(null);
 
   // ----------------------------------------------------------
-  // LOAD LOOKUPS (UNCHANGED)
+  // LOAD PRODUCTS
   // ----------------------------------------------------------
   useEffect(() => {
     (async () => {
       try {
         const p = await api.get("/products");
-        const s = await api.get("/series");
-        const c = await api.get("/categories");
-
         setProducts(
           (p.data || []).map(r => ({
             item: r.Item,
@@ -54,39 +41,32 @@ export default function PurchaseVoucher() {
             categoryname: r.CategoryName
           }))
         );
-
-        setSeriesList((s.data || []).map(r => r.SeriesName));
-        setCategories((c.data || []).map(r => r.CategoryName));
       } catch {
-        alert("Failed to load lookups");
+        alert("Failed to load products");
       }
     })();
   }, []);
 
   // ----------------------------------------------------------
-  // HIDE SUGGESTIONS (UNCHANGED)
+  // HIDE SUGGESTIONS
   // ----------------------------------------------------------
   useEffect(() => {
     const handler = e => {
       if (itemRef.current && !itemRef.current.contains(e.target))
         setShowItemSug(false);
-      if (seriesRef.current && !seriesRef.current.contains(e.target))
-        setShowSeriesSug(false);
     };
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, []);
 
   // ----------------------------------------------------------
-  // ITEM INPUT (UNCHANGED)
+  // ITEM CHANGE
   // ----------------------------------------------------------
   const onItemChange = val => {
     setItem(val);
     setSeries("");
     setCategory("");
-    setIsOnlineEnabled(false);
-    setEnabledSizes([]);
-    setSizeQty({});
+    setHighlightIndex(-1);
 
     if (!val.trim()) {
       setShowItemSug(false);
@@ -102,85 +82,21 @@ export default function PurchaseVoucher() {
     setShowItemSug(matches.length > 0);
   };
 
-  const selectProduct = async p => {
+  const selectProduct = p => {
     setItem(p.item);
     setSeries(p.seriesname);
     setCategory(p.categoryname);
     setShowItemSug(false);
-
-    if (location === "Jaipur") {
-      try {
-        const res = await api.get(`/online/status-by-item/${p.item}`);
-        if (res.data?.is_online) {
-          setIsOnlineEnabled(true);
-          setEnabledSizes(res.data.sizes || []);
-          setSizeQty({});
-          return;
-        }
-      } catch {}
-    }
-
-    setIsOnlineEnabled(false);
-    setEnabledSizes([]);
-    setSizeQty({});
+    setHighlightIndex(-1);
   };
 
   // ----------------------------------------------------------
-  // SERIES INPUT (UNCHANGED)
-  // ----------------------------------------------------------
-  const onSeriesChange = val => {
-    setSeries(val);
-    setCategory("");
-
-    if (!val.trim()) {
-      setShowSeriesSug(false);
-      return;
-    }
-
-    const q = val.toLowerCase();
-    const matches = seriesList.filter(s =>
-      s.toLowerCase().startsWith(q)
-    );
-
-    setSeriesSuggestions(matches);
-    setShowSeriesSug(matches.length > 0);
-
-    const exact = seriesList.find(s => s.toLowerCase() === q);
-    if (exact) {
-      const p = products.find(pr => pr.seriesname === exact);
-      if (p) setCategory(p.categoryname);
-    }
-  };
-
-  const selectSeries = s => {
-    setSeries(s);
-    setShowSeriesSug(false);
-    const p = products.find(pr => pr.seriesname === s);
-    if (p) setCategory(p.categoryname);
-  };
-
-  const totalSizeQty = Object.values(sizeQty)
-    .map(Number)
-    .reduce((a, b) => a + b, 0);
-
-  // ----------------------------------------------------------
-  // ADD ROW (UNCHANGED)
+  // ADD ROW
   // ----------------------------------------------------------
   const onAddRow = () => {
     if (!item || !qty) {
       alert("Enter Item and Quantity");
       return;
-    }
-
-    if (isOnlineEnabled && location === "Jaipur") {
-      if (!enabledSizes.length) {
-        alert("Size details required");
-        return;
-      }
-      if (totalSizeQty !== Number(qty)) {
-        alert("Size total must equal quantity");
-        return;
-      }
     }
 
     setRows(prev => [
@@ -189,25 +105,30 @@ export default function PurchaseVoucher() {
         Item: item,
         SeriesName: series,
         CategoryName: category,
-        Quantity: Number(qty),
-        SizeQty: isOnlineEnabled ? sizeQty : null
+        Quantity: Number(qty)
       }
     ]);
 
+    // reset
     setItem("");
     setSeries("");
     setCategory("");
     setQty("");
-    setIsOnlineEnabled(false);
-    setEnabledSizes([]);
-    setSizeQty({});
+    setItemSuggestions([]);
+    setShowItemSug(false);
+    setHighlightIndex(-1);
+
+    // auto focus back to item
+    setTimeout(() => {
+      itemInputRef.current?.focus();
+    }, 0);
   };
 
   const removeRow = i =>
     setRows(rows.filter((_, idx) => idx !== i));
 
   // ----------------------------------------------------------
-  // SUBMIT (ONLY UPDATED PART)
+  // SUBMIT
   // ----------------------------------------------------------
   const onSubmit = async () => {
     if (!rows.length) {
@@ -223,8 +144,7 @@ export default function PurchaseVoucher() {
     };
 
     try {
-      setLoading(true); // 🔒 Freeze
-
+      setLoading(true);
       const res = await postIncoming(payload);
       if (res.data?.success) {
         alert("Posted successfully");
@@ -233,12 +153,12 @@ export default function PurchaseVoucher() {
     } catch {
       alert("Submit failed");
     } finally {
-      setLoading(false); // 🔓 Unfreeze
+      setLoading(false);
     }
   };
 
   // ----------------------------------------------------------
-  // UI (UNCHANGED STRUCTURE)
+  // UI
   // ----------------------------------------------------------
   return (
     <div style={{ padding: 18 }}>
@@ -251,22 +171,75 @@ export default function PurchaseVoucher() {
           onChange={e => setLocation(e.target.value)}
           disabled={loading}
         >
-          {LOCATIONS.map(l => <option key={l}>{l}</option>)}
+          {LOCATIONS.map(l => (
+            <option key={l}>{l}</option>
+          ))}
         </select>
       </div>
 
+      {/* FIELD ROW */}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+
+        {/* ITEM */}
         <div ref={itemRef} style={{ position: "relative" }}>
           <input
+            ref={itemInputRef}
             placeholder="Item"
             value={item}
             onChange={e => onItemChange(e.target.value)}
             disabled={loading}
+            autoFocus
+            onKeyDown={e => {
+              if (!showItemSug) return;
+
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setHighlightIndex(prev =>
+                  prev < itemSuggestions.length - 1 ? prev + 1 : prev
+                );
+              }
+
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHighlightIndex(prev =>
+                  prev > 0 ? prev - 1 : 0
+                );
+              }
+
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (highlightIndex >= 0) {
+                  selectProduct(itemSuggestions[highlightIndex]);
+                }
+              }
+            }}
           />
+
           {showItemSug && (
-            <div style={{ position: "absolute", background: "#fff", border: "1px solid #ccc" }}>
+            <div
+              style={{
+                position: "absolute",
+                background: "#fff",
+                border: "1px solid #ccc",
+                width: "100%",
+                maxHeight: 200,
+                overflowY: "auto",
+                zIndex: 10
+              }}
+            >
               {itemSuggestions.map((p, i) => (
-                <div key={i} onClick={() => selectProduct(p)} style={{ padding: 8, cursor: "pointer" }}>
+                <div
+                  key={i}
+                  onClick={() => selectProduct(p)}
+                  style={{
+                    padding: 8,
+                    cursor: "pointer",
+                    background:
+                      i === highlightIndex
+                        ? "#d9e2ff"
+                        : "transparent"
+                  }}
+                >
                   {p.item}
                 </div>
               ))}
@@ -274,43 +247,44 @@ export default function PurchaseVoucher() {
           )}
         </div>
 
-        <div ref={seriesRef} style={{ position: "relative" }}>
-          <input
-            placeholder="Series"
-            value={series}
-            onChange={e => onSeriesChange(e.target.value)}
-            disabled={loading}
-          />
-          {showSeriesSug && (
-            <div style={{ position: "absolute", background: "#fff", border: "1px solid #ccc" }}>
-              {seriesSuggestions.map((s, i) => (
-                <div key={i} onClick={() => selectSeries(s)} style={{ padding: 8, cursor: "pointer" }}>
-                  {s}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <input
-          list="catList"
-          placeholder="Category"
-          value={category}
-          onChange={e => setCategory(e.target.value)}
-          disabled={loading}
-        />
-
+        {/* QTY */}
         <input
           type="number"
           placeholder="Qty"
           value={qty}
           onChange={e => setQty(e.target.value)}
           disabled={loading}
+          onKeyDown={e => {
+            if (e.key === "Enter") {
+              onAddRow();
+            }
+          }}
         />
 
-        <button onClick={onAddRow} disabled={loading}>Add</button>
+        {/* ADD */}
+        <button onClick={onAddRow} disabled={loading}>
+          Add
+        </button>
+
+        {/* SERIES (READONLY) */}
+        <input
+          value={series}
+          placeholder="Series"
+          readOnly
+          tabIndex={-1}
+        />
+
+        {/* CATEGORY (READONLY) */}
+        <input
+          value={category}
+          placeholder="Category"
+          readOnly
+          tabIndex={-1}
+        />
+
       </div>
 
+      {/* ROW TABLE */}
       <table border="1" width="100%">
         <tbody>
           {rows.map((r, i) => (
@@ -320,7 +294,10 @@ export default function PurchaseVoucher() {
               <td>{r.CategoryName}</td>
               <td>{r.Quantity}</td>
               <td>
-                <button onClick={() => removeRow(i)} disabled={loading}>
+                <button
+                  onClick={() => removeRow(i)}
+                  disabled={loading}
+                >
                   Remove
                 </button>
               </td>
@@ -335,7 +312,7 @@ export default function PurchaseVoucher() {
         </button>
       </div>
 
-      {/* 🔒 Overlay */}
+      {/* LOADING OVERLAY */}
       {loading && (
         <div
           style={{
