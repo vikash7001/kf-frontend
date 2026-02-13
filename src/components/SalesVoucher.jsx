@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { api, postSales } from "../services/api";
 
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
@@ -17,23 +17,27 @@ export default function SalesVoucher() {
   // row input
   const [item, setItem] = useState("");
   const [qty, setQty] = useState("");
-
   const [selectedProduct, setSelectedProduct] = useState(null);
+
   const [rows, setRows] = useState([]);
 
+  // dropdown
   const [itemSuggestions, setItemSuggestions] = useState([]);
   const [showItemSug, setShowItemSug] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
 
-  // 🔹 online size logic
+  // online size
   const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
   const [enabledSizes, setEnabledSizes] = useState([]);
   const [sizeQty, setSizeQty] = useState({});
 
-  // 🔒 loading state (NEW)
   const [loading, setLoading] = useState(false);
 
+  const itemRef = useRef(null);
+  const itemInputRef = useRef(null);
+
   // --------------------------------------------------
-  // LOAD LOOKUPS (UNCHANGED)
+  // LOAD DATA
   // --------------------------------------------------
   useEffect(() => {
     async function load() {
@@ -55,11 +59,13 @@ export default function SalesVoucher() {
   }, []);
 
   // --------------------------------------------------
-  // ITEM SEARCH (UNCHANGED)
+  // ITEM CHANGE
   // --------------------------------------------------
   const onItemChange = (val) => {
     setItem(val);
     setSelectedProduct(null);
+    setHighlightIndex(-1);
+
     setIsOnlineEnabled(false);
     setEnabledSizes([]);
     setSizeQty({});
@@ -78,13 +84,11 @@ export default function SalesVoucher() {
     setShowItemSug(matches.length > 0);
   };
 
-  // --------------------------------------------------
-  // SELECT PRODUCT (UNCHANGED)
-  // --------------------------------------------------
   const selectProduct = async (p) => {
     setSelectedProduct(p);
     setItem(p.item);
     setShowItemSug(false);
+    setHighlightIndex(-1);
 
     try {
       const res = await api.get(`/online/status-by-item/${p.item}`);
@@ -92,16 +96,8 @@ export default function SalesVoucher() {
         setIsOnlineEnabled(true);
         setEnabledSizes(res.data.sizes || []);
         setSizeQty({});
-      } else {
-        setIsOnlineEnabled(false);
-        setEnabledSizes([]);
-        setSizeQty({});
       }
-    } catch {
-      setIsOnlineEnabled(false);
-      setEnabledSizes([]);
-      setSizeQty({});
-    }
+    } catch {}
   };
 
   const totalSizeQty = Object.values(sizeQty)
@@ -109,7 +105,7 @@ export default function SalesVoucher() {
     .reduce((a, b) => a + b, 0);
 
   // --------------------------------------------------
-  // ADD ROW (UNCHANGED)
+  // ADD ROW
   // --------------------------------------------------
   const onAddRow = () => {
     if (!selectedProduct || !qty) {
@@ -118,10 +114,6 @@ export default function SalesVoucher() {
     }
 
     if (isOnlineEnabled && location === "Jaipur") {
-      if (!enabledSizes.length) {
-        alert("Size details required");
-        return;
-      }
       if (totalSizeQty !== Number(qty)) {
         alert("Size total must equal quantity");
         return;
@@ -145,13 +137,18 @@ export default function SalesVoucher() {
     setIsOnlineEnabled(false);
     setEnabledSizes([]);
     setSizeQty({});
+    setHighlightIndex(-1);
+
+    setTimeout(() => {
+      itemInputRef.current?.focus();
+    }, 0);
   };
 
   const removeRow = (i) =>
     setRows(rows.filter((_, x) => x !== i));
 
   // --------------------------------------------------
-  // SUBMIT (UPDATED ONLY HERE)
+  // SUBMIT
   // --------------------------------------------------
   const onSubmit = async () => {
     if (!rows.length) {
@@ -168,8 +165,7 @@ export default function SalesVoucher() {
     };
 
     try {
-      setLoading(true); // 🔒 Freeze
-
+      setLoading(true);
       const res = await postSales(payload);
 
       if (res.data?.success) {
@@ -178,16 +174,15 @@ export default function SalesVoucher() {
         setCustomer("");
         setVoucherNo("");
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       alert("Sales failed");
     } finally {
-      setLoading(false); // 🔓 Unfreeze
+      setLoading(false);
     }
   };
 
   // --------------------------------------------------
-  // RENDER (STRUCTURE UNCHANGED)
+  // UI
   // --------------------------------------------------
   return (
     <div style={{ padding: 18 }}>
@@ -226,24 +221,70 @@ export default function SalesVoucher() {
         />
       </div>
 
+      {/* ITEM ROW */}
       <div style={{ display: "flex", gap: 8 }}>
-        <div style={{ position: "relative" }}>
+        <div ref={itemRef} style={{ position: "relative" }}>
           <input
+            ref={itemInputRef}
             value={item}
             onChange={e => onItemChange(e.target.value)}
             placeholder="Item"
             disabled={loading}
+            autoFocus
+            onKeyDown={e => {
+              if (!showItemSug) return;
+
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setHighlightIndex(prev =>
+                  prev < itemSuggestions.length - 1 ? prev + 1 : prev
+                );
+              }
+
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHighlightIndex(prev =>
+                  prev > 0 ? prev - 1 : 0
+                );
+              }
+
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (highlightIndex >= 0) {
+                  selectProduct(itemSuggestions[highlightIndex]);
+                }
+              }
+            }}
           />
-          {showItemSug &&
-            itemSuggestions.map((p, i) => (
-              <div
-                key={i}
-                onClick={() => selectProduct(p)}
-                style={{ cursor: "pointer", background: "#eee" }}
-              >
-                {p.item}
-              </div>
-            ))}
+
+          {showItemSug && (
+            <div
+              style={{
+                position: "absolute",
+                background: "#fff",
+                border: "1px solid #ccc",
+                width: "100%",
+                maxHeight: 200,
+                overflowY: "auto",
+                zIndex: 10
+              }}
+            >
+              {itemSuggestions.map((p, i) => (
+                <div
+                  key={i}
+                  onClick={() => selectProduct(p)}
+                  style={{
+                    padding: 8,
+                    cursor: "pointer",
+                    background:
+                      i === highlightIndex ? "#d9e2ff" : "transparent"
+                  }}
+                >
+                  {p.item}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <input
@@ -252,6 +293,11 @@ export default function SalesVoucher() {
           onChange={e => setQty(e.target.value)}
           placeholder="Qty"
           disabled={loading}
+          onKeyDown={e => {
+            if (e.key === "Enter") {
+              onAddRow();
+            }
+          }}
         />
 
         <button onClick={onAddRow} disabled={loading}>
@@ -259,6 +305,7 @@ export default function SalesVoucher() {
         </button>
       </div>
 
+      {/* ONLINE SIZE */}
       {isOnlineEnabled && location === "Jaipur" && (
         <div style={{ marginTop: 12 }}>
           <b>Size-wise Quantity (Jaipur)</b>
@@ -304,7 +351,6 @@ export default function SalesVoucher() {
         {loading ? "Posting..." : "Submit Sales"}
       </button>
 
-      {/* 🔒 Overlay */}
       {loading && (
         <div
           style={{
