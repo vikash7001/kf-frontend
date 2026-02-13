@@ -13,9 +13,6 @@ import { api } from './services/api';
 export default function App() {
 
   const [user, setUser] = useState(null);
-
-  // Modes:
-  // admin | customer | purchase | sales | transfer
   const [mode, setMode] = useState(null);
 
   useEffect(() => {
@@ -29,7 +26,7 @@ export default function App() {
       setMode(u.Role === 'Customer' ? 'customer' : 'admin');
     }
 
-    // Tally-style shortcuts
+    // Keyboard shortcuts (still active)
     function onKeyDown(e) {
 
       if (e.key === 'F9') {
@@ -77,19 +74,18 @@ export default function App() {
     <div>
 
       {/* ---------- TITLE BAR ---------- */}
-      <div className="titlebar">
+      <div className="titlebar" style={{
+        height: 42,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "0 15px"
+      }}>
         <div className="company">KARNI FASHIONS</div>
-        <div>{user.FullName} — {user.Role}</div>
-      </div>
 
-      {/* ---------- TOOLBAR ---------- */}
-      <div className="toolbar">
-        <div className="kbd">F9</div><div>Purchase</div>
-        <div className="kbd">F8</div><div>Sales</div>
-        <div className="kbd">F7</div><div>Transfer</div>
-        <div className="kbd">Ctrl+A</div><div>Save</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 15 }}>
+          <div>{user.FullName} — {user.Role}</div>
 
-        <div style={{ marginLeft: 'auto' }}>
           <button
             onClick={() => {
               localStorage.removeItem('kf_token');
@@ -107,7 +103,6 @@ export default function App() {
       <div className="container">
         <div className="panel">
 
-          {/* DASHBOARDS */}
           {mode === "admin" && (
             <AdminDashboard user={user} />
           )}
@@ -116,7 +111,6 @@ export default function App() {
             <CustomerView user={user} />
           )}
 
-          {/* PURCHASE */}
           {mode === "purchase" && (
             <PurchaseVoucher
               user={user}
@@ -126,7 +120,6 @@ export default function App() {
             />
           )}
 
-          {/* SALES */}
           {mode === "sales" && (
             <SalesVoucher
               user={user}
@@ -136,7 +129,6 @@ export default function App() {
             />
           )}
 
-          {/* STOCK TRANSFER */}
           {mode === "transfer" && (
             <StockTransfer
               user={user}

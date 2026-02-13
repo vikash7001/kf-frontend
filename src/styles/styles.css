@@ -1,12 +1,79 @@
-body { font-family: monospace; margin:0; background:#f5f5f5; }
-.titlebar { background:#003f8a; color:white; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
-.titlebar .company { font-weight:700; font-size:18px; }
-.toolbar { background:#ffd966; padding:8px 12px; display:flex; gap:12px; align-items:center; }
-.container { padding:12px; }
-.panel { background:white; padding:12px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
-.row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
-select,input{ padding:6px; font-family:monospace; }
-button{ padding:6px 10px; font-weight:700; }
-table { width:100%; border-collapse:collapse; font-family:monospace; }
-th,td { padding:6px; border-bottom:1px solid #eee; text-align:left; }
-.kbd { font-weight:700; background:#eee; padding:3px 6px; border-radius:4px; }
+/* GLOBAL */
+body {
+  font-family: monospace;
+  font-size: 14px;              /* 🔥 Reduced from default 16px */
+  margin: 0;
+  background: #f5f5f5;
+}
+
+/* TITLE BAR */
+.titlebar {
+  background: #003f8a;
+  color: white;
+  height: 38px;                 /* 🔥 Reduced height */
+  padding: 0 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.titlebar .company {
+  font-weight: 700;
+  font-size: 16px;              /* Slightly reduced */
+}
+
+/* REMOVE TOOLBAR COMPLETELY */
+.toolbar {
+  display: none;
+}
+
+/* MAIN LAYOUT */
+.container {
+  padding: 10px;                /* Reduced */
+}
+
+.panel {
+  background: white;
+  padding: 10px;                /* Reduced */
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+/* FORM ROWS */
+.row {
+  display: flex;
+  gap: 6px;                     /* Reduced */
+  align-items: center;
+  margin-bottom: 6px;           /* Reduced */
+}
+
+/* INPUTS */
+select,
+input {
+  padding: 5px 6px;             /* Slightly tighter */
+  font-family: monospace;
+  font-size: 14px;
+}
+
+/* BUTTONS */
+button {
+  padding: 5px 10px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* TABLE */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: monospace;
+  font-size: 13px;              /* 🔥 Smaller for data density */
+}
+
+th,
+td {
+  padding: 5px 6px;             /* Reduced */
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
