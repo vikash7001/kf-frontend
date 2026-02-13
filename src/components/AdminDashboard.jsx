@@ -26,6 +26,8 @@ export default function AdminDashboard({ user }) {
 
   const [screen, setScreen] = useState('purchase');
 
+  /* ================= SCREEN MAPPING ================= */
+
   const screens = {
     purchase: <PurchaseVoucher user={user} />,
     sales: <SalesVoucher user={user} />,
@@ -47,6 +49,8 @@ export default function AdminDashboard({ user }) {
     viewSales: <ViewSales />,
     viewTransfers: <ViewTransfers />
   };
+
+  /* ================= SIDEBAR SECTIONS ================= */
 
   const sections = [
     {
@@ -97,22 +101,17 @@ export default function AdminDashboard({ user }) {
   return (
     <div className="erp-layout">
 
-      {/* ---------- HEADER ---------- */}
+      {/* ================= HEADER ================= */}
       <div className="erp-header">
-        <div className="erp-header-left">
-          KARNI FASHIONS ERP
-        </div>
-        <div className="erp-header-right">
-          Welcome {user?.username || 'Admin'}
-        </div>
+        <div>KARNI FASHIONS ERP</div>
+        <div>Welcome {user?.username || 'Admin'}</div>
       </div>
 
-      {/* ---------- BODY ---------- */}
+      {/* ================= BODY ================= */}
       <div className="erp-body">
 
-        {/* ---------- SIDEBAR ---------- */}
-        <div className="erp-sidebar">
-
+        {/* ================= SIDEBAR ================= */}
+        <aside className="erp-sidebar">
           {sections.map(section => (
             <div key={section.title}>
 
@@ -124,7 +123,9 @@ export default function AdminDashboard({ user }) {
                 <div
                   key={item.key}
                   onClick={() => setScreen(item.key)}
-                  className={`sidebar-item ${screen === item.key ? 'active' : ''}`}
+                  className={`sidebar-item ${
+                    screen === item.key ? 'active' : ''
+                  }`}
                 >
                   {item.label}
                 </div>
@@ -132,13 +133,12 @@ export default function AdminDashboard({ user }) {
 
             </div>
           ))}
+        </aside>
 
-        </div>
-
-        {/* ---------- CONTENT ---------- */}
-        <div className="erp-content">
-          {screens[screen]}
-        </div>
+        {/* ================= CONTENT ================= */}
+        <main className="erp-content">
+          {screens[screen] || <div>Select a module</div>}
+        </main>
 
       </div>
     </div>

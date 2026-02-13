@@ -4,32 +4,32 @@ import { api, postIncoming } from "../services/api";
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
 
 export default function PurchaseVoucher() {
+
   const user = JSON.parse(localStorage.getItem("kf_user"));
 
-  // lookups
+  // ---------------- STATE ----------------
+
   const [products, setProducts] = useState([]);
 
-  // form
   const [location, setLocation] = useState(LOCATIONS[0]);
   const [item, setItem] = useState("");
   const [series, setSeries] = useState("");
   const [category, setCategory] = useState("");
   const [qty, setQty] = useState("");
 
-  // suggestions
   const [itemSuggestions, setItemSuggestions] = useState([]);
   const [showItemSug, setShowItemSug] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const itemRef = useRef(null);
   const itemInputRef = useRef(null);
 
-  // ----------------------------------------------------------
-  // LOAD PRODUCTS
-  // ----------------------------------------------------------
+  // ---------------- LOAD PRODUCTS ----------------
+
   useEffect(() => {
     (async () => {
       try {
@@ -47,21 +47,20 @@ export default function PurchaseVoucher() {
     })();
   }, []);
 
-  // ----------------------------------------------------------
-  // HIDE SUGGESTIONS
-  // ----------------------------------------------------------
+  // ---------------- HIDE DROPDOWN ----------------
+
   useEffect(() => {
     const handler = e => {
-      if (itemRef.current && !itemRef.current.contains(e.target))
+      if (itemRef.current && !itemRef.current.contains(e.target)) {
         setShowItemSug(false);
+      }
     };
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, []);
 
-  // ----------------------------------------------------------
-  // ITEM CHANGE
-  // ----------------------------------------------------------
+  // ---------------- ITEM CHANGE ----------------
+
   const onItemChange = val => {
     setItem(val);
     setSeries("");
@@ -90,9 +89,8 @@ export default function PurchaseVoucher() {
     setHighlightIndex(-1);
   };
 
-  // ----------------------------------------------------------
-  // ADD ROW
-  // ----------------------------------------------------------
+  // ---------------- ADD ROW ----------------
+
   const onAddRow = () => {
     if (!item || !qty) {
       alert("Enter Item and Quantity");
@@ -109,7 +107,6 @@ export default function PurchaseVoucher() {
       }
     ]);
 
-    // reset
     setItem("");
     setSeries("");
     setCategory("");
@@ -118,7 +115,6 @@ export default function PurchaseVoucher() {
     setShowItemSug(false);
     setHighlightIndex(-1);
 
-    // auto focus back to item
     setTimeout(() => {
       itemInputRef.current?.focus();
     }, 0);
@@ -127,15 +123,22 @@ export default function PurchaseVoucher() {
   const removeRow = i =>
     setRows(rows.filter((_, idx) => idx !== i));
 
-  // ----------------------------------------------------------
-  // SUBMIT
-  // ----------------------------------------------------------
-  const onSubmit = async () => {
+  const totalQty = rows.reduce(
+    (sum, r) => sum + Number(r.Quantity || 0),
+    0
+  );
+
+  // ---------------- SUBMIT ----------------
+
+  const onSubmit = () => {
     if (!rows.length) {
       alert("No rows to post");
       return;
     }
+    setShowConfirm(true);
+  };
 
+  const confirmSubmit = async () => {
     const payload = {
       UserID: user.userid,
       UserName: user.username,
@@ -144,7 +147,9 @@ export default function PurchaseVoucher() {
     };
 
     try {
+      setShowConfirm(false);
       setLoading(true);
+
       const res = await postIncoming(payload);
       if (res.data?.success) {
         alert("Posted successfully");
@@ -157,15 +162,15 @@ export default function PurchaseVoucher() {
     }
   };
 
-  // ----------------------------------------------------------
-  // UI
-  // ----------------------------------------------------------
+  // ---------------- UI ----------------
+
   return (
-    <div style={{ padding: 18 }}>
+    <div>
+
       <h2>Purchase Voucher (Incoming)</h2>
 
       <div style={{ marginBottom: 12 }}>
-        <label>Location:</label>
+        <label>Location: </label>
         <select
           value={location}
           onChange={e => setLocation(e.target.value)}
@@ -177,10 +182,9 @@ export default function PurchaseVoucher() {
         </select>
       </div>
 
-      {/* FIELD ROW */}
+      {/* ENTRY ROW */}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
 
-        {/* ITEM */}
         <div ref={itemRef} style={{ position: "relative" }}>
           <input
             ref={itemInputRef}
@@ -247,7 +251,6 @@ export default function PurchaseVoucher() {
           )}
         </div>
 
-        {/* QTY */}
         <input
           type="number"
           placeholder="Qty"
@@ -255,37 +258,29 @@ export default function PurchaseVoucher() {
           onChange={e => setQty(e.target.value)}
           disabled={loading}
           onKeyDown={e => {
-            if (e.key === "Enter") {
-              onAddRow();
-            }
+            if (e.key === "Enter") onAddRow();
           }}
         />
 
-        {/* ADD */}
         <button onClick={onAddRow} disabled={loading}>
           Add
         </button>
 
-        {/* SERIES (READONLY) */}
-        <input
-          value={series}
-          placeholder="Series"
-          readOnly
-          tabIndex={-1}
-        />
-
-        {/* CATEGORY (READONLY) */}
-        <input
-          value={category}
-          placeholder="Category"
-          readOnly
-          tabIndex={-1}
-        />
-
+        <input value={series} placeholder="Series" readOnly />
+        <input value={category} placeholder="Category" readOnly />
       </div>
 
-      {/* ROW TABLE */}
-      <table border="1" width="100%">
+      {/* TABLE */}
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Series</th>
+            <th>Category</th>
+            <th>Qty</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>
@@ -295,6 +290,7 @@ export default function PurchaseVoucher() {
               <td>{r.Quantity}</td>
               <td>
                 <button
+                  className="secondary"
                   onClick={() => removeRow(i)}
                   disabled={loading}
                 >
@@ -306,34 +302,44 @@ export default function PurchaseVoucher() {
         </tbody>
       </table>
 
+      <div style={{ marginTop: 14 }}>
+        <strong>Total Pieces:</strong> {totalQty}
+      </div>
+
       <div style={{ marginTop: 12 }}>
         <button onClick={onSubmit} disabled={loading}>
-          {loading ? "Posting..." : "Submit Incoming"}
+          Submit Incoming
         </button>
       </div>
 
-      {/* LOADING OVERLAY */}
+      {/* CONFIRM MODAL */}
+      {showConfirm && (
+        <div className="confirm-overlay">
+          <div className="confirm-box">
+            <h3>Confirm Posting</h3>
+
+            <div><strong>Location:</strong> {location}</div>
+            <div><strong>Total Pieces:</strong> {totalQty}</div>
+
+            <div style={{ marginTop: 15, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button className="secondary" onClick={() => setShowConfirm(false)}>
+                Back
+              </button>
+              <button onClick={confirmSubmit}>
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LOADING */}
       {loading && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(0,0,0,0.4)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 9999,
-            color: "#fff",
-            fontSize: 22,
-            fontWeight: "bold"
-          }}
-        >
+        <div className="loading-overlay">
           Posting... Please wait
         </div>
       )}
+
     </div>
   );
 }

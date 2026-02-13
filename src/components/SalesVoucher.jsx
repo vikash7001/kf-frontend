@@ -4,41 +4,38 @@ import { api, postSales } from "../services/api";
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
 
 export default function SalesVoucher() {
+
   const user = JSON.parse(localStorage.getItem("kf_user"));
 
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
 
-  // header
   const [location, setLocation] = useState(LOCATIONS[0]);
   const [customer, setCustomer] = useState("");
   const [voucherNo, setVoucherNo] = useState("");
 
-  // row input
   const [item, setItem] = useState("");
   const [qty, setQty] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   const [rows, setRows] = useState([]);
 
-  // dropdown
   const [itemSuggestions, setItemSuggestions] = useState([]);
   const [showItemSug, setShowItemSug] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
 
-  // online size
   const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
   const [enabledSizes, setEnabledSizes] = useState([]);
   const [sizeQty, setSizeQty] = useState({});
 
   const [loading, setLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const itemRef = useRef(null);
   const itemInputRef = useRef(null);
 
-  // --------------------------------------------------
-  // LOAD DATA
-  // --------------------------------------------------
+  // ---------------- LOAD DATA ----------------
+
   useEffect(() => {
     async function load() {
       const p = await api.get("/products");
@@ -58,9 +55,8 @@ export default function SalesVoucher() {
     load().catch(() => alert("Failed to load data"));
   }, []);
 
-  // --------------------------------------------------
-  // ITEM CHANGE
-  // --------------------------------------------------
+  // ---------------- ITEM CHANGE ----------------
+
   const onItemChange = (val) => {
     setItem(val);
     setSelectedProduct(null);
@@ -104,9 +100,13 @@ export default function SalesVoucher() {
     .map(Number)
     .reduce((a, b) => a + b, 0);
 
-  // --------------------------------------------------
-  // ADD ROW
-  // --------------------------------------------------
+  const totalQty = rows.reduce(
+    (sum, r) => sum + Number(r.Quantity || 0),
+    0
+  );
+
+  // ---------------- ADD ROW ----------------
+
   const onAddRow = () => {
     if (!selectedProduct || !qty) {
       alert("Select item and quantity");
@@ -147,15 +147,17 @@ export default function SalesVoucher() {
   const removeRow = (i) =>
     setRows(rows.filter((_, x) => x !== i));
 
-  // --------------------------------------------------
-  // SUBMIT
-  // --------------------------------------------------
-  const onSubmit = async () => {
+  // ---------------- SUBMIT ----------------
+
+  const onSubmit = () => {
     if (!rows.length) {
       alert("No items added");
       return;
     }
+    setShowConfirm(true);
+  };
 
+  const confirmSubmit = async () => {
     const payload = {
       UserName: user.username,
       Location: location,
@@ -165,7 +167,9 @@ export default function SalesVoucher() {
     };
 
     try {
+      setShowConfirm(false);
       setLoading(true);
+
       const res = await postSales(payload);
 
       if (res.data?.success) {
@@ -181,9 +185,8 @@ export default function SalesVoucher() {
     }
   };
 
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
+  // ---------------- UI ----------------
+
   return (
     <div style={{ padding: 18 }}>
       <h2>Sales Voucher</h2>
@@ -221,7 +224,7 @@ export default function SalesVoucher() {
         />
       </div>
 
-      {/* ITEM ROW */}
+      {/* ITEM ENTRY */}
       <div style={{ display: "flex", gap: 8 }}>
         <div ref={itemRef} style={{ position: "relative" }}>
           <input
@@ -277,7 +280,9 @@ export default function SalesVoucher() {
                     padding: 8,
                     cursor: "pointer",
                     background:
-                      i === highlightIndex ? "#d9e2ff" : "transparent"
+                      i === highlightIndex
+                        ? "#d9e2ff"
+                        : "transparent"
                   }}
                 >
                   {p.item}
@@ -294,9 +299,7 @@ export default function SalesVoucher() {
           placeholder="Qty"
           disabled={loading}
           onKeyDown={e => {
-            if (e.key === "Enter") {
-              onAddRow();
-            }
+            if (e.key === "Enter") onAddRow();
           }}
         />
 
@@ -305,31 +308,17 @@ export default function SalesVoucher() {
         </button>
       </div>
 
-      {/* ONLINE SIZE */}
-      {isOnlineEnabled && location === "Jaipur" && (
-        <div style={{ marginTop: 12 }}>
-          <b>Size-wise Quantity (Jaipur)</b>
-          {enabledSizes.map(sz => (
-            <div key={sz}>
-              {sz}
-              <input
-                type="number"
-                value={sizeQty[sz] || ""}
-                onChange={e =>
-                  setSizeQty({ ...sizeQty, [sz]: Number(e.target.value) })
-                }
-                style={{ marginLeft: 8 }}
-                disabled={loading}
-              />
-            </div>
-          ))}
-          <div>
-            <b>Total:</b> {totalSizeQty} / {qty || 0}
-          </div>
-        </div>
-      )}
-
-      <table border="1" width="100%" style={{ marginTop: 12 }}>
+      {/* TABLE */}
+      <table style={{ marginTop: 12 }}>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Series</th>
+            <th>Category</th>
+            <th>Qty</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>
@@ -338,8 +327,12 @@ export default function SalesVoucher() {
               <td>{r.CategoryName}</td>
               <td>{r.Quantity}</td>
               <td>
-                <button onClick={() => removeRow(i)} disabled={loading}>
-                  X
+                <button
+                  className="secondary"
+                  onClick={() => removeRow(i)}
+                  disabled={loading}
+                >
+                  Remove
                 </button>
               </td>
             </tr>
@@ -347,28 +340,38 @@ export default function SalesVoucher() {
         </tbody>
       </table>
 
+      <div style={{ marginTop: 14 }}>
+        <strong>Total Pieces:</strong> {totalQty}
+      </div>
+
       <button onClick={onSubmit} style={{ marginTop: 12 }} disabled={loading}>
-        {loading ? "Posting..." : "Submit Sales"}
+        Submit Sales
       </button>
 
+      {/* CONFIRM MODAL */}
+      {showConfirm && (
+        <div className="confirm-overlay">
+          <div className="confirm-box">
+            <h3>Confirm Sales Posting</h3>
+
+            <div><strong>Location:</strong> {location}</div>
+            <div><strong>Customer:</strong> {customer || "-"}</div>
+            <div><strong>Total Pieces:</strong> {totalQty}</div>
+
+            <div style={{ marginTop: 15, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button className="secondary" onClick={() => setShowConfirm(false)}>
+                Back
+              </button>
+              <button onClick={confirmSubmit}>
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(0,0,0,0.4)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 9999,
-            color: "#fff",
-            fontSize: 22,
-            fontWeight: "bold"
-          }}
-        >
+        <div className="loading-overlay">
           Posting... Please wait
         </div>
       )}

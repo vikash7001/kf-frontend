@@ -6,10 +6,12 @@
   box-sizing: border-box;
 }
 
-body {
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* 🔥 Prevent full-page scroll */
   font-family: 'Segoe UI', Arial, sans-serif;
   font-size: 14px;
-  margin: 0;
   background: #f3f4f6;
   color: #222;
 }
@@ -65,6 +67,7 @@ body {
 .erp-body {
   flex: 1;
   display: flex;
+  overflow: hidden; /* 🔥 Important for separate scroll */
 }
 
 /* ===================================================== */
@@ -76,9 +79,20 @@ body {
   background: #ffffff;
   border-right: 1px solid #e5e7eb;
   padding: 18px 14px;
-  overflow-y: auto;
+  overflow-y: auto;  /* 🔥 Independent scroll */
 }
 
+/* Sidebar Scrollbar (Professional thin style) */
+.erp-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.erp-sidebar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 6px;
+}
+
+/* Sidebar Sections */
 .sidebar-section-title {
   font-size: 11px;
   font-weight: 700;
@@ -114,7 +128,17 @@ body {
   flex: 1;
   padding: 20px;
   background: #f9fafb;
-  overflow-y: auto;
+  overflow-y: auto; /* 🔥 Independent scroll */
+}
+
+/* Content Scrollbar */
+.erp-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.erp-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 6px;
 }
 
 /* ===================================================== */
@@ -184,7 +208,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Secondary / Remove buttons */
+/* Secondary buttons */
 button.secondary {
   background: #6b7280;
 }
@@ -245,4 +269,29 @@ tbody tr:nth-child(even) {
   color: white;
   font-size: 18px;
   font-weight: 600;
+}
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9998;
+}
+
+.confirm-box {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  width: 320px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+.confirm-box h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
 }
