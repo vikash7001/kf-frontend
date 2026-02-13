@@ -26,8 +26,6 @@ export default function AdminDashboard({ user }) {
 
   const [screen, setScreen] = useState('purchase');
 
-  /* ---------- SCREEN MAPPING ---------- */
-
   const screens = {
     purchase: <PurchaseVoucher user={user} />,
     sales: <SalesVoucher user={user} />,
@@ -49,8 +47,6 @@ export default function AdminDashboard({ user }) {
     viewSales: <ViewSales />,
     viewTransfers: <ViewTransfers />
   };
-
-  /* ---------- SIDEBAR SECTIONS ---------- */
 
   const sections = [
     {
@@ -99,45 +95,28 @@ export default function AdminDashboard({ user }) {
   ];
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="erp-layout">
 
-      {/* ---------- TOP HEADER ---------- */}
-      <div style={{
-        height: 50,
-        background: '#0f3c8a',
-        color: 'white',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 20px',
-        fontWeight: 'bold'
-      }}>
-        <div>KARNI FASHIONS ERP</div>
-        <div>
+      {/* ---------- HEADER ---------- */}
+      <div className="erp-header">
+        <div className="erp-header-left">
+          KARNI FASHIONS ERP
+        </div>
+        <div className="erp-header-right">
           Welcome {user?.username || 'Admin'}
         </div>
       </div>
 
-      {/* ---------- MAIN BODY ---------- */}
-      <div style={{ display: 'flex', flex: 1 }}>
+      {/* ---------- BODY ---------- */}
+      <div className="erp-body">
 
         {/* ---------- SIDEBAR ---------- */}
-        <div style={{
-          width: 230,
-          background: '#f4f4f4',
-          padding: 15,
-          borderRight: '1px solid #ccc',
-          overflowY: 'auto'
-        }}>
-          {sections.map(section => (
-            <div key={section.title} style={{ marginBottom: 25 }}>
+        <div className="erp-sidebar">
 
-              <div style={{
-                fontSize: 12,
-                fontWeight: 'bold',
-                marginBottom: 8,
-                color: '#666'
-              }}>
+          {sections.map(section => (
+            <div key={section.title}>
+
+              <div className="sidebar-section-title">
                 {section.title}
               </div>
 
@@ -145,14 +124,7 @@ export default function AdminDashboard({ user }) {
                 <div
                   key={item.key}
                   onClick={() => setScreen(item.key)}
-                  style={{
-                    padding: '8px 10px',
-                    cursor: 'pointer',
-                    borderRadius: 4,
-                    marginBottom: 5,
-                    background: screen === item.key ? '#d9e2ff' : 'transparent',
-                    fontWeight: screen === item.key ? 'bold' : 'normal'
-                  }}
+                  className={`sidebar-item ${screen === item.key ? 'active' : ''}`}
                 >
                   {item.label}
                 </div>
@@ -160,15 +132,11 @@ export default function AdminDashboard({ user }) {
 
             </div>
           ))}
+
         </div>
 
-        {/* ---------- CONTENT AREA ---------- */}
-        <div style={{
-          flex: 1,
-          padding: 20,
-          overflowY: 'auto',
-          background: '#fafafa'
-        }}>
+        {/* ---------- CONTENT ---------- */}
+        <div className="erp-content">
           {screens[screen]}
         </div>
 
