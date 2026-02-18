@@ -5,6 +5,7 @@ export default function ProductMaster({ onExit }) {
   const [item, setItem] = useState("");
   const [seriesName, setSeriesName] = useState("");
   const [categoryName, setCategoryName] = useState("");
+  const [origin, setOrigin] = useState("");
 
   const [seriesList, setSeriesList] = useState([]);
   const [list, setList] = useState([]);
@@ -27,20 +28,22 @@ export default function ProductMaster({ onExit }) {
   };
 
   const save = async () => {
-    if (!item || !seriesName || !categoryName) {
-      alert("Item, Series and Category required");
+    if (!item || !seriesName || !categoryName || !origin) {
+      alert("Item, Series, Category and Origin required");
       return;
     }
 
     await api.post("/products", {
       Item: item,
       SeriesName: seriesName,
-      CategoryName: categoryName
+      CategoryName: categoryName,
+      Origin: origin
     });
 
     setItem("");
     setSeriesName("");
     setCategoryName("");
+    setOrigin("");
     load();
   };
 
@@ -54,7 +57,10 @@ export default function ProductMaster({ onExit }) {
         onChange={e => setItem(e.target.value)}
       />
 
-      <select value={seriesName} onChange={e => onSeriesChange(e.target.value)}>
+      <select
+        value={seriesName}
+        onChange={e => onSeriesChange(e.target.value)}
+      >
         <option value="">Select Series</option>
         {seriesList.map(s => (
           <option key={s.SeriesName} value={s.SeriesName}>
@@ -70,6 +76,17 @@ export default function ProductMaster({ onExit }) {
         style={{ background: "#f0f0f0" }}
       />
 
+      {/* ORIGIN DROPDOWN */}
+      <select
+        value={origin}
+        onChange={e => setOrigin(e.target.value)}
+      >
+        <option value="">Select Origin</option>
+        <option value="Jaipur">Jaipur</option>
+        <option value="Kolkata">Kolkata</option>
+        <option value="Ahmedabad">Ahmedabad</option>
+      </select>
+
       <br /><br />
 
       <button onClick={save}>Save</button>
@@ -80,7 +97,7 @@ export default function ProductMaster({ onExit }) {
       <ul>
         {list.map(p => (
           <li key={p.ProductID}>
-            {p.Item} ({p.SeriesName})
+            {p.Item} ({p.SeriesName}) - {p.Origin}
           </li>
         ))}
       </ul>
