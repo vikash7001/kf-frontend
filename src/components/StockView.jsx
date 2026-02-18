@@ -60,18 +60,17 @@ export default function StockView({ user }) {
   const [stock, setStock] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  /* ------------------------------
-     Filters & sorting state
-  -------------------------------- */
   const saved = loadSavedFilters();
 
   const [productFilter, setProductFilter] = useState(saved.product || []);
   const [seriesFilter, setSeriesFilter] = useState(saved.series || []);
   const [categoryFilter, setCategoryFilter] = useState(saved.category || []);
+  const [originFilter, setOriginFilter] = useState(saved.origin || []);
 
   const [showProduct, setShowProduct] = useState(false);
   const [showSeries, setShowSeries] = useState(false);
   const [showCategory, setShowCategory] = useState(false);
+  const [showOrigin, setShowOrigin] = useState(false);
 
   const [sortBy, setSortBy] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -85,13 +84,11 @@ export default function StockView({ user }) {
     saveFilters({
       product: productFilter,
       series: seriesFilter,
-      category: categoryFilter
+      category: categoryFilter,
+      origin: originFilter
     });
-  }, [productFilter, seriesFilter, categoryFilter]);
+  }, [productFilter, seriesFilter, categoryFilter, originFilter]);
 
-  /* ------------------------------
-     Helpers
-  -------------------------------- */
   function toggleFilter(setter, value) {
     setter(prev =>
       prev.includes(value)
@@ -114,9 +111,6 @@ export default function StockView({ user }) {
     return sortDir === "asc" ? " ▲" : " ▼";
   }
 
-  /* ------------------------------
-     Load stock
-  -------------------------------- */
   async function loadStock() {
     try {
       setLoading(true);
@@ -132,6 +126,7 @@ export default function StockView({ user }) {
         item: r.Item,
         seriesname: r.SeriesName,
         categoryname: r.CategoryName,
+        origin: r.Origin,
         jaipurqty: Number(r.JaipurQty || 0),
         kolkataqty: Number(r.KolkataQty || 0),
         ahmedabadqty: Number(r.AhmedabadQty || 0),
@@ -147,14 +142,12 @@ export default function StockView({ user }) {
     }
   }
 
-  /* ------------------------------
-     Filter + sort
-  -------------------------------- */
   const filteredAndSortedStock = [...stock]
     .filter(s =>
       (productFilter.length === 0 || productFilter.includes(s.item)) &&
       (seriesFilter.length === 0 || seriesFilter.includes(s.seriesname)) &&
-      (categoryFilter.length === 0 || categoryFilter.includes(s.categoryname))
+      (categoryFilter.length === 0 || categoryFilter.includes(s.categoryname)) &&
+      (originFilter.length === 0 || originFilter.includes(s.origin))
     )
     .sort((a, b) => {
       if (!sortBy) return 0;
@@ -171,6 +164,7 @@ export default function StockView({ user }) {
     });
 
   const seriesList = [...new Set(stock.map(s => s.seriesname))].sort();
+  const originList = [...new Set(stock.map(s => s.origin))].sort();
 
   return (
     <div style={{ padding: 16 }}>
@@ -181,7 +175,6 @@ export default function StockView({ user }) {
 
       {!loading && stock.length > 0 && (
         <>
-          {/* FILTER BAR */}
           <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
             <FilterSection
               title="Products"
@@ -195,8 +188,7 @@ export default function StockView({ user }) {
                     type="checkbox"
                     checked={productFilter.includes(p)}
                     onChange={() => toggleFilter(setProductFilter, p)}
-                  />{" "}
-                  {p}
+                  /> {p}
                 </label>
               ))}
             </FilterSection>
@@ -213,8 +205,7 @@ export default function StockView({ user }) {
                     type="checkbox"
                     checked={seriesFilter.includes(s)}
                     onChange={() => toggleFilter(setSeriesFilter, s)}
-                  />{" "}
-                  {s}
+                  /> {s}
                 </label>
               ))}
             </FilterSection>
@@ -231,8 +222,24 @@ export default function StockView({ user }) {
                     type="checkbox"
                     checked={categoryFilter.includes(c)}
                     onChange={() => toggleFilter(setCategoryFilter, c)}
-                  />{" "}
-                  {c}
+                  /> {c}
+                </label>
+              ))}
+            </FilterSection>
+
+            <FilterSection
+              title="Origin"
+              open={showOrigin}
+              onToggle={() => setShowOrigin(v => !v)}
+              activeCount={originFilter.length}
+            >
+              {originList.map(o => (
+                <label key={o} style={{ display: "block" }}>
+                  <input
+                    type="checkbox"
+                    checked={originFilter.includes(o)}
+                    onChange={() => toggleFilter(setOriginFilter, o)}
+                  /> {o}
                 </label>
               ))}
             </FilterSection>
@@ -243,13 +250,13 @@ export default function StockView({ user }) {
               setProductFilter([]);
               setSeriesFilter([]);
               setCategoryFilter([]);
+              setOriginFilter([]);
               localStorage.removeItem(LS_KEY);
             }}
           >
             Reset Filters
           </button>
 
-          {/* TABLE */}
           <table
             border="1"
             cellPadding="6"
@@ -264,6 +271,7 @@ export default function StockView({ user }) {
                 <th onClick={() => handleSort("item")}>Product{sortArrow("item")}</th>
                 <th onClick={() => handleSort("seriesname")}>Series{sortArrow("seriesname")}</th>
                 <th onClick={() => handleSort("categoryname")}>Category{sortArrow("categoryname")}</th>
+                <th onClick={() => handleSort("origin")}>Origin{sortArrow("origin")}</th>
                 <th onClick={() => handleSort("jaipurqty")}>Jaipur{sortArrow("jaipurqty")}</th>
                 <th onClick={() => handleSort("kolkataqty")}>Kolkata{sortArrow("kolkataqty")}</th>
                 <th onClick={() => handleSort("ahmedabadqty")}>Ahmedabad{sortArrow("ahmedabadqty")}</th>
@@ -276,6 +284,7 @@ export default function StockView({ user }) {
                   <td>{s.item}</td>
                   <td>{s.seriesname}</td>
                   <td>{s.categoryname}</td>
+                  <td>{s.origin}</td>
                   <td align="right">{s.jaipurqty}</td>
                   <td align="right">{s.kolkataqty}</td>
                   <td align="right">{s.ahmedabadqty}</td>
