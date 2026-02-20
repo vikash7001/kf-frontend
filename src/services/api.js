@@ -84,3 +84,19 @@ export function getJobWorkers() {
   return apiInstance.get("/jobworkers");
 }
 
+// Vendors
+export function addVendor(data) {
+  return apiInstance.post("/vendors", data);
+}
+
+// Job Workers
+export function addJobWorker(data) {
+  return apiInstance.post("/jobworkers", data);
+}
+export function getFabricIncomingList() {
+  return apiInstance.get("/fabric/incoming/list");
+}
+
+export function getFabricMovementList() {
+  return apiInstance.get("/fabric/movement/list");
+}

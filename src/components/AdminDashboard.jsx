@@ -25,12 +25,17 @@ import OnlineSkuManager from './OnlineSkuManager';
 import FabricIncoming from './FabricIncoming';
 import FabricIssue from './FabricIssue';
 import ProductionDashboard from './ProductionDashboard';
+import ViewFabricIncoming from './ViewFabricIncoming';
+import ViewFabricIssue from './ViewFabricIssue';
+
+import VendorMaster from './VendorMaster';
+import JobWorkerMaster from './JobWorkerMaster';
 
 export default function AdminDashboard({ user }) {
 
   const [screen, setScreen] = useState('purchase');
 
-  // ✅ Collapsible sections state
+  // Collapsible sections
   const [openSections, setOpenSections] = useState({
     CORE: true,
     IMAGES: false,
@@ -50,28 +55,43 @@ export default function AdminDashboard({ user }) {
   /* ================= SCREEN MAPPING ================= */
 
   const screens = {
+
+    // CORE
     purchase: <PurchaseVoucher user={user} />,
     sales: <SalesVoucher user={user} />,
     stock: <StockView user={user} />,
     transfer: <StockTransfer user={user} />,
+
+    // IMAGES
     images: <ImageViewer user={user} />,
     manageImages: <ManageImages user={user} />,
+
+    // MASTERS
     category: <CategoryMaster />,
     series: <SeriesMaster />,
     product: <ProductMaster />,
     customer: <CustomerMaster />,
     rateList: <RateList />,
-    itemDetails: <ItemDetails />,
-    onlineEnablement: <OnlineEnablement />,
-    onlineStock: <OnlineStockView />,
-    onlineSkuAmazon: <OnlineSkuManager marketplace="AMAZON" />,
-    onlineSkuPendingAmazon: <OnlineSkuPendingAmazon />,
+    vendor: <VendorMaster />,
+    jobworker: <JobWorkerMaster />,
+
+    // REPORTS
     viewIncoming: <ViewIncoming />,
     viewSales: <ViewSales />,
     viewTransfers: <ViewTransfers />,
+
+    // PRODUCTION
     fabricIncoming: <FabricIncoming />,
     fabricIssue: <FabricIssue />,
-    productionDashboard: <ProductionDashboard />
+    productionDashboard: <ProductionDashboard />,
+    viewFabricIncoming: <ViewFabricIncoming />,
+    viewFabricIssue: <ViewFabricIssue />,
+
+    // ONLINE
+    onlineEnablement: <OnlineEnablement />,
+    onlineStock: <OnlineStockView />,
+    onlineSkuAmazon: <OnlineSkuManager marketplace="AMAZON" />,
+    onlineSkuPendingAmazon: <OnlineSkuPendingAmazon />
   };
 
   /* ================= SIDEBAR SECTIONS ================= */
@@ -100,6 +120,8 @@ export default function AdminDashboard({ user }) {
         { key: 'series', label: 'Series' },
         { key: 'product', label: 'Product' },
         { key: 'customer', label: 'Customer' },
+        { key: 'vendor', label: 'Vendor' },
+        { key: 'jobworker', label: 'Job Worker' },
         { key: 'rateList', label: 'Rate List' },
       ]
     },
@@ -116,6 +138,8 @@ export default function AdminDashboard({ user }) {
       items: [
         { key: 'fabricIncoming', label: 'Fabric Incoming' },
         { key: 'fabricIssue', label: 'Fabric Issue' },
+        { key: 'viewFabricIncoming', label: 'View Fabric Incoming' },
+        { key: 'viewFabricIssue', label: 'View Fabric Issue' },
         { key: 'productionDashboard', label: 'Production Dashboard' },
       ]
     },
@@ -147,7 +171,7 @@ export default function AdminDashboard({ user }) {
           {sections.map(section => (
             <div key={section.title}>
 
-              {/* SECTION TITLE (CLICKABLE) */}
+              {/* Section Title */}
               <div
                 className="sidebar-section-title"
                 onClick={() => toggleSection(section.title)}
@@ -162,15 +186,13 @@ export default function AdminDashboard({ user }) {
                 <span>{openSections[section.title] ? "▾" : "▸"}</span>
               </div>
 
-              {/* SECTION ITEMS */}
+              {/* Section Items */}
               {openSections[section.title] &&
                 section.items.map(item => (
                   <div
                     key={item.key}
                     onClick={() => setScreen(item.key)}
-                    className={`sidebar-item ${
-                      screen === item.key ? 'active' : ''
-                    }`}
+                    className={`sidebar-item ${screen === item.key ? 'active' : ''}`}
                   >
                     {item.label}
                   </div>
