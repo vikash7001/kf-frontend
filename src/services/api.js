@@ -84,6 +84,3 @@ export function getJobWorkers() {
   return apiInstance.get("/jobworkers");
 }
 
-export function getAvailableLots() {
-  return apiInstance.get("/fabric/lots/available");
-}
