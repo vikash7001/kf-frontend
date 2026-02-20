@@ -51,7 +51,7 @@ export default function AdminDashboard({ user }) {
     onlineSkuPendingAmazon: <OnlineSkuPendingAmazon />,
     viewIncoming: <ViewIncoming />,
     viewSales: <ViewSales />,
-    viewTransfers: <ViewTransfers />
+    viewTransfers: <ViewTransfers />,
 fabricIncoming: <FabricIncoming />,
 fabricIssue: <FabricIssue />,
 productionDashboard: <ProductionDashboard />,
