@@ -76,3 +76,14 @@ export function getVendors() {
 export function getLocations() {
   return apiInstance.get("/locations");
 }
+
+export function getAvailableLots() {
+  return apiInstance.get("/fabric/lots/available");
+}
+export function getJobWorkers() {
+  return apiInstance.get("/jobworkers");
+}
+
+export function getAvailableLots() {
+  return apiInstance.get("/fabric/lots/available");
+}
