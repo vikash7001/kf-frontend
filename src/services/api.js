@@ -4,13 +4,16 @@ const BASE =
   process.env.REACT_APP_API_URL ||
   "https://site--kf-backend-api--844vk4b7xzxp.code.run";
 
-
 const apiInstance = axios.create({
   baseURL: BASE,
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+/* =====================================================
+   CORE API WRAPPER
+===================================================== */
 
 const api = {
   setToken(token) {
@@ -33,6 +36,10 @@ const api = {
 export { api };
 export default api;
 
+/* =====================================================
+   EXISTING MODULES (UNCHANGED)
+===================================================== */
+
 export function postIncoming(data) {
   return apiInstance.post("/incoming", data);
 }
@@ -40,14 +47,32 @@ export function postIncoming(data) {
 export function postSales(data) {
   return apiInstance.post("/sales", data);
 }
+
+/* =====================================================
+   FABRIC / PRODUCTION MODULE
+===================================================== */
+
+// 🔹 Fabric Incoming
 export function postFabricIncoming(data) {
   return apiInstance.post("/fabric/incoming", data);
 }
 
+// 🔹 Fabric Movement (Issue to Job Worker)
 export function postFabricMovement(data) {
   return apiInstance.post("/fabric/movement", data);
 }
 
+// 🔹 Live Production Dashboard
 export function getFabricDashboard() {
   return apiInstance.get("/fabric/dashboard/live");
+}
+
+// 🔹 Vendors Master
+export function getVendors() {
+  return apiInstance.get("/vendors");
+}
+
+// 🔹 Locations Master
+export function getLocations() {
+  return apiInstance.get("/locations");
 }
