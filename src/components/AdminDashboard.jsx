@@ -22,6 +22,10 @@ import OnlineStockView from './OnlineStockView';
 import OnlineSkuPendingAmazon from './OnlineSkuPendingAmazon';
 import OnlineSkuManager from './OnlineSkuManager';
 
+import FabricIncoming from './FabricIncoming';
+import FabricIssue from './FabricIssue';
+import ProductionDashboard from './ProductionDashboard';
+
 export default function AdminDashboard({ user }) {
 
   const [screen, setScreen] = useState('purchase');
@@ -48,6 +52,10 @@ export default function AdminDashboard({ user }) {
     viewIncoming: <ViewIncoming />,
     viewSales: <ViewSales />,
     viewTransfers: <ViewTransfers />
+fabricIncoming: <FabricIncoming />,
+fabricIssue: <FabricIssue />,
+productionDashboard: <ProductionDashboard />,
+
   };
 
   /* ================= SIDEBAR SECTIONS ================= */
@@ -87,6 +95,15 @@ export default function AdminDashboard({ user }) {
         { key: 'viewTransfers', label: 'Stock Transfers' },
       ]
     },
+{
+  title: "PRODUCTION",
+  items: [
+    { key: 'fabricIncoming', label: 'Fabric Incoming' },
+    { key: 'fabricIssue', label: 'Fabric Issue' },
+    { key: 'productionDashboard', label: 'Production Dashboard' }
+  ]
+}
+
     {
       title: "ONLINE",
       items: [

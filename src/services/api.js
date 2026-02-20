@@ -40,3 +40,14 @@ export function postIncoming(data) {
 export function postSales(data) {
   return apiInstance.post("/sales", data);
 }
+export function postFabricIncoming(data) {
+  return apiInstance.post("/fabric/incoming", data);
+}
+
+export function postFabricMovement(data) {
+  return apiInstance.post("/fabric/movement", data);
+}
+
+export function getFabricDashboard() {
+  return apiInstance.get("/fabric/dashboard/live");
+}
