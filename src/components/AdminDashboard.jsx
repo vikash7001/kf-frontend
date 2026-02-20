@@ -30,6 +30,23 @@ export default function AdminDashboard({ user }) {
 
   const [screen, setScreen] = useState('purchase');
 
+  // ✅ Collapsible sections state
+  const [openSections, setOpenSections] = useState({
+    CORE: true,
+    IMAGES: false,
+    MASTERS: false,
+    REPORTS: false,
+    PRODUCTION: true,
+    ONLINE: false
+  });
+
+  function toggleSection(title) {
+    setOpenSections(prev => ({
+      ...prev,
+      [title]: !prev[title]
+    }));
+  }
+
   /* ================= SCREEN MAPPING ================= */
 
   const screens = {
@@ -52,10 +69,9 @@ export default function AdminDashboard({ user }) {
     viewIncoming: <ViewIncoming />,
     viewSales: <ViewSales />,
     viewTransfers: <ViewTransfers />,
-fabricIncoming: <FabricIncoming />,
-fabricIssue: <FabricIssue />,
-productionDashboard: <ProductionDashboard />,
-
+    fabricIncoming: <FabricIncoming />,
+    fabricIssue: <FabricIssue />,
+    productionDashboard: <ProductionDashboard />
   };
 
   /* ================= SIDEBAR SECTIONS ================= */
@@ -95,15 +111,14 @@ productionDashboard: <ProductionDashboard />,
         { key: 'viewTransfers', label: 'Stock Transfers' },
       ]
     },
-{
-  title: "PRODUCTION",
-  items: [
-    { key: 'fabricIncoming', label: 'Fabric Incoming' },
-    { key: 'fabricIssue', label: 'Fabric Issue' },
-    { key: 'productionDashboard', label: 'Production Dashboard' },
-  ]
-},
-
+    {
+      title: "PRODUCTION",
+      items: [
+        { key: 'fabricIncoming', label: 'Fabric Incoming' },
+        { key: 'fabricIssue', label: 'Fabric Issue' },
+        { key: 'productionDashboard', label: 'Production Dashboard' },
+      ]
+    },
     {
       title: "ONLINE",
       items: [
@@ -132,21 +147,35 @@ productionDashboard: <ProductionDashboard />,
           {sections.map(section => (
             <div key={section.title}>
 
-              <div className="sidebar-section-title">
-                {section.title}
+              {/* SECTION TITLE (CLICKABLE) */}
+              <div
+                className="sidebar-section-title"
+                onClick={() => toggleSection(section.title)}
+                style={{
+                  cursor: "pointer",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
+                }}
+              >
+                <span>{section.title}</span>
+                <span>{openSections[section.title] ? "▾" : "▸"}</span>
               </div>
 
-              {section.items.map(item => (
-                <div
-                  key={item.key}
-                  onClick={() => setScreen(item.key)}
-                  className={`sidebar-item ${
-                    screen === item.key ? 'active' : ''
-                  }`}
-                >
-                  {item.label}
-                </div>
-              ))}
+              {/* SECTION ITEMS */}
+              {openSections[section.title] &&
+                section.items.map(item => (
+                  <div
+                    key={item.key}
+                    onClick={() => setScreen(item.key)}
+                    className={`sidebar-item ${
+                      screen === item.key ? 'active' : ''
+                    }`}
+                  >
+                    {item.label}
+                  </div>
+                ))
+              }
 
             </div>
           ))}
