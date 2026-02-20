@@ -100,9 +100,9 @@ productionDashboard: <ProductionDashboard />,
   items: [
     { key: 'fabricIncoming', label: 'Fabric Incoming' },
     { key: 'fabricIssue', label: 'Fabric Issue' },
-    { key: 'productionDashboard', label: 'Production Dashboard' }
+    { key: 'productionDashboard', label: 'Production Dashboard' },
   ]
-}
+},
 
     {
       title: "ONLINE",
