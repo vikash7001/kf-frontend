@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   getAvailableLots,
   getJobWorkers,
+  getLocations,
   postFabricMovement
 } from "../services/api";
 
@@ -9,11 +10,14 @@ export default function FabricIssue() {
 
   const [lots, setLots] = useState([]);
   const [jobWorkers, setJobWorkers] = useState([]);
+  const [locations, setLocations] = useState([]);
+
   const [selectedLot, setSelectedLot] = useState(null);
   const [message, setMessage] = useState("");
 
   const [form, setForm] = useState({
     issue_date: "",
+    from_location_id: "",
     lot_no: "",
     design_number: "",
     jobworker_id: "",
@@ -21,6 +25,8 @@ export default function FabricIssue() {
     due_date: "",
     remarks: ""
   });
+
+  /* ================= LOAD DATA ================= */
 
   useEffect(() => {
     loadData();
@@ -30,28 +36,57 @@ export default function FabricIssue() {
     try {
       const l = await getAvailableLots();
       const j = await getJobWorkers();
-      setLots(l.data);
-      setJobWorkers(j.data);
+      const loc = await getLocations();
+
+      setLots(l.data || []);
+      setJobWorkers(j.data || []);
+      setLocations(loc.data || []);
     } catch (err) {
       console.error(err);
     }
   }
+
+  /* ================= HANDLE CHANGE ================= */
 
   function handleChange(e) {
     const { name, value } = e.target;
 
     if (name === "lot_no") {
       const lot = lots.find(l => l.lot_no === value);
-      setSelectedLot(lot);
+      setSelectedLot(lot || null);
     }
 
     setForm(prev => ({ ...prev, [name]: value }));
   }
 
+  /* ================= SUBMIT ================= */
+
   async function handleSubmit() {
 
+    setMessage("");
+
+    if (!form.issue_date) {
+      setMessage("Select Issue Date ❌");
+      return;
+    }
+
+    if (!form.from_location_id) {
+      setMessage("Select From Location ❌");
+      return;
+    }
+
     if (!selectedLot) {
-      setMessage("Select lot ❌");
+      setMessage("Select Lot ❌");
+      return;
+    }
+
+    if (!form.jobworker_id) {
+      setMessage("Select Job Worker ❌");
+      return;
+    }
+
+    if (!form.quantity || Number(form.quantity) <= 0) {
+      setMessage("Enter valid quantity ❌");
       return;
     }
 
@@ -65,17 +100,20 @@ export default function FabricIssue() {
         lot_no: form.lot_no,
         design_number: form.design_number,
         jobworker_id: Number(form.jobworker_id),
+        process_id: jobWorkers.find(j => j.jobworker_id === Number(form.jobworker_id))?.process_id,
+        from_location_id: Number(form.from_location_id),
         uom: "MTR",
         qty_issued: Number(form.quantity),
         issue_date: form.issue_date,
-        due_date: form.due_date,
-        remarks: form.remarks
+        due_date: form.due_date || null,
+        remarks: form.remarks || null
       });
 
       setMessage("Fabric issued successfully ✅");
 
       setForm({
         issue_date: "",
+        from_location_id: "",
         lot_no: "",
         design_number: "",
         jobworker_id: "",
@@ -85,7 +123,7 @@ export default function FabricIssue() {
       });
 
       setSelectedLot(null);
-      loadData(); // refresh balances
+      loadData();
 
     } catch (err) {
       setMessage("Error issuing fabric ❌");
@@ -93,12 +131,18 @@ export default function FabricIssue() {
     }
   }
 
+  /* ================= UI ================= */
+
   return (
     <div>
 
       <h2>Fabric Issue</h2>
 
-      {message && <div style={{ marginBottom: 10 }}>{message}</div>}
+      {message && (
+        <div style={{ marginBottom: 12, fontWeight: "bold" }}>
+          {message}
+        </div>
+      )}
 
       <div className="form-grid">
 
@@ -108,6 +152,19 @@ export default function FabricIssue() {
           value={form.issue_date}
           onChange={handleChange}
         />
+
+        <select
+          name="from_location_id"
+          value={form.from_location_id}
+          onChange={handleChange}
+        >
+          <option value="">Select Location</option>
+          {locations.map(l => (
+            <option key={l.location_id} value={l.location_id}>
+              {l.location_name}
+            </option>
+          ))}
+        </select>
 
         <select
           name="lot_no"
