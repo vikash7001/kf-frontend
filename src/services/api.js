@@ -100,3 +100,10 @@ export function getFabricIncomingList() {
 export function getFabricMovementList() {
   return apiInstance.get("/fabric/movement/list");
 }
+export function getProcesses() {
+  return apiInstance.get("/processes");
+}
+
+export function addProcess(data) {
+  return apiInstance.post("/processes", data);
+}

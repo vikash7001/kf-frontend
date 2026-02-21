@@ -30,6 +30,7 @@ import ViewFabricIssue from './ViewFabricIssue';
 
 import VendorMaster from './VendorMaster';
 import JobWorkerMaster from './JobWorkerMaster';
+import ProcessMaster from './ProcessMaster';
 
 export default function AdminDashboard({ user }) {
 
@@ -74,11 +75,18 @@ export default function AdminDashboard({ user }) {
     rateList: <RateList />,
     vendor: <VendorMaster />,
     jobworker: <JobWorkerMaster />,
+    process: <ProcessMaster />,
 
     // REPORTS
     viewIncoming: <ViewIncoming />,
     viewSales: <ViewSales />,
     viewTransfers: <ViewTransfers />,
+itemDetails: (
+  <ItemDetails
+    onExit={() => setScreen('stock')}
+  />
+),
+
 
     // PRODUCTION
     fabricIncoming: <FabricIncoming />,
@@ -122,6 +130,7 @@ export default function AdminDashboard({ user }) {
         { key: 'customer', label: 'Customer' },
         { key: 'vendor', label: 'Vendor' },
         { key: 'jobworker', label: 'Job Worker' },
+        { key: 'process', label: 'Process' },
         { key: 'rateList', label: 'Rate List' },
       ]
     },
@@ -131,6 +140,8 @@ export default function AdminDashboard({ user }) {
         { key: 'viewIncoming', label: 'View Purchase' },
         { key: 'viewSales', label: 'View Sales' },
         { key: 'viewTransfers', label: 'Stock Transfers' },
+        { key: 'itemDetails', label: 'Item Details' },
+
       ]
     },
     {
