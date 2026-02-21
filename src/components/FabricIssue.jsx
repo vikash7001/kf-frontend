@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   getAvailableLots,
   getJobWorkers,
-  postFabricMovement
+  createProductionJob
 } from "../services/api";
 
 export default function FabricIssue() {
@@ -15,16 +15,13 @@ export default function FabricIssue() {
   const [form, setForm] = useState({
     issue_date: "",
     lot_no: "",
-    from_location_id: "",
-    location_name: "",
     design_number: "",
     jobworker_id: "",
     quantity: "",
     due_date: "",
+    jobworker_rate: "",
     remarks: ""
   });
-
-  /* ================= LOAD DATA ================= */
 
   useEffect(() => {
     loadData();
@@ -41,52 +38,31 @@ export default function FabricIssue() {
     }
   }
 
-  /* ================= HANDLE CHANGE ================= */
-
   function handleChange(e) {
     const { name, value } = e.target;
 
     if (name === "lot_no") {
       const lot = lots.find(l => l.lot_no === value);
-
-      setSelectedLot(lot || null);
-
-      setForm(prev => ({
-        ...prev,
-        lot_no: value,
-        from_location_id: lot?.location_id || "",
-        location_name: lot?.location_name || ""
-      }));
-
-      return;
+      setSelectedLot(lot);
     }
 
     setForm(prev => ({ ...prev, [name]: value }));
   }
 
-  /* ================= SUBMIT ================= */
-
   async function handleSubmit() {
 
-    setMessage("");
-
-    if (!form.issue_date) {
-      setMessage("Select Issue Date ❌");
+    if (!selectedLot) {
+      setMessage("Select lot ❌");
       return;
     }
 
-    if (!selectedLot) {
-      setMessage("Select Lot ❌");
+    if (!form.design_number) {
+      setMessage("Enter design number ❌");
       return;
     }
 
     if (!form.jobworker_id) {
-      setMessage("Select Job Worker ❌");
-      return;
-    }
-
-    if (!form.quantity || Number(form.quantity) <= 0) {
-      setMessage("Enter valid quantity ❌");
+      setMessage("Select job worker ❌");
       return;
     }
 
@@ -97,29 +73,27 @@ export default function FabricIssue() {
 
     try {
 
-      await postFabricMovement({
+      await createProductionJob({
         lot_no: form.lot_no,
         design_number: form.design_number,
-        jobworker_id: Number(form.jobworker_id),
-        from_location_id: Number(form.from_location_id),
-        uom: "MTR",
-        qty_issued: Number(form.quantity),
-        issue_date: form.issue_date,
-        due_date: form.due_date || null,
-        remarks: form.remarks || null
+        initial_mtr: Number(form.quantity),
+        to_jobworker_id: Number(form.jobworker_id),
+        movement_date: form.issue_date,
+        due_date: form.due_date,
+        jobworker_rate: Number(form.jobworker_rate) || null,
+        remarks: form.remarks
       });
 
-      setMessage("Fabric issued successfully ✅");
+      setMessage("Production job created successfully ✅");
 
       setForm({
         issue_date: "",
         lot_no: "",
-        from_location_id: "",
-        location_name: "",
         design_number: "",
         jobworker_id: "",
         quantity: "",
         due_date: "",
+        jobworker_rate: "",
         remarks: ""
       });
 
@@ -127,20 +101,18 @@ export default function FabricIssue() {
       loadData();
 
     } catch (err) {
-      setMessage("Error issuing fabric ❌");
       console.error(err);
+      setMessage("Error creating production job ❌");
     }
   }
-
-  /* ================= UI ================= */
 
   return (
     <div>
 
-      <h2>Fabric Issue</h2>
+      <h2>Create Production Job</h2>
 
       {message && (
-        <div style={{ marginBottom: 12, fontWeight: "bold" }}>
+        <div style={{ marginBottom: 10 }}>
           {message}
         </div>
       )}
@@ -170,15 +142,8 @@ export default function FabricIssue() {
         {selectedLot && (
           <div style={{ fontSize: 14 }}>
             Fabric: <b>{selectedLot.fabric_name}</b> |
-            Purchased: {selectedLot.total_purchased} |
-            Issued: {selectedLot.total_issued} |
+            Location: {selectedLot.location_name} |
             Balance: {selectedLot.balance}
-          </div>
-        )}
-
-        {selectedLot && (
-          <div style={{ fontSize: 14 }}>
-            Location: <b>{form.location_name}</b>
           </div>
         )}
 
@@ -210,6 +175,13 @@ export default function FabricIssue() {
         />
 
         <input
+          name="jobworker_rate"
+          placeholder="Job Worker Rate"
+          value={form.jobworker_rate}
+          onChange={handleChange}
+        />
+
+        <input
           type="date"
           name="due_date"
           value={form.due_date}
@@ -225,7 +197,9 @@ export default function FabricIssue() {
 
       </div>
 
-      <button onClick={handleSubmit}>Issue Fabric</button>
+      <button onClick={handleSubmit}>
+        Create Job
+      </button>
 
     </div>
   );

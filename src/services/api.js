@@ -107,3 +107,12 @@ export function getProcesses() {
 export function addProcess(data) {
   return apiInstance.post("/processes", data);
 }
+export function createProductionJob(data) {
+  return apiInstance.post("/production/create-job", data);
+}
+export function getProductionDashboard() {
+  return apiInstance.get("/production/dashboard");
+}
+export function getProductionHistory(jobId) {
+  return apiInstance.get(`/production/history/${jobId}`);
+}
