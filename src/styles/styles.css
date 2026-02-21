@@ -1,5 +1,5 @@
 /* ===================================================== */
-/* ================= GLOBAL SETTINGS =================== */
+/* ================= GLOBAL ============================ */
 /* ===================================================== */
 
 * {
@@ -10,34 +10,29 @@ html, body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  font-family: 'Segoe UI', Arial, sans-serif;
-  font-size: 14px;
-  background: #f3f4f6;
-  color: #222;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 13px;
+  background: #dcdcdc; /* Classic Tally grey */
+  color: #000;
 }
 
 /* ===================================================== */
-/* ================= TITLE BAR ========================= */
+/* ================= TOP BLUE STRIP ==================== */
 /* ===================================================== */
 
 .titlebar {
-  background: #1f3a8a;
-  color: white;
-  height: 42px;
-  padding: 0 18px;
+  background: #1c3faa;
+  color: #fff;
+  height: 30px;
+  padding: 0 10px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-weight: 600;
+  justify-content: space-between;
+  font-weight: bold;
 }
 
 .titlebar .company {
-  font-weight: 700;
-  font-size: 15px;
-}
-
-.toolbar {
-  display: none;
+  font-size: 13px;
 }
 
 /* ===================================================== */
@@ -51,14 +46,15 @@ html, body {
 }
 
 .erp-header {
-  height: 40px;
-  background: #1f3a8a;
-  color: white;
+  height: 28px;
+  background: #2c4aa5;
+  color: #fff;
+  padding: 0 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 .erp-body {
@@ -72,46 +68,34 @@ html, body {
 /* ===================================================== */
 
 .erp-sidebar {
-  width: 220px;
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
-  padding: 18px 14px;
+  width: 190px;
+  background: #efefef;
+  border-right: 1px solid #a0a0a0;
+  padding: 6px 8px;
   overflow-y: auto;
-}
-
-.erp-sidebar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.erp-sidebar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 6px;
 }
 
 .sidebar-section-title {
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #6b7280;
-  margin-top: 18px;
-  margin-bottom: 8px;
+  font-weight: bold;
+  margin: 10px 0 4px 0;
+  color: #444;
 }
 
 .sidebar-item {
-  padding: 8px 10px;
-  border-radius: 6px;
+  padding: 5px 6px;
   cursor: pointer;
-  transition: 0.15s ease;
+  font-size: 12px;
 }
 
 .sidebar-item:hover {
-  background: #f3f4f6;
+  background: #dce6ff;
 }
 
 .sidebar-item.active {
-  background: #2563eb;
-  color: white;
-  font-weight: 600;
+  background: #2c4aa5;
+  color: #fff;
+  font-weight: bold;
 }
 
 /* ===================================================== */
@@ -120,218 +104,149 @@ html, body {
 
 .erp-content {
   flex: 1;
-  padding: 30px;
-  background: #f9fafb;
+  background: #ffffff;
+  padding: 8px 12px;
   overflow-y: auto;
 }
 
-.erp-content::-webkit-scrollbar {
-  width: 8px;
-}
-
-.erp-content::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 6px;
-}
-
 /* ===================================================== */
-/* ================= PANEL (PREMIUM FIX) =============== */
+/* ================= PANEL ============================= */
 /* ===================================================== */
 
 .container {
-  display: flex;
-  justify-content: center;
+  width: 100%;
 }
 
 .panel {
-  background: #ffffff;
   width: 100%;
-  max-width: 820px;
-  padding: 32px 36px 90px 36px; /* bottom space for sticky button */
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+  padding: 6px 8px;
+  background: #ffffff;
+  border: none;
 }
 
+/* Voucher Title */
 .panel h2 {
-  margin-top: 0;
-  margin-bottom: 26px;
-  font-size: 20px;
-  font-weight: 700;
-  color: #111827;
+  font-size: 14px;
+  font-weight: bold;
+  margin: 4px 0 10px 0;
+  border-bottom: 1px solid #c0c0c0;
+  padding-bottom: 4px;
+}
+
+/* ===================================================== */
+/* ================= FORM GRID ========================= */
+/* ===================================================== */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  row-gap: 4px;
+  column-gap: 8px;
+  align-items: center;
 }
 
 /* ===================================================== */
 /* ================= FORM ELEMENTS ===================== */
 /* ===================================================== */
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 18px;
+label {
+  font-weight: bold;
+  font-size: 12px;
 }
-
-.form-group label {
-  margin-bottom: 6px;
-  font-weight: 600;
-  font-size: 13px;
-  color: #374151;
-}
-
-/* Premium Inputs */
 
 select,
 input,
 textarea {
-  padding: 10px 12px;
-  font-size: 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  outline: none;
-  transition: 0.2s;
+  padding: 3px 5px;
+  font-size: 12px;
+  border: 1px solid #a9a9a9;
+  border-radius: 0;
   width: 100%;
-  background: #ffffff;
+  background: #fff;
 }
 
 select:focus,
 input:focus,
 textarea:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+  border: 1px solid #2c4aa5;
+  background: #eaf0ff;
+  outline: none;
 }
 
 /* ===================================================== */
-/* ================= FORM ACTION FOOTER ================ */
+/* ================= ACTION BUTTONS ==================== */
 /* ===================================================== */
 
-.form-actions {
-  position: sticky;
-  bottom: 0;
-  background: #ffffff;
-  padding-top: 18px;
-  padding-bottom: 10px;
-  margin-top: 20px;
-  display: flex;
-  gap: 12px;
-  border-top: 1px solid #e5e7eb;
+.button-strip {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #c0c0c0;
 }
-
-/* ===================================================== */
-/* ================= BUTTONS =========================== */
-/* ===================================================== */
 
 button {
-  padding: 9px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  border-radius: 6px;
-  border: none;
-  background: #2563eb;
-  color: white;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  border: 1px solid #2c4aa5;
+  background: #2c4aa5;
+  color: #fff;
   cursor: pointer;
-  transition: 0.2s;
 }
 
 button:hover {
-  background: #1d4ed8;
+  background: #1c3faa;
 }
 
 button.secondary {
-  background: #6b7280;
-}
-
-button.secondary:hover {
-  background: #4b5563;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  background: #dcdcdc;
+  border: 1px solid #888;
+  color: #000;
 }
 
 /* ===================================================== */
-/* ================= MESSAGE STYLES ==================== */
-/* ===================================================== */
-
-.message-success {
-  background: #ecfdf5;
-  color: #065f46;
-  padding: 10px 14px;
-  border-radius: 6px;
-  margin-bottom: 16px;
-  font-weight: 600;
-}
-
-.message-error {
-  background: #fef2f2;
-  color: #991b1b;
-  padding: 10px 14px;
-  border-radius: 6px;
-  margin-bottom: 16px;
-  font-weight: 600;
-}
-
-/* ===================================================== */
-/* ================= TABLE ============================= */
+/* ================= TABLE (Voucher Grid) ============== */
 /* ===================================================== */
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 18px;
-  font-size: 13px;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
+  margin-top: 6px;
+  font-size: 12px;
 }
 
 th {
-  background: #f9fafb;
-  font-weight: 600;
+  background: #f2f2f2;
+  border: 1px solid #a9a9a9;
+  padding: 4px;
   text-align: left;
-  padding: 12px 10px;
-  border-bottom: 1px solid #e5e7eb;
+  font-weight: bold;
 }
 
 td {
-  padding: 10px;
-  border-bottom: 1px solid #f0f0f0;
+  border: 1px solid #c8c8c8;
+  padding: 4px;
 }
 
 tr:hover {
-  background: #f3f4f6;
-}
-
-tbody tr:nth-child(even) {
-  background: #fafafa;
+  background: #eef3ff;
 }
 
 /* ===================================================== */
-/* ================= OVERLAYS ========================== */
+/* ================= MESSAGE BOX ======================= */
 /* ===================================================== */
 
-.loading-overlay,
-.confirm-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0,0,0,0.45);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
+.message-success {
+  background: #e6f0ff;
+  border: 1px solid #2c4aa5;
+  padding: 4px;
+  margin-bottom: 6px;
+  font-size: 12px;
 }
 
-.confirm-box {
-  background: white;
-  padding: 26px;
-  border-radius: 10px;
-  width: 340px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.25);
-}
-
-.confirm-box h3 {
-  margin-top: 0;
-  margin-bottom: 18px;
+.message-error {
+  background: #ffe6e6;
+  border: 1px solid #cc0000;
+  padding: 4px;
+  margin-bottom: 6px;
+  font-size: 12px;
 }
