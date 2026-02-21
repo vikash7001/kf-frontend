@@ -11,19 +11,19 @@ html, body {
   margin: 0;
   overflow: hidden;
   font-family: Tahoma, Arial, sans-serif;
-  font-size: 13px;
-  background: #dcdcdc; /* Classic Tally grey */
+  font-size: 12px;
+  background: #dcdcdc;
   color: #000;
 }
 
 /* ===================================================== */
-/* ================= TOP BLUE STRIP ==================== */
+/* ================= TOP BAR =========================== */
 /* ===================================================== */
 
 .titlebar {
   background: #1c3faa;
   color: #fff;
-  height: 30px;
+  height: 28px;
   padding: 0 10px;
   display: flex;
   align-items: center;
@@ -31,12 +31,8 @@ html, body {
   font-weight: bold;
 }
 
-.titlebar .company {
-  font-size: 13px;
-}
-
 /* ===================================================== */
-/* ================= ERP LAYOUT ======================== */
+/* ================= LAYOUT ============================ */
 /* ===================================================== */
 
 .erp-layout {
@@ -46,14 +42,14 @@ html, body {
 }
 
 .erp-header {
-  height: 28px;
+  height: 26px;
   background: #2c4aa5;
   color: #fff;
-  padding: 0 10px;
+  padding: 0 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
 }
 
@@ -68,69 +64,57 @@ html, body {
 /* ===================================================== */
 
 .erp-sidebar {
-  width: 190px;
+  width: 185px;
   background: #efefef;
-  border-right: 1px solid #a0a0a0;
-  padding: 6px 8px;
+  border-right: 1px solid #9c9c9c;
+  padding: 6px;
   overflow-y: auto;
 }
 
-.sidebar-section-title {
-  font-size: 11px;
-  font-weight: bold;
-  margin: 10px 0 4px 0;
-  color: #444;
-}
-
 .sidebar-item {
-  padding: 5px 6px;
+  padding: 4px 6px;
+  font-size: 11px;
   cursor: pointer;
-  font-size: 12px;
-}
-
-.sidebar-item:hover {
-  background: #dce6ff;
 }
 
 .sidebar-item.active {
   background: #2c4aa5;
   color: #fff;
-  font-weight: bold;
+}
+
+.sidebar-item:hover {
+  background: #cfdcff;
 }
 
 /* ===================================================== */
-/* ================= CONTENT AREA ====================== */
+/* ================= CONTENT =========================== */
 /* ===================================================== */
 
 .erp-content {
   flex: 1;
-  background: #ffffff;
-  padding: 8px 12px;
+  background: #f2f2f2;
+  padding: 6px 8px;
   overflow-y: auto;
 }
 
 /* ===================================================== */
-/* ================= PANEL ============================= */
+/* ================= VOUCHER PANEL ===================== */
 /* ===================================================== */
 
-.container {
-  width: 100%;
-}
-
 .panel {
-  width: 100%;
-  padding: 6px 8px;
   background: #ffffff;
-  border: none;
+  border: 1px solid #a0a0a0;
+  padding: 6px 8px;
 }
 
-/* Voucher Title */
+/* Title */
+
 .panel h2 {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
-  margin: 4px 0 10px 0;
-  border-bottom: 1px solid #c0c0c0;
-  padding-bottom: 4px;
+  margin: 0 0 6px 0;
+  border-bottom: 1px solid #bfbfbf;
+  padding-bottom: 3px;
 }
 
 /* ===================================================== */
@@ -139,92 +123,98 @@ html, body {
 
 .form-grid {
   display: grid;
-  grid-template-columns: 170px 1fr;
+  grid-template-columns: 150px 260px;
   row-gap: 4px;
-  column-gap: 8px;
+  column-gap: 6px;
   align-items: center;
 }
 
-/* ===================================================== */
-/* ================= FORM ELEMENTS ===================== */
-/* ===================================================== */
+/* Labels */
 
 label {
   font-weight: bold;
-  font-size: 12px;
+  font-size: 11px;
 }
 
-select,
+/* ===================================================== */
+/* ================= INPUTS (PROPER SIZE) ============== */
+/* ===================================================== */
+
 input,
-textarea {
-  padding: 3px 5px;
-  font-size: 12px;
-  border: 1px solid #a9a9a9;
-  border-radius: 0;
+select {
+  height: 20px;
+  padding: 2px 4px;
+  font-size: 11px;
+  border: 1px solid #8c8c8c;
+  background: #ffffff;
   width: 100%;
-  background: #fff;
 }
 
-select:focus,
+textarea {
+  font-size: 11px;
+  border: 1px solid #8c8c8c;
+  padding: 2px 4px;
+  width: 260px;
+}
+
 input:focus,
+select:focus,
 textarea:focus {
-  border: 1px solid #2c4aa5;
   background: #eaf0ff;
+  border: 1px solid #2c4aa5;
   outline: none;
 }
 
 /* ===================================================== */
-/* ================= ACTION BUTTONS ==================== */
+/* ================= INLINE ROW (ITEM ENTRY) =========== */
 /* ===================================================== */
 
-.button-strip {
-  margin-top: 8px;
-  padding-top: 6px;
-  border-top: 1px solid #c0c0c0;
+.inline-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
 }
 
-button {
-  padding: 3px 8px;
-  font-size: 12px;
-  font-weight: bold;
+.inline-row input {
+  width: 180px;
+}
+
+.inline-row .qty {
+  width: 80px;
+}
+
+.inline-row button {
+  height: 20px;
+  padding: 0 8px;
+  font-size: 11px;
   border: 1px solid #2c4aa5;
   background: #2c4aa5;
-  color: #fff;
+  color: white;
   cursor: pointer;
 }
 
-button:hover {
-  background: #1c3faa;
-}
-
-button.secondary {
-  background: #dcdcdc;
-  border: 1px solid #888;
-  color: #000;
-}
-
 /* ===================================================== */
-/* ================= TABLE (Voucher Grid) ============== */
+/* ================= TABLE ============================= */
 /* ===================================================== */
 
 table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 11px;
   margin-top: 6px;
-  font-size: 12px;
 }
 
 th {
-  background: #f2f2f2;
-  border: 1px solid #a9a9a9;
-  padding: 4px;
-  text-align: left;
+  background: #e6e6e6;
+  border: 1px solid #9c9c9c;
+  padding: 3px;
   font-weight: bold;
 }
 
 td {
   border: 1px solid #c8c8c8;
-  padding: 4px;
+  padding: 3px;
 }
 
 tr:hover {
@@ -232,21 +222,27 @@ tr:hover {
 }
 
 /* ===================================================== */
-/* ================= MESSAGE BOX ======================= */
+/* ================= BUTTON STRIP ====================== */
 /* ===================================================== */
 
-.message-success {
-  background: #e6f0ff;
-  border: 1px solid #2c4aa5;
-  padding: 4px;
-  margin-bottom: 6px;
-  font-size: 12px;
+.button-strip {
+  margin-top: 6px;
+  border-top: 1px solid #bfbfbf;
+  padding-top: 4px;
 }
 
-.message-error {
-  background: #ffe6e6;
-  border: 1px solid #cc0000;
-  padding: 4px;
-  margin-bottom: 6px;
-  font-size: 12px;
+.button-strip button {
+  height: 20px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: bold;
+  border: 1px solid #2c4aa5;
+  background: #2c4aa5;
+  color: #fff;
+}
+
+.button-strip button.secondary {
+  background: #dcdcdc;
+  border: 1px solid #888;
+  color: #000;
 }
