@@ -106,101 +106,109 @@ export default function FabricIssue() {
     }
   }
 
-  return (
-    <div>
+return (
+  <div className="page-container">
 
-      <h2>Create Production Job</h2>
+    <h2 className="page-title">Fabric Issue</h2>
 
-      {message && (
-        <div style={{ marginBottom: 10 }}>
-          {message}
+    {message && (
+      <div className="message-box">
+        {message}
+      </div>
+    )}
+
+    <div className="vertical-form">
+
+      <label>Issue Date</label>
+      <input
+        type="date"
+        name="issue_date"
+        value={form.issue_date}
+        onChange={handleChange}
+      />
+
+      <label>Select Lot</label>
+      <select
+        name="lot_no"
+        value={form.lot_no}
+        onChange={handleChange}
+      >
+        <option value="">Select Lot</option>
+        {lots.map(l => (
+          <option key={l.lot_no} value={l.lot_no}>
+            {l.lot_no} (Bal: {l.balance})
+          </option>
+        ))}
+      </select>
+
+      {selectedLot && (
+        <div className="lot-info-box">
+          <b>Fabric:</b> {selectedLot.fabric_name} <br />
+          <b>Location:</b> {selectedLot.location_name} <br />
+          <b>Available Balance:</b> {selectedLot.balance} MTR
         </div>
       )}
 
-      <div className="form-grid">
+      <label>Design Number</label>
+      <input
+        name="design_number"
+        placeholder="Enter Design Number"
+        value={form.design_number}
+        onChange={handleChange}
+      />
 
-        <input
-          type="date"
-          name="issue_date"
-          value={form.issue_date}
-          onChange={handleChange}
-        />
+      <label>Job Worker</label>
+      <select
+        name="jobworker_id"
+        value={form.jobworker_id}
+        onChange={handleChange}
+      >
+        <option value="">Select Job Worker</option>
+        {jobWorkers.map(j => (
+          <option key={j.jobworker_id} value={j.jobworker_id}>
+            {j.jobworker_name} ({j.process_name})
+          </option>
+        ))}
+      </select>
 
-        <select
-          name="lot_no"
-          value={form.lot_no}
-          onChange={handleChange}
-        >
-          <option value="">Select Lot</option>
-          {lots.map(l => (
-            <option key={l.lot_no} value={l.lot_no}>
-              {l.lot_no} (Bal: {l.balance})
-            </option>
-          ))}
-        </select>
+      <label>Quantity (MTR)</label>
+      <input
+        name="quantity"
+        placeholder="Enter Quantity"
+        value={form.quantity}
+        onChange={handleChange}
+      />
 
-        {selectedLot && (
-          <div style={{ fontSize: 14 }}>
-            Fabric: <b>{selectedLot.fabric_name}</b> |
-            Location: {selectedLot.location_name} |
-            Balance: {selectedLot.balance}
-          </div>
-        )}
+      <label>Job Worker Rate (Optional)</label>
+      <input
+        name="jobworker_rate"
+        placeholder="Enter Rate"
+        value={form.jobworker_rate}
+        onChange={handleChange}
+      />
 
-        <input
-          name="design_number"
-          placeholder="Design Number"
-          value={form.design_number}
-          onChange={handleChange}
-        />
+      <label>Due Date</label>
+      <input
+        type="date"
+        name="due_date"
+        value={form.due_date}
+        onChange={handleChange}
+      />
 
-        <select
-          name="jobworker_id"
-          value={form.jobworker_id}
-          onChange={handleChange}
-        >
-          <option value="">Select Job Worker</option>
-          {jobWorkers.map(j => (
-            <option key={j.jobworker_id} value={j.jobworker_id}>
-              {j.jobworker_name} ({j.process_name})
-            </option>
-          ))}
-        </select>
+      <label>Remarks</label>
+      <textarea
+        name="remarks"
+        placeholder="Remarks"
+        value={form.remarks}
+        onChange={handleChange}
+      />
 
-        <input
-          name="quantity"
-          placeholder="Quantity (MTR)"
-          value={form.quantity}
-          onChange={handleChange}
-        />
-
-        <input
-          name="jobworker_rate"
-          placeholder="Job Worker Rate"
-          value={form.jobworker_rate}
-          onChange={handleChange}
-        />
-
-        <input
-          type="date"
-          name="due_date"
-          value={form.due_date}
-          onChange={handleChange}
-        />
-
-        <textarea
-          name="remarks"
-          placeholder="Remarks"
-          value={form.remarks}
-          onChange={handleChange}
-        />
-
-      </div>
-
-      <button onClick={handleSubmit}>
-        Create Job
+      <button className="primary-btn" onClick={handleSubmit}>
+        Save Fabric Issue
       </button>
 
     </div>
-  );
+
+  </div>
+);
 }
