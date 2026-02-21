@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   getAvailableLots,
   getJobWorkers,
-  getLocations,
   postFabricMovement
 } from "../services/api";
 
@@ -10,15 +9,14 @@ export default function FabricIssue() {
 
   const [lots, setLots] = useState([]);
   const [jobWorkers, setJobWorkers] = useState([]);
-  const [locations, setLocations] = useState([]);
-
   const [selectedLot, setSelectedLot] = useState(null);
   const [message, setMessage] = useState("");
 
   const [form, setForm] = useState({
     issue_date: "",
-    from_location_id: "",
     lot_no: "",
+    from_location_id: "",
+    location_name: "",
     design_number: "",
     jobworker_id: "",
     quantity: "",
@@ -36,11 +34,8 @@ export default function FabricIssue() {
     try {
       const l = await getAvailableLots();
       const j = await getJobWorkers();
-      const loc = await getLocations();
-
       setLots(l.data || []);
       setJobWorkers(j.data || []);
-      setLocations(loc.data || []);
     } catch (err) {
       console.error(err);
     }
@@ -53,7 +48,17 @@ export default function FabricIssue() {
 
     if (name === "lot_no") {
       const lot = lots.find(l => l.lot_no === value);
+
       setSelectedLot(lot || null);
+
+      setForm(prev => ({
+        ...prev,
+        lot_no: value,
+        from_location_id: lot?.location_id || "",
+        location_name: lot?.location_name || ""
+      }));
+
+      return;
     }
 
     setForm(prev => ({ ...prev, [name]: value }));
@@ -67,11 +72,6 @@ export default function FabricIssue() {
 
     if (!form.issue_date) {
       setMessage("Select Issue Date ❌");
-      return;
-    }
-
-    if (!form.from_location_id) {
-      setMessage("Select From Location ❌");
       return;
     }
 
@@ -96,11 +96,11 @@ export default function FabricIssue() {
     }
 
     try {
+
       await postFabricMovement({
         lot_no: form.lot_no,
         design_number: form.design_number,
         jobworker_id: Number(form.jobworker_id),
-        process_id: jobWorkers.find(j => j.jobworker_id === Number(form.jobworker_id))?.process_id,
         from_location_id: Number(form.from_location_id),
         uom: "MTR",
         qty_issued: Number(form.quantity),
@@ -113,8 +113,9 @@ export default function FabricIssue() {
 
       setForm({
         issue_date: "",
-        from_location_id: "",
         lot_no: "",
+        from_location_id: "",
+        location_name: "",
         design_number: "",
         jobworker_id: "",
         quantity: "",
@@ -154,19 +155,6 @@ export default function FabricIssue() {
         />
 
         <select
-          name="from_location_id"
-          value={form.from_location_id}
-          onChange={handleChange}
-        >
-          <option value="">Select Location</option>
-          {locations.map(l => (
-            <option key={l.location_id} value={l.location_id}>
-              {l.location_name}
-            </option>
-          ))}
-        </select>
-
-        <select
           name="lot_no"
           value={form.lot_no}
           onChange={handleChange}
@@ -185,6 +173,12 @@ export default function FabricIssue() {
             Purchased: {selectedLot.total_purchased} |
             Issued: {selectedLot.total_issued} |
             Balance: {selectedLot.balance}
+          </div>
+        )}
+
+        {selectedLot && (
+          <div style={{ fontSize: 14 }}>
+            Location: <b>{form.location_name}</b>
           </div>
         )}
 
