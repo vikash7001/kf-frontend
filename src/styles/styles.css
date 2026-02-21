@@ -9,7 +9,7 @@
 html, body {
   height: 100%;
   margin: 0;
-  overflow: hidden; /* Prevent full-page scroll */
+  overflow: hidden;
   font-family: 'Segoe UI', Arial, sans-serif;
   font-size: 14px;
   background: #f3f4f6;
@@ -17,7 +17,7 @@ html, body {
 }
 
 /* ===================================================== */
-/* ================= TITLE BAR (APP) =================== */
+/* ================= TITLE BAR ========================= */
 /* ===================================================== */
 
 .titlebar {
@@ -29,7 +29,6 @@ html, body {
   justify-content: space-between;
   align-items: center;
   font-weight: 600;
-  font-size: 14px;
 }
 
 .titlebar .company {
@@ -60,7 +59,6 @@ html, body {
   justify-content: space-between;
   padding: 0 18px;
   font-weight: 600;
-  font-size: 14px;
 }
 
 .erp-body {
@@ -103,7 +101,6 @@ html, body {
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
   transition: 0.15s ease;
 }
 
@@ -123,7 +120,7 @@ html, body {
 
 .erp-content {
   flex: 1;
-  padding: 20px;
+  padding: 30px;
   background: #f9fafb;
   overflow-y: auto;
 }
@@ -138,54 +135,84 @@ html, body {
 }
 
 /* ===================================================== */
-/* ================= PANELS / CARDS ==================== */
+/* ================= PANEL (PREMIUM FIX) =============== */
 /* ===================================================== */
 
 .container {
-  padding: 14px;
+  display: flex;
+  justify-content: center;
 }
 
 .panel {
   background: #ffffff;
-  padding: 18px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  width: 100%;
+  max-width: 820px;
+  padding: 32px 36px 90px 36px; /* bottom space for sticky button */
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+}
+
+.panel h2 {
+  margin-top: 0;
+  margin-bottom: 26px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
 }
 
 /* ===================================================== */
 /* ================= FORM ELEMENTS ===================== */
 /* ===================================================== */
 
-/* Vertical Form Group */
 .form-group {
   display: flex;
   flex-direction: column;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .form-group label {
-  margin-bottom: 5px;
-  font-weight: 500;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #374151;
 }
 
-/* Inputs */
+/* Premium Inputs */
+
 select,
 input,
 textarea {
-  padding: 6px 8px;
+  padding: 10px 12px;
   font-size: 14px;
   border: 1px solid #d1d5db;
-  border-radius: 4px;
+  border-radius: 8px;
   outline: none;
   transition: 0.2s;
   width: 100%;
+  background: #ffffff;
 }
 
 select:focus,
 input:focus,
 textarea:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+/* ===================================================== */
+/* ================= FORM ACTION FOOTER ================ */
+/* ===================================================== */
+
+.form-actions {
+  position: sticky;
+  bottom: 0;
+  background: #ffffff;
+  padding-top: 18px;
+  padding-bottom: 10px;
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid #e5e7eb;
 }
 
 /* ===================================================== */
@@ -193,10 +220,10 @@ textarea:focus {
 /* ===================================================== */
 
 button {
-  padding: 6px 12px;
-  font-size: 13px;
+  padding: 9px 16px;
+  font-size: 14px;
   font-weight: 600;
-  border-radius: 4px;
+  border-radius: 6px;
   border: none;
   background: #2563eb;
   color: white;
@@ -208,17 +235,17 @@ button:hover {
   background: #1d4ed8;
 }
 
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 button.secondary {
   background: #6b7280;
 }
 
 button.secondary:hover {
   background: #4b5563;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ===================================================== */
@@ -228,18 +255,18 @@ button.secondary:hover {
 .message-success {
   background: #ecfdf5;
   color: #065f46;
-  padding: 8px 12px;
-  border-radius: 4px;
-  margin-bottom: 15px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 16px;
   font-weight: 600;
 }
 
 .message-error {
   background: #fef2f2;
   color: #991b1b;
-  padding: 8px 12px;
-  border-radius: 4px;
-  margin-bottom: 15px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 16px;
   font-weight: 600;
 }
 
@@ -250,21 +277,23 @@ button.secondary:hover {
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 14px;
+  margin-top: 18px;
   font-size: 13px;
   background: white;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 th {
   background: #f9fafb;
   font-weight: 600;
   text-align: left;
-  padding: 10px 8px;
+  padding: 12px 10px;
   border-bottom: 1px solid #e5e7eb;
 }
 
 td {
-  padding: 8px;
+  padding: 10px;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -277,29 +306,10 @@ tbody tr:nth-child(even) {
 }
 
 /* ===================================================== */
-/* ================= LOADING OVERLAY =================== */
+/* ================= OVERLAYS ========================== */
 /* ===================================================== */
 
-.loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0,0,0,0.4);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  color: white;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-/* ===================================================== */
-/* ================= CONFIRM BOX ======================= */
-/* ===================================================== */
-
+.loading-overlay,
 .confirm-overlay {
   position: fixed;
   top: 0;
@@ -310,18 +320,18 @@ tbody tr:nth-child(even) {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9998;
+  z-index: 9999;
 }
 
 .confirm-box {
   background: white;
-  padding: 24px;
-  border-radius: 8px;
-  width: 320px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  padding: 26px;
+  border-radius: 10px;
+  width: 340px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.25);
 }
 
 .confirm-box h3 {
   margin-top: 0;
-  margin-bottom: 15px;
+  margin-bottom: 18px;
 }
