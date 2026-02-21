@@ -28,8 +28,8 @@ export default function FabricIncoming() {
     try {
       const v = await getVendors();
       const l = await getLocations();
-      setVendors(v.data);
-      setLocations(l.data);
+      setVendors(v.data || []);
+      setLocations(l.data || []);
     } catch (err) {
       console.error(err);
     }
@@ -42,6 +42,7 @@ export default function FabricIncoming() {
 
   async function handleSubmit() {
     try {
+
       await postFabricIncoming({
         ...form,
         quantity: Number(form.quantity),
@@ -69,146 +70,151 @@ export default function FabricIncoming() {
     }
   }
 
-return (
-  <div className="container">
-    <div className="panel">
+  return (
+    <div className="container">
+      <div className="panel">
 
-      <h2 style={{ marginTop: 0, marginBottom: 20 }}>
-        Fabric Issue
-      </h2>
+        <h2 style={{ marginTop: 0, marginBottom: 20 }}>
+          Fabric Incoming
+        </h2>
 
-      {message && (
-        <div style={{ marginBottom: 15, fontWeight: 600 }}>
-          {message}
+        {message && (
+          <div style={{ marginBottom: 15, fontWeight: 600 }}>
+            {message}
+          </div>
+        )}
+
+        {/* Entry Date */}
+        <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
+          <label>Entry Date</label>
+          <input
+            type="date"
+            name="entry_date"
+            value={form.entry_date}
+            onChange={handleChange}
+          />
         </div>
-      )}
 
-      {/* Issue Date */}
-      <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
-        <label>Issue Date</label>
-        <input
-          type="date"
-          name="issue_date"
-          value={form.issue_date}
-          onChange={handleChange}
-        />
-      </div>
-
-      {/* Lot Selection */}
-      <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
-        <label>Select Lot</label>
-        <select
-          name="lot_no"
-          value={form.lot_no}
-          onChange={handleChange}
-        >
-          <option value="">Select Lot</option>
-          {lots.map(l => (
-            <option key={l.lot_no} value={l.lot_no}>
-              {l.lot_no} (Bal: {l.balance})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Lot Info Box */}
-      {selectedLot && (
-        <div
-          style={{
-            background: "#f1f5f9",
-            padding: 12,
-            borderLeft: "4px solid #2563eb",
-            marginBottom: 15,
-            fontSize: 13
-          }}
-        >
-          <div><b>Fabric:</b> {selectedLot.fabric_name}</div>
-          <div><b>Location:</b> {selectedLot.location_name}</div>
-          <div><b>Available Balance:</b> {selectedLot.balance} MTR</div>
+        {/* Vendor */}
+        <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
+          <label>Select Vendor</label>
+          <select
+            name="vendor_id"
+            value={form.vendor_id}
+            onChange={handleChange}
+          >
+            <option value="">Select Vendor</option>
+            {vendors.map(v => (
+              <option key={v.vendor_id} value={v.vendor_id}>
+                {v.vendor_name}
+              </option>
+            ))}
+          </select>
         </div>
-      )}
 
-      {/* Design Number */}
-      <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
-        <label>Design Number</label>
-        <input
-          name="design_number"
-          placeholder="Enter Design Number"
-          value={form.design_number}
-          onChange={handleChange}
-        />
+        {/* Fabric Name */}
+        <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
+          <label>Fabric Name</label>
+          <input
+            name="fabric_name"
+            placeholder="Enter Fabric Name"
+            value={form.fabric_name}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Lot No */}
+        <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
+          <label>Lot No</label>
+          <input
+            name="lot_no"
+            placeholder="Enter Lot No"
+            value={form.lot_no}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Quantity */}
+        <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
+          <label>Quantity (MTR)</label>
+          <input
+            name="quantity"
+            placeholder="Enter Quantity"
+            value={form.quantity}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Rate */}
+        <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
+          <label>Rate (Optional)</label>
+          <input
+            name="rate"
+            placeholder="Enter Rate"
+            value={form.rate}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Fold */}
+        <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
+          <label>Fold (Optional)</label>
+          <input
+            name="fold"
+            placeholder="Enter Fold"
+            value={form.fold}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Width */}
+        <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
+          <label>Width (Optional)</label>
+          <input
+            name="width"
+            placeholder="Enter Width"
+            value={form.width}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Location */}
+        <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
+          <label>Select Location</label>
+          <select
+            name="location_id"
+            value={form.location_id}
+            onChange={handleChange}
+          >
+            <option value="">Select Location</option>
+            {locations.map(l => (
+              <option key={l.location_id} value={l.location_id}>
+                {l.location_name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Remarks */}
+        <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
+          <label>Remarks</label>
+          <textarea
+            name="remarks"
+            rows="3"
+            style={{ width: "100%", padding: "8px" }}
+            value={form.remarks}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Save Button */}
+        <div style={{ marginTop: 20 }}>
+          <button onClick={handleSubmit}>
+            Save Fabric Incoming
+          </button>
+        </div>
+
       </div>
-
-      {/* Job Worker */}
-      <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
-        <label>Job Worker</label>
-        <select
-          name="jobworker_id"
-          value={form.jobworker_id}
-          onChange={handleChange}
-        >
-          <option value="">Select Job Worker</option>
-          {jobWorkers.map(j => (
-            <option key={j.jobworker_id} value={j.jobworker_id}>
-              {j.jobworker_name} ({j.process_name})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Quantity */}
-      <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
-        <label>Quantity (MTR)</label>
-        <input
-          name="quantity"
-          placeholder="Enter Quantity"
-          value={form.quantity}
-          onChange={handleChange}
-        />
-      </div>
-
-      {/* Job Worker Rate */}
-      <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
-        <label>Job Worker Rate (Optional)</label>
-        <input
-          name="jobworker_rate"
-          placeholder="Enter Rate"
-          value={form.jobworker_rate}
-          onChange={handleChange}
-        />
-      </div>
-
-      {/* Due Date */}
-      <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
-        <label>Due Date</label>
-        <input
-          type="date"
-          name="due_date"
-          value={form.due_date}
-          onChange={handleChange}
-        />
-      </div>
-
-      {/* Remarks */}
-      <div className="row" style={{ flexDirection: "column", alignItems: "flex-start" }}>
-        <label>Remarks</label>
-        <textarea
-          name="remarks"
-          rows="3"
-          style={{ width: "100%", padding: "8px" }}
-          value={form.remarks}
-          onChange={handleChange}
-        />
-      </div>
-
-      {/* Button */}
-      <div style={{ marginTop: 20 }}>
-        <button onClick={handleSubmit}>
-          Save Fabric Issue
-        </button>
-      </div>
-
     </div>
-  </div>
-);
+  );
 }

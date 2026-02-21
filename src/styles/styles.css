@@ -9,7 +9,7 @@
 html, body {
   height: 100%;
   margin: 0;
-  overflow: hidden; /* 🔥 Prevent full-page scroll */
+  overflow: hidden; /* Prevent full-page scroll */
   font-family: 'Segoe UI', Arial, sans-serif;
   font-size: 14px;
   background: #f3f4f6;
@@ -37,7 +37,6 @@ html, body {
   font-size: 15px;
 }
 
-/* Hide old toolbar completely */
 .toolbar {
   display: none;
 }
@@ -67,7 +66,7 @@ html, body {
 .erp-body {
   flex: 1;
   display: flex;
-  overflow: hidden; /* 🔥 Important for separate scroll */
+  overflow: hidden;
 }
 
 /* ===================================================== */
@@ -79,10 +78,9 @@ html, body {
   background: #ffffff;
   border-right: 1px solid #e5e7eb;
   padding: 18px 14px;
-  overflow-y: auto;  /* 🔥 Independent scroll */
+  overflow-y: auto;
 }
 
-/* Sidebar Scrollbar (Professional thin style) */
 .erp-sidebar::-webkit-scrollbar {
   width: 6px;
 }
@@ -92,7 +90,6 @@ html, body {
   border-radius: 6px;
 }
 
-/* Sidebar Sections */
 .sidebar-section-title {
   font-size: 11px;
   font-weight: 700;
@@ -128,10 +125,9 @@ html, body {
   flex: 1;
   padding: 20px;
   background: #f9fafb;
-  overflow-y: auto; /* 🔥 Independent scroll */
+  overflow-y: auto;
 }
 
-/* Content Scrollbar */
 .erp-content::-webkit-scrollbar {
   width: 8px;
 }
@@ -160,25 +156,34 @@ html, body {
 /* ================= FORM ELEMENTS ===================== */
 /* ===================================================== */
 
-.row {
+/* Vertical Form Group */
+.form-group {
   display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 10px;
+  flex-direction: column;
+  margin-bottom: 14px;
 }
 
+.form-group label {
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+/* Inputs */
 select,
-input {
+input,
+textarea {
   padding: 6px 8px;
   font-size: 14px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
   outline: none;
   transition: 0.2s;
+  width: 100%;
 }
 
 select:focus,
-input:focus {
+input:focus,
+textarea:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
 }
@@ -208,13 +213,34 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Secondary buttons */
 button.secondary {
   background: #6b7280;
 }
 
 button.secondary:hover {
   background: #4b5563;
+}
+
+/* ===================================================== */
+/* ================= MESSAGE STYLES ==================== */
+/* ===================================================== */
+
+.message-success {
+  background: #ecfdf5;
+  color: #065f46;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.message-error {
+  background: #fef2f2;
+  color: #991b1b;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-weight: 600;
 }
 
 /* ===================================================== */
@@ -246,7 +272,6 @@ tr:hover {
   background: #f3f4f6;
 }
 
-/* Zebra striping */
 tbody tr:nth-child(even) {
   background: #fafafa;
 }
@@ -270,6 +295,11 @@ tbody tr:nth-child(even) {
   font-size: 18px;
   font-weight: 600;
 }
+
+/* ===================================================== */
+/* ================= CONFIRM BOX ======================= */
+/* ===================================================== */
+
 .confirm-overlay {
   position: fixed;
   top: 0;
