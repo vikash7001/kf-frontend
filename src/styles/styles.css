@@ -1,6 +1,4 @@
-/* ===================================================== */
-/* ================= GLOBAL ============================ */
-/* ===================================================== */
+/* ================= GLOBAL ================= */
 
 * {
   box-sizing: border-box;
@@ -16,9 +14,7 @@ html, body {
   color: #000;
 }
 
-/* ===================================================== */
-/* ================= TOP BAR =========================== */
-/* ===================================================== */
+/* ================= HEADER ================= */
 
 .titlebar {
   background: #1c3faa;
@@ -31,9 +27,7 @@ html, body {
   font-weight: bold;
 }
 
-/* ===================================================== */
-/* ================= LAYOUT ============================ */
-/* ===================================================== */
+/* ================= LAYOUT ================= */
 
 .erp-layout {
   height: 100vh;
@@ -59,9 +53,7 @@ html, body {
   overflow: hidden;
 }
 
-/* ===================================================== */
-/* ================= SIDEBAR =========================== */
-/* ===================================================== */
+/* ================= SIDEBAR ================= */
 
 .erp-sidebar {
   width: 185px;
@@ -86,9 +78,7 @@ html, body {
   background: #cfdcff;
 }
 
-/* ===================================================== */
-/* ================= CONTENT =========================== */
-/* ===================================================== */
+/* ================= CONTENT ================= */
 
 .erp-content {
   flex: 1;
@@ -97,17 +87,13 @@ html, body {
   overflow-y: auto;
 }
 
-/* ===================================================== */
-/* ================= VOUCHER PANEL ===================== */
-/* ===================================================== */
+/* ================= PANEL ================= */
 
 .panel {
   background: #ffffff;
   border: 1px solid #a0a0a0;
   padding: 6px 8px;
 }
-
-/* Title */
 
 .panel h2 {
   font-size: 12px;
@@ -117,28 +103,22 @@ html, body {
   padding-bottom: 3px;
 }
 
-/* ===================================================== */
-/* ================= FORM GRID ========================= */
-/* ===================================================== */
+/* ================= FORM GRID ================= */
 
 .form-grid {
   display: grid;
-  grid-template-columns: 150px 260px;
+  grid-template-columns: 150px 250px;
   row-gap: 4px;
   column-gap: 6px;
   align-items: center;
 }
-
-/* Labels */
 
 label {
   font-weight: bold;
   font-size: 11px;
 }
 
-/* ===================================================== */
-/* ================= INPUTS (PROPER SIZE) ============== */
-/* ===================================================== */
+/* ================= INPUTS ================= */
 
 input,
 select {
@@ -150,53 +130,48 @@ select {
   width: 100%;
 }
 
-textarea {
-  font-size: 11px;
-  border: 1px solid #8c8c8c;
-  padding: 2px 4px;
-  width: 260px;
-}
-
 input:focus,
-select:focus,
-textarea:focus {
+select:focus {
   background: #eaf0ff;
   border: 1px solid #2c4aa5;
   outline: none;
 }
 
-/* ===================================================== */
-/* ================= INLINE ROW (ITEM ENTRY) =========== */
-/* ===================================================== */
+/* ================= INLINE ENTRY ROW ================= */
 
 .inline-row {
   display: flex;
-  gap: 6px;
   align-items: center;
-  margin-top: 4px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
-.inline-row input {
-  width: 180px;
+/* Item wide */
+.inline-row .item-input {
+  width: 420px;
+  height: 20px;
 }
 
-.inline-row .qty {
-  width: 80px;
+/* Qty small */
+.inline-row .qty-input {
+  width: 60px;
+  height: 20px;
+  text-align: right;
 }
 
+/* Add button */
 .inline-row button {
   height: 20px;
   padding: 0 8px;
   font-size: 11px;
+  font-weight: bold;
   border: 1px solid #2c4aa5;
   background: #2c4aa5;
   color: white;
   cursor: pointer;
 }
 
-/* ===================================================== */
-/* ================= TABLE ============================= */
-/* ===================================================== */
+/* ================= TABLE ================= */
 
 table {
   width: 100%;
@@ -221,9 +196,7 @@ tr:hover {
   background: #eef3ff;
 }
 
-/* ===================================================== */
-/* ================= BUTTON STRIP ====================== */
-/* ===================================================== */
+/* ================= BUTTON STRIP ================= */
 
 .button-strip {
   margin-top: 6px;
@@ -239,10 +212,4 @@ tr:hover {
   border: 1px solid #2c4aa5;
   background: #2c4aa5;
   color: #fff;
-}
-
-.button-strip button.secondary {
-  background: #dcdcdc;
-  border: 1px solid #888;
-  color: #000;
 }
