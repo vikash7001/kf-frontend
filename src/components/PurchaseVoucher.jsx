@@ -271,36 +271,38 @@ export default function PurchaseVoucher() {
       </div>
 
       {/* TABLE */}
-      <table>
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Series</th>
-            <th>Category</th>
-            <th>Qty</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i}>
-              <td>{r.Item}</td>
-              <td>{r.SeriesName}</td>
-              <td>{r.CategoryName}</td>
-              <td>{r.Quantity}</td>
-              <td>
-                <button
-                  className="secondary"
-                  onClick={() => removeRow(i)}
-                  disabled={loading}
-                >
-                  Remove
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+{/* TABLE */}
+<table className="voucher-table">
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th>Series</th>
+      <th>Category</th>
+      <th>Qty</th>
+      <th></th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {rows.map((r, i) => (
+      <tr key={i}>
+        <td>{r.Item}</td>
+        <td>{r.SeriesName}</td>
+        <td>{r.CategoryName}</td>
+        <td>{r.Quantity}</td>
+        <td>
+          <button
+            className="secondary"
+            onClick={() => removeRow(i)}
+            disabled={loading}
+          >
+            Remove
+          </button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
 
       <div style={{ marginTop: 14 }}>
         <strong>Total Pieces:</strong> {totalQty}

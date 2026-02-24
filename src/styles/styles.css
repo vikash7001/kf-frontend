@@ -213,3 +213,44 @@ tr:hover {
   background: #2c4aa5;
   color: #fff;
 }
+/* ===================================================== */
+/* ============ VOUCHER TABLE (SAFE SCOPED) ============ */
+/* ===================================================== */
+
+.voucher-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* Prevent auto column resizing */
+}
+
+/* Column 1 - Item (largest) */
+.voucher-table th:nth-child(1),
+.voucher-table td:nth-child(1) {
+  width: 45%;
+}
+
+/* Column 2 - Series */
+.voucher-table th:nth-child(2),
+.voucher-table td:nth-child(2) {
+  width: 18%;
+}
+
+/* Column 3 - Category */
+.voucher-table th:nth-child(3),
+.voucher-table td:nth-child(3) {
+  width: 18%;
+}
+
+/* Column 4 - Qty (compact + right aligned) */
+.voucher-table th:nth-child(4),
+.voucher-table td:nth-child(4) {
+  width: 9%;
+  text-align: right;
+}
+
+/* Column 5 - Remove button */
+.voucher-table th:nth-child(5),
+.voucher-table td:nth-child(5) {
+  width: 10%;
+  text-align: center;
+}
