@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 
-const LOCATIONS = ["Jaipur", "Kolkata"];
+const LOCATIONS = ["Jaipur", "Ahmedabad", "Kolkata"];
 const ALL_SIZES = ["S","M","L","XL","XXL","3XL","4XL","5XL","6XL","7XL"];
 
 export default function StockTransfer() {
