@@ -55,13 +55,24 @@ export default function SalesVoucher() {
     load().catch(() => alert("Failed to load data"));
   }, []);
 
+  // ---------------- HIDE DROPDOWN ----------------
+
+  useEffect(() => {
+    const handler = e => {
+      if (itemRef.current && !itemRef.current.contains(e.target)) {
+        setShowItemSug(false);
+      }
+    };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
+
   // ---------------- ITEM CHANGE ----------------
 
   const onItemChange = (val) => {
     setItem(val);
     setSelectedProduct(null);
     setHighlightIndex(-1);
-
     setIsOnlineEnabled(false);
     setEnabledSizes([]);
     setSizeQty({});
@@ -188,52 +199,53 @@ export default function SalesVoucher() {
   // ---------------- UI ----------------
 
   return (
-    <div style={{ padding: 18 }}>
-      <h2>Sales Voucher</h2>
+    <div className="voucher-wrapper">
 
-      <div style={{ marginBottom: 12 }}>
-        <select
-          value={location}
-          onChange={e => setLocation(e.target.value)}
-          disabled={loading}
-        >
-          {LOCATIONS.map(l => <option key={l}>{l}</option>)}
-        </select>
+      <div className="voucher-top">
+        <h2>Sales Voucher</h2>
 
-        <input
-          list="customerList"
-          placeholder="Customer"
-          value={customer}
-          onChange={e => setCustomer(e.target.value)}
-          style={{ marginLeft: 8 }}
-          disabled={loading}
-        />
+        <div className="location-group">
+          <select
+            value={location}
+            onChange={e => setLocation(e.target.value)}
+            disabled={loading}
+          >
+            {LOCATIONS.map(l => <option key={l}>{l}</option>)}
+          </select>
 
-        <datalist id="customerList">
-          {customers.map(c => (
-            <option key={c.CustomerID} value={c.CustomerName} />
-          ))}
-        </datalist>
+          <input
+            list="customerList"
+            placeholder="Customer"
+            value={customer}
+            onChange={e => setCustomer(e.target.value)}
+            disabled={loading}
+          />
 
-        <input
-          placeholder="Voucher No"
-          value={voucherNo}
-          onChange={e => setVoucherNo(e.target.value)}
-          style={{ marginLeft: 8 }}
-          disabled={loading}
-        />
+          <datalist id="customerList">
+            {customers.map(c => (
+              <option key={c.CustomerID} value={c.CustomerName} />
+            ))}
+          </datalist>
+
+          <input
+            placeholder="Voucher No"
+            value={voucherNo}
+            onChange={e => setVoucherNo(e.target.value)}
+            disabled={loading}
+          />
+        </div>
       </div>
 
-      {/* ITEM ENTRY */}
-      <div style={{ display: "flex", gap: 8 }}>
-        <div ref={itemRef} style={{ position: "relative" }}>
+      {/* ENTRY ROW */}
+      <div className="voucher-entry">
+
+        <div ref={itemRef} className="entry-item">
           <input
             ref={itemInputRef}
             value={item}
             onChange={e => onItemChange(e.target.value)}
-            placeholder="Item"
+            placeholder="Search Item..."
             disabled={loading}
-            autoFocus
             onKeyDown={e => {
               if (!showItemSug) return;
 
@@ -261,29 +273,14 @@ export default function SalesVoucher() {
           />
 
           {showItemSug && (
-            <div
-              style={{
-                position: "absolute",
-                background: "#fff",
-                border: "1px solid #ccc",
-                width: "100%",
-                maxHeight: 200,
-                overflowY: "auto",
-                zIndex: 10
-              }}
-            >
+            <div className="suggestion-box">
               {itemSuggestions.map((p, i) => (
                 <div
                   key={i}
                   onClick={() => selectProduct(p)}
-                  style={{
-                    padding: 8,
-                    cursor: "pointer",
-                    background:
-                      i === highlightIndex
-                        ? "#d9e2ff"
-                        : "transparent"
-                  }}
+                  className={`suggestion-item ${
+                    i === highlightIndex ? "active-suggestion" : ""
+                  }`}
                 >
                   {p.item}
                 </div>
@@ -309,62 +306,56 @@ export default function SalesVoucher() {
       </div>
 
       {/* TABLE */}
-      <table style={{ marginTop: 12 }}>
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Series</th>
-            <th>Category</th>
-            <th>Qty</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i}>
-              <td>{r.Item}</td>
-              <td>{r.SeriesName}</td>
-              <td>{r.CategoryName}</td>
-              <td>{r.Quantity}</td>
-              <td>
-                <button
-                  className="secondary"
-                  onClick={() => removeRow(i)}
-                  disabled={loading}
-                >
-                  Remove
-                </button>
-              </td>
+      <div className="table-box">
+        <table className="modern-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Series</th>
+              <th>Category</th>
+              <th className="qty-col">Qty</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div style={{ marginTop: 14 }}>
-        <strong>Total Pieces:</strong> {totalQty}
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td>{r.Item}</td>
+                <td>{r.SeriesName}</td>
+                <td>{r.CategoryName}</td>
+                <td className="qty-col">{r.Quantity}</td>
+                <td>
+                  <button
+                    className="remove-btn"
+                    onClick={() => removeRow(i)}
+                  >
+                    ×
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      <button onClick={onSubmit} style={{ marginTop: 12 }} disabled={loading}>
-        Submit Sales
-      </button>
+      <div className="voucher-footer">
+        <div>Total Pieces: <strong>{totalQty}</strong></div>
+        <button className="submit-btn" onClick={onSubmit}>
+          Submit Sales
+        </button>
+      </div>
 
       {/* CONFIRM MODAL */}
       {showConfirm && (
         <div className="confirm-overlay">
           <div className="confirm-box">
             <h3>Confirm Sales Posting</h3>
-
             <div><strong>Location:</strong> {location}</div>
             <div><strong>Customer:</strong> {customer || "-"}</div>
             <div><strong>Total Pieces:</strong> {totalQty}</div>
-
-            <div style={{ marginTop: 15, display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button className="secondary" onClick={() => setShowConfirm(false)}>
-                Back
-              </button>
-              <button onClick={confirmSubmit}>
-                Confirm
-              </button>
+            <div className="confirm-actions">
+              <button onClick={() => setShowConfirm(false)}>Back</button>
+              <button onClick={confirmSubmit}>Confirm</button>
             </div>
           </div>
         </div>

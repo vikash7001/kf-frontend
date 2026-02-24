@@ -25,6 +25,8 @@ export default function PurchaseVoucher() {
   const itemRef = useRef(null);
   const itemInputRef = useRef(null);
 
+  // ---------------- LOAD PRODUCTS ----------------
+
   useEffect(() => {
     (async () => {
       try {
@@ -42,6 +44,8 @@ export default function PurchaseVoucher() {
     })();
   }, []);
 
+  // ---------------- HIDE DROPDOWN ----------------
+
   useEffect(() => {
     const handler = e => {
       if (itemRef.current && !itemRef.current.contains(e.target)) {
@@ -51,6 +55,8 @@ export default function PurchaseVoucher() {
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, []);
+
+  // ---------------- ITEM CHANGE ----------------
 
   const onItemChange = val => {
     setItem(val);
@@ -77,7 +83,10 @@ export default function PurchaseVoucher() {
     setSeries(p.seriesname);
     setCategory(p.categoryname);
     setShowItemSug(false);
+    setHighlightIndex(-1);
   };
+
+  // ---------------- ADD ROW ----------------
 
   const onAddRow = () => {
     if (!item || !qty) {
@@ -101,6 +110,7 @@ export default function PurchaseVoucher() {
     setQty("");
     setItemSuggestions([]);
     setShowItemSug(false);
+    setHighlightIndex(-1);
 
     setTimeout(() => {
       itemInputRef.current?.focus();
@@ -114,6 +124,8 @@ export default function PurchaseVoucher() {
     (sum, r) => sum + Number(r.Quantity || 0),
     0
   );
+
+  // ---------------- SUBMIT ----------------
 
   const onSubmit = () => {
     if (!rows.length) {
@@ -147,6 +159,8 @@ export default function PurchaseVoucher() {
     }
   };
 
+  // ---------------- UI ----------------
+
   return (
     <div className="voucher-wrapper">
 
@@ -176,6 +190,30 @@ export default function PurchaseVoucher() {
             value={item}
             onChange={e => onItemChange(e.target.value)}
             disabled={loading}
+            onKeyDown={e => {
+              if (!showItemSug) return;
+
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setHighlightIndex(prev =>
+                  prev < itemSuggestions.length - 1 ? prev + 1 : prev
+                );
+              }
+
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHighlightIndex(prev =>
+                  prev > 0 ? prev - 1 : 0
+                );
+              }
+
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (highlightIndex >= 0) {
+                  selectProduct(itemSuggestions[highlightIndex]);
+                }
+              }
+            }}
           />
 
           {showItemSug && (
@@ -184,7 +222,9 @@ export default function PurchaseVoucher() {
                 <div
                   key={i}
                   onClick={() => selectProduct(p)}
-                  className="suggestion-item"
+                  className={`suggestion-item ${
+                    i === highlightIndex ? "active-suggestion" : ""
+                  }`}
                 >
                   {p.item}
                 </div>
@@ -199,6 +239,9 @@ export default function PurchaseVoucher() {
           value={qty}
           onChange={e => setQty(e.target.value)}
           disabled={loading}
+          onKeyDown={e => {
+            if (e.key === "Enter") onAddRow();
+          }}
         />
 
         <button onClick={onAddRow} disabled={loading}>

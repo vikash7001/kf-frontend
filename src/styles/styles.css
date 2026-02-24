@@ -124,6 +124,33 @@ select:focus {
   background: #f5f8ff;
 }
 
+/* ================= VOUCHER WRAPPER ================= */
+
+.voucher-wrapper {
+  background: #ffffff;
+}
+
+/* ================= VOUCHER TOP ================= */
+
+.voucher-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.voucher-top h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.location-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* ================= ENTRY ROW ================= */
 
 .voucher-entry {
@@ -131,6 +158,10 @@ select:focus {
   grid-template-columns: 3fr 1fr auto 1fr 1fr;
   gap: 10px;
   margin-bottom: 18px;
+}
+
+.entry-item {
+  position: relative;
 }
 
 .voucher-entry button {
@@ -150,7 +181,7 @@ select:focus {
 
 /* ================= TABLE ================= */
 
-.table-wrapper {
+.table-box {
   border: 1px solid #e0e5ee;
   border-radius: 4px;
   overflow-x: auto;
@@ -233,6 +264,7 @@ select:focus {
   max-height: 220px;
   overflow-y: auto;
   z-index: 100;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
 }
 
 .suggestion-item {
@@ -242,6 +274,10 @@ select:focus {
 
 .suggestion-item:hover {
   background: #eef3ff;
+}
+
+.active-suggestion {
+  background: #dbe6ff;
 }
 
 /* ================= MODAL ================= */
