@@ -7,10 +7,7 @@ export default function PurchaseVoucher() {
 
   const user = JSON.parse(localStorage.getItem("kf_user"));
 
-  // ---------------- STATE ----------------
-
   const [products, setProducts] = useState([]);
-
   const [location, setLocation] = useState(LOCATIONS[0]);
   const [item, setItem] = useState("");
   const [series, setSeries] = useState("");
@@ -27,8 +24,6 @@ export default function PurchaseVoucher() {
 
   const itemRef = useRef(null);
   const itemInputRef = useRef(null);
-
-  // ---------------- LOAD PRODUCTS ----------------
 
   useEffect(() => {
     (async () => {
@@ -47,8 +42,6 @@ export default function PurchaseVoucher() {
     })();
   }, []);
 
-  // ---------------- HIDE DROPDOWN ----------------
-
   useEffect(() => {
     const handler = e => {
       if (itemRef.current && !itemRef.current.contains(e.target)) {
@@ -58,8 +51,6 @@ export default function PurchaseVoucher() {
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, []);
-
-  // ---------------- ITEM CHANGE ----------------
 
   const onItemChange = val => {
     setItem(val);
@@ -86,10 +77,7 @@ export default function PurchaseVoucher() {
     setSeries(p.seriesname);
     setCategory(p.categoryname);
     setShowItemSug(false);
-    setHighlightIndex(-1);
   };
-
-  // ---------------- ADD ROW ----------------
 
   const onAddRow = () => {
     if (!item || !qty) {
@@ -113,7 +101,6 @@ export default function PurchaseVoucher() {
     setQty("");
     setItemSuggestions([]);
     setShowItemSug(false);
-    setHighlightIndex(-1);
 
     setTimeout(() => {
       itemInputRef.current?.focus();
@@ -127,8 +114,6 @@ export default function PurchaseVoucher() {
     (sum, r) => sum + Number(r.Quantity || 0),
     0
   );
-
-  // ---------------- SUBMIT ----------------
 
   const onSubmit = () => {
     if (!rows.length) {
@@ -162,87 +147,44 @@ export default function PurchaseVoucher() {
     }
   };
 
-  // ---------------- UI ----------------
-
   return (
-    <div>
+    <div className="voucher-wrapper">
 
-      <h2>Purchase Voucher (Incoming)</h2>
+      <div className="voucher-top">
+        <h2>Purchase Voucher</h2>
 
-      <div style={{ marginBottom: 12 }}>
-        <label>Location: </label>
-        <select
-          value={location}
-          onChange={e => setLocation(e.target.value)}
-          disabled={loading}
-        >
-          {LOCATIONS.map(l => (
-            <option key={l}>{l}</option>
-          ))}
-        </select>
+        <div className="location-group">
+          <label>Location</label>
+          <select
+            value={location}
+            onChange={e => setLocation(e.target.value)}
+            disabled={loading}
+          >
+            {LOCATIONS.map(l => (
+              <option key={l}>{l}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* ENTRY ROW */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+      <div className="voucher-entry">
 
-        <div ref={itemRef} style={{ position: "relative" }}>
+        <div ref={itemRef} className="entry-item">
           <input
             ref={itemInputRef}
-            placeholder="Item"
+            placeholder="Search Item..."
             value={item}
             onChange={e => onItemChange(e.target.value)}
             disabled={loading}
-            autoFocus
-            onKeyDown={e => {
-              if (!showItemSug) return;
-
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setHighlightIndex(prev =>
-                  prev < itemSuggestions.length - 1 ? prev + 1 : prev
-                );
-              }
-
-              if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setHighlightIndex(prev =>
-                  prev > 0 ? prev - 1 : 0
-                );
-              }
-
-              if (e.key === "Enter") {
-                e.preventDefault();
-                if (highlightIndex >= 0) {
-                  selectProduct(itemSuggestions[highlightIndex]);
-                }
-              }
-            }}
           />
 
           {showItemSug && (
-            <div
-              style={{
-                position: "absolute",
-                background: "#fff",
-                border: "1px solid #ccc",
-                width: "100%",
-                maxHeight: 200,
-                overflowY: "auto",
-                zIndex: 10
-              }}
-            >
+            <div className="suggestion-box">
               {itemSuggestions.map((p, i) => (
                 <div
                   key={i}
                   onClick={() => selectProduct(p)}
-                  style={{
-                    padding: 8,
-                    cursor: "pointer",
-                    background:
-                      i === highlightIndex
-                        ? "#d9e2ff"
-                        : "transparent"
-                  }}
+                  className="suggestion-item"
                 >
                   {p.item}
                 </div>
@@ -257,9 +199,6 @@ export default function PurchaseVoucher() {
           value={qty}
           onChange={e => setQty(e.target.value)}
           disabled={loading}
-          onKeyDown={e => {
-            if (e.key === "Enter") onAddRow();
-          }}
         />
 
         <button onClick={onAddRow} disabled={loading}>
@@ -270,72 +209,59 @@ export default function PurchaseVoucher() {
         <input value={category} placeholder="Category" readOnly />
       </div>
 
-      {/* TABLE */}
-{/* TABLE */}
-<table className="voucher-table">
-  <thead>
-    <tr>
-      <th>Item</th>
-      <th>Series</th>
-      <th>Category</th>
-      <th>Qty</th>
-      <th></th>
-    </tr>
-  </thead>
-
-  <tbody>
-    {rows.map((r, i) => (
-      <tr key={i}>
-        <td>{r.Item}</td>
-        <td>{r.SeriesName}</td>
-        <td>{r.CategoryName}</td>
-        <td>{r.Quantity}</td>
-        <td>
-          <button
-            className="secondary"
-            onClick={() => removeRow(i)}
-            disabled={loading}
-          >
-            Remove
-          </button>
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-
-      <div style={{ marginTop: 14 }}>
-        <strong>Total Pieces:</strong> {totalQty}
+      <div className="table-box">
+        <table className="modern-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Series</th>
+              <th>Category</th>
+              <th className="qty-col">Qty</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td>{r.Item}</td>
+                <td>{r.SeriesName}</td>
+                <td>{r.CategoryName}</td>
+                <td className="qty-col">{r.Quantity}</td>
+                <td>
+                  <button
+                    className="remove-btn"
+                    onClick={() => removeRow(i)}
+                  >
+                    ×
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      <div style={{ marginTop: 12 }}>
-        <button onClick={onSubmit} disabled={loading}>
+      <div className="voucher-footer">
+        <div>Total Pieces: <strong>{totalQty}</strong></div>
+        <button className="submit-btn" onClick={onSubmit}>
           Submit Incoming
         </button>
       </div>
 
-      {/* CONFIRM MODAL */}
       {showConfirm && (
         <div className="confirm-overlay">
           <div className="confirm-box">
             <h3>Confirm Posting</h3>
-
             <div><strong>Location:</strong> {location}</div>
             <div><strong>Total Pieces:</strong> {totalQty}</div>
-
-            <div style={{ marginTop: 15, display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button className="secondary" onClick={() => setShowConfirm(false)}>
-                Back
-              </button>
-              <button onClick={confirmSubmit}>
-                Confirm
-              </button>
+            <div className="confirm-actions">
+              <button onClick={() => setShowConfirm(false)}>Back</button>
+              <button onClick={confirmSubmit}>Confirm</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* LOADING */}
       {loading && (
         <div className="loading-overlay">
           Posting... Please wait
