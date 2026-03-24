@@ -7,6 +7,7 @@ export default function StockTransfer() {
   const user = JSON.parse(localStorage.getItem("kf_user"));
 
   const [products, setProducts] = useState([]);
+  const [highlightIndex, setHighlightIndex] = useState(0);
 
   // header
   const [fromLocation, setFromLocation] = useState(LOCATIONS[0]);
@@ -27,13 +28,10 @@ export default function StockTransfer() {
   const [enabledSizes, setEnabledSizes] = useState([]);
   const [sizeQty, setSizeQty] = useState({});
 
-  // refs (for smooth UX)
   const itemRef = useRef();
   const qtyRef = useRef();
 
-  // --------------------------------------------------
-  // LOAD PRODUCTS
-  // --------------------------------------------------
+  // ---------------- LOAD PRODUCTS ----------------
   useEffect(() => {
     async function load() {
       const p = await api.get("/products");
@@ -50,9 +48,7 @@ export default function StockTransfer() {
     load().catch(() => alert("Failed to load products"));
   }, []);
 
-  // --------------------------------------------------
-  // ITEM SEARCH
-  // --------------------------------------------------
+  // ---------------- ITEM SEARCH ----------------
   const onItemChange = (val) => {
     setItem(val);
     setSelectedProduct(null);
@@ -72,15 +68,12 @@ export default function StockTransfer() {
     setShowItemSug(matches.length > 0);
   };
 
-  // --------------------------------------------------
-  // SELECT PRODUCT
-  // --------------------------------------------------
+  // ---------------- SELECT PRODUCT ----------------
   const selectProduct = async (p) => {
     setSelectedProduct(p);
     setItem(p.item);
     setShowItemSug(false);
 
-    // focus qty (purchase style flow)
     setTimeout(() => qtyRef.current?.focus(), 100);
 
     try {
@@ -99,16 +92,12 @@ export default function StockTransfer() {
     }
   };
 
-  // --------------------------------------------------
-  // SIZE TOTAL
-  // --------------------------------------------------
+  // ---------------- SIZE TOTAL ----------------
   const totalSizeQty = Object.values(sizeQty)
     .map(Number)
     .reduce((a, b) => a + b, 0);
 
-  // --------------------------------------------------
-  // ADD ROW
-  // --------------------------------------------------
+  // ---------------- ADD ROW ----------------
   const onAddRow = () => {
     if (!selectedProduct || !qty) {
       alert("Select item and quantity");
@@ -136,23 +125,19 @@ export default function StockTransfer() {
       }
     ]);
 
-    // reset
     setItem("");
     setQty("");
     setSelectedProduct(null);
     setSizeQty({});
     setIsOnlineEnabled(false);
 
-    // focus back to item (FAST ENTRY)
     setTimeout(() => itemRef.current?.focus(), 100);
   };
 
   const removeRow = (i) =>
     setRows(rows.filter((_, x) => x !== i));
 
-  // --------------------------------------------------
-  // SUBMIT
-  // --------------------------------------------------
+  // ---------------- SUBMIT ----------------
   const onSubmit = async () => {
     if (!rows.length) {
       alert("No items added");
@@ -164,7 +149,6 @@ export default function StockTransfer() {
       return;
     }
 
-    // ✅ confirmation (IMPORTANT)
     if (!window.confirm("Confirm Stock Transfer?")) return;
 
     const payload = {
@@ -186,9 +170,7 @@ export default function StockTransfer() {
     }
   };
 
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
+  // ---------------- UI ----------------
   return (
     <div style={{ padding: 20, background: "#f5f5f5" }}>
       <h2>Stock Transfer</h2>
@@ -206,18 +188,44 @@ export default function StockTransfer() {
         </select>
       </div>
 
-      {/* ENTRY BOX */}
+      {/* ENTRY */}
       <div style={{ display: "flex", gap: 10 }}>
         <div style={{ position: "relative", width: 250 }}>
           <input
             ref={itemRef}
             value={item}
-            onChange={e => onItemChange(e.target.value)}
+            onChange={e => {
+              onItemChange(e.target.value);
+              setHighlightIndex(0);
+            }}
             placeholder="Item"
             style={{ width: "100%", padding: 6 }}
             onKeyDown={e => {
-              if (e.key === "Enter" && itemSuggestions.length > 0) {
-                selectProduct(itemSuggestions[0]);
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setHighlightIndex(i =>
+                  Math.min(i + 1, itemSuggestions.length - 1)
+                );
+              }
+
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHighlightIndex(i => Math.max(i - 1, 0));
+              }
+
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (itemSuggestions.length > 0) {
+                  selectProduct(itemSuggestions[highlightIndex]);
+                }
+              }
+
+              if (e.key === "ArrowRight") {
+                qtyRef.current?.focus();
+              }
+
+              if (e.key === "Escape") {
+                setShowItemSug(false);
               }
             }}
           />
@@ -240,6 +248,7 @@ export default function StockTransfer() {
                   style={{
                     padding: 6,
                     cursor: "pointer",
+                    background: i === highlightIndex ? "#dbeafe" : "#fff",
                     borderBottom: "1px solid #eee"
                   }}
                 >
@@ -262,6 +271,7 @@ export default function StockTransfer() {
           style={{ width: 80 }}
           onKeyDown={e => {
             if (e.key === "Enter") onAddRow();
+            if (e.key === "ArrowLeft") itemRef.current?.focus();
           }}
         />
 
