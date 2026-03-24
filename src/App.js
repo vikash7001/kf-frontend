@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Login from './components/Login';
 import AdminDashboard from './components/AdminDashboard';
 import CustomerView from './components/CustomerView';
-
+import Communication from './components/Communication';
 import PurchaseVoucher from './components/PurchaseVoucher';
 import SalesVoucher from './components/SalesVoucher';
 import StockTransfer from './components/StockTransfer';
@@ -33,7 +33,10 @@ export default function App() {
         setMode("purchase");
         e.preventDefault();
       }
-
+if (e.key === 'F6') {
+  setMode("communication");
+  e.preventDefault();
+}
       if (e.key === 'F8') {
         setMode("sales");
         e.preventDefault();
@@ -137,7 +140,9 @@ export default function App() {
               }
             />
           )}
-
+{mode === "communication" && (
+  <Communication />
+)}
         </div>
       </div>
 

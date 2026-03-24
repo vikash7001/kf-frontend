@@ -10,7 +10,7 @@ import ViewIncoming from './ViewIncoming';
 import ViewSales from './ViewSales';
 import ViewTransfers from './ViewTransfers';
 import RateList from './RateList';
-
+import Communication from './Communication';
 import CategoryMaster from './CategoryMaster';
 import SeriesMaster from './SeriesMaster';
 import ProductMaster from './ProductMaster';
@@ -62,7 +62,7 @@ export default function AdminDashboard({ user }) {
     sales: <SalesVoucher user={user} />,
     stock: <StockView user={user} />,
     transfer: <StockTransfer user={user} />,
-
+communication: <Communication user={user} />,
     // IMAGES
     images: <ImageViewer user={user} />,
     manageImages: <ManageImages user={user} />,
@@ -114,6 +114,12 @@ itemDetails: (
         { key: 'transfer', label: 'Stock Transfer' },
       ]
     },
+{
+  title: "COMMUNICATION",
+  items: [
+    { key: 'communication', label: 'Communication' },
+  ]
+},
     {
       title: "IMAGES",
       items: [
