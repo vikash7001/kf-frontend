@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { api } from "../services/api";
 
 const LOCATIONS = ["Jaipur", "Ahmedabad", "Kolkata"];
-const ALL_SIZES = ["S","M","L","XL","XXL","3XL","4XL","5XL","6XL","7XL"];
 
 export default function StockTransfer() {
   const user = JSON.parse(localStorage.getItem("kf_user"));
@@ -23,10 +22,14 @@ export default function StockTransfer() {
   const [itemSuggestions, setItemSuggestions] = useState([]);
   const [showItemSug, setShowItemSug] = useState(false);
 
-  // 🔹 online size logic
+  // size logic
   const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
   const [enabledSizes, setEnabledSizes] = useState([]);
   const [sizeQty, setSizeQty] = useState({});
+
+  // refs (for smooth UX)
+  const itemRef = useRef();
+  const qtyRef = useRef();
 
   // --------------------------------------------------
   // LOAD PRODUCTS
@@ -53,18 +56,16 @@ export default function StockTransfer() {
   const onItemChange = (val) => {
     setItem(val);
     setSelectedProduct(null);
-    setIsOnlineEnabled(false);
-    setEnabledSizes([]);
-    setSizeQty({});
 
     if (!val) {
       setShowItemSug(false);
       return;
     }
 
-    const q = val.toLowerCase();
     const matches = products
-      .filter(p => p.item.toLowerCase().includes(q))
+      .filter(p =>
+        (p.item || "").toLowerCase().includes(val.toLowerCase())
+      )
       .slice(0, 10);
 
     setItemSuggestions(matches);
@@ -79,6 +80,9 @@ export default function StockTransfer() {
     setItem(p.item);
     setShowItemSug(false);
 
+    // focus qty (purchase style flow)
+    setTimeout(() => qtyRef.current?.focus(), 100);
+
     try {
       const res = await api.get(`/online/status-by-item/${p.item}`);
       if (res.data?.is_online) {
@@ -88,12 +92,10 @@ export default function StockTransfer() {
       } else {
         setIsOnlineEnabled(false);
         setEnabledSizes([]);
-        setSizeQty({});
       }
     } catch {
       setIsOnlineEnabled(false);
       setEnabledSizes([]);
-      setSizeQty({});
     }
   };
 
@@ -117,12 +119,8 @@ export default function StockTransfer() {
       fromLocation === "Jaipur" || toLocation === "Jaipur";
 
     if (isOnlineEnabled && jaipurInvolved) {
-      if (!enabledSizes.length) {
-        alert("Online-enabled item needs size details");
-        return;
-      }
       if (totalSizeQty !== Number(qty)) {
-        alert("Size total must equal transfer quantity");
+        alert("Size total must equal quantity");
         return;
       }
     }
@@ -134,23 +132,26 @@ export default function StockTransfer() {
         SeriesName: selectedProduct.seriesname,
         CategoryName: selectedProduct.categoryname,
         Quantity: Number(qty),
-        SizeQty: isOnlineEnabled && jaipurInvolved ? sizeQty : null
+        SizeQty: isOnlineEnabled ? sizeQty : null
       }
     ]);
 
+    // reset
     setItem("");
     setQty("");
     setSelectedProduct(null);
-    setIsOnlineEnabled(false);
-    setEnabledSizes([]);
     setSizeQty({});
+    setIsOnlineEnabled(false);
+
+    // focus back to item (FAST ENTRY)
+    setTimeout(() => itemRef.current?.focus(), 100);
   };
 
   const removeRow = (i) =>
     setRows(rows.filter((_, x) => x !== i));
 
   // --------------------------------------------------
-  // SUBMIT TRANSFER
+  // SUBMIT
   // --------------------------------------------------
   const onSubmit = async () => {
     if (!rows.length) {
@@ -159,9 +160,12 @@ export default function StockTransfer() {
     }
 
     if (fromLocation === toLocation) {
-      alert("From and To location cannot be same");
+      alert("From and To cannot be same");
       return;
     }
+
+    // ✅ confirmation (IMPORTANT)
+    if (!window.confirm("Confirm Stock Transfer?")) return;
 
     const payload = {
       UserName: user.username,
@@ -173,20 +177,20 @@ export default function StockTransfer() {
     try {
       const res = await api.post("/stock/transfer", payload);
       if (res.data?.success) {
-        alert("Stock transferred");
+        alert("Stock transferred successfully");
         setRows([]);
+        itemRef.current?.focus();
       }
     } catch (e) {
-      console.error(e);
       alert(e.response?.data?.error || "Transfer failed");
     }
   };
 
   // --------------------------------------------------
-  // RENDER
+  // UI
   // --------------------------------------------------
   return (
-    <div style={{ padding: 18 }}>
+    <div style={{ padding: 20, background: "#f5f5f5" }}>
       <h2>Stock Transfer</h2>
 
       {/* HEADER */}
@@ -195,69 +199,114 @@ export default function StockTransfer() {
           {LOCATIONS.map(l => <option key={l}>{l}</option>)}
         </select>
 
-        <span style={{ margin: "0 8px" }}>→</span>
+        <span style={{ margin: "0 10px" }}>→</span>
 
         <select value={toLocation} onChange={e => setToLocation(e.target.value)}>
           {LOCATIONS.map(l => <option key={l}>{l}</option>)}
         </select>
       </div>
 
-      {/* ROW ENTRY */}
-      <div style={{ display: "flex", gap: 8 }}>
-        <div style={{ position: "relative" }}>
+      {/* ENTRY BOX */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ position: "relative", width: 250 }}>
           <input
+            ref={itemRef}
             value={item}
             onChange={e => onItemChange(e.target.value)}
             placeholder="Item"
+            style={{ width: "100%", padding: 6 }}
+            onKeyDown={e => {
+              if (e.key === "Enter" && itemSuggestions.length > 0) {
+                selectProduct(itemSuggestions[0]);
+              }
+            }}
           />
-          {showItemSug &&
-            itemSuggestions.map((p, i) => (
-              <div
-                key={i}
-                onClick={() => selectProduct(p)}
-                style={{ cursor: "pointer", background: "#eee" }}
-              >
-                {p.item}
-              </div>
-            ))}
+
+          {/* DROPDOWN */}
+          {showItemSug && (
+            <div style={{
+              position: "absolute",
+              background: "#fff",
+              border: "1px solid #ccc",
+              width: "100%",
+              maxHeight: 200,
+              overflowY: "auto",
+              zIndex: 10
+            }}>
+              {itemSuggestions.map((p, i) => (
+                <div
+                  key={i}
+                  onClick={() => selectProduct(p)}
+                  style={{
+                    padding: 6,
+                    cursor: "pointer",
+                    borderBottom: "1px solid #eee"
+                  }}
+                >
+                  <strong>{p.item}</strong>
+                  <div style={{ fontSize: 11 }}>
+                    {p.seriesname} | {p.categoryname}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <input
+          ref={qtyRef}
           type="number"
           value={qty}
           onChange={e => setQty(e.target.value)}
           placeholder="Qty"
+          style={{ width: 80 }}
+          onKeyDown={e => {
+            if (e.key === "Enter") onAddRow();
+          }}
         />
 
         <button onClick={onAddRow}>Add</button>
       </div>
 
-      {/* SIZE INPUT */}
-      {isOnlineEnabled &&
-        (fromLocation === "Jaipur" || toLocation === "Jaipur") && (
-          <div style={{ marginTop: 12 }}>
-            <b>Size-wise Quantity (Jaipur)</b>
-            {enabledSizes.map(sz => (
-              <div key={sz}>
-                {sz}
-                <input
-                  type="number"
-                  value={sizeQty[sz] || ""}
-                  onChange={e =>
-                    setSizeQty({ ...sizeQty, [sz]: Number(e.target.value) })
-                  }
-                  style={{ marginLeft: 8 }}
-                />
-              </div>
-            ))}
-            <div>
-              <b>Total:</b> {totalSizeQty} / {qty || 0}
-            </div>
-          </div>
-        )}
+      {/* SELECTED INFO */}
+      {selectedProduct && (
+        <div style={{ marginTop: 6, fontSize: 12 }}>
+          {selectedProduct.seriesname} | {selectedProduct.categoryname}
+        </div>
+      )}
 
-      {/* ROWS */}
-      <table border="1" width="100%" style={{ marginTop: 12 }}>
+      {/* SIZE INPUT */}
+      {isOnlineEnabled && (
+        <div style={{ marginTop: 10 }}>
+          <b>Size Qty</b>
+          {enabledSizes.map(sz => (
+            <div key={sz}>
+              {sz}
+              <input
+                type="number"
+                value={sizeQty[sz] || ""}
+                onChange={e =>
+                  setSizeQty({ ...sizeQty, [sz]: Number(e.target.value) })
+                }
+                style={{ marginLeft: 8 }}
+              />
+            </div>
+          ))}
+          <div>Total: {totalSizeQty} / {qty || 0}</div>
+        </div>
+      )}
+
+      {/* TABLE */}
+      <table width="100%" border="1" style={{ marginTop: 12, background: "#fff" }}>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Series</th>
+            <th>Category</th>
+            <th>Qty</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>
