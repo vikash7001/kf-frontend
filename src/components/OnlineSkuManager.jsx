@@ -3,14 +3,11 @@ import { api } from "../services/api";
 
 /**
  * Generic Marketplace SKU Manager
- * Stock is NOT edited here.
- * Only SKU → (productid + size) mapping.
+ * Custom labels implemented for karnifashion.com
  */
-export default function OnlineSkuManager({ marketplace = "AMAZON", onExit }) {
+export default function OnlineSkuManager({ marketplace = "karnifashion.com", onExit }) {
   const [designs, setDesigns] = useState([]);
   const [selected, setSelected] = useState(null);
-
-  // key: productid_size
   const [skuMap, setSkuMap] = useState({});
 
   // --------------------------------
@@ -18,93 +15,94 @@ export default function OnlineSkuManager({ marketplace = "AMAZON", onExit }) {
   // --------------------------------
   useEffect(() => {
     async function load() {
-      // 1️⃣ Load online-enabled designs + sizes (SS2)
-      const res = await api.get("/online/config");
-      const rows = res.data || [];
+      try {
+        const res = await api.get("/online/config");
+        const rows = res.data || [];
 
-      const map = {};
-      rows.forEach(r => {
-        if (!r.is_online || !r.size_code) return;
+        const map = {};
+        rows.forEach(r => {
+          if (!r.is_online || !r.size_code) return;
 
-        if (!map[r.productid]) {
-          map[r.productid] = {
-            productid: r.productid,
-            item: r.item,
-            sizes: []
-          };
-        }
+          if (!map[r.productid]) {
+            map[r.productid] = {
+              productid: r.productid,
+              item: r.item,
+              sizes: []
+            };
+          }
 
-        if (!map[r.productid].sizes.includes(r.size_code)) {
-          map[r.productid].sizes.push(r.size_code);
-        }
-      });
+          if (!map[r.productid].sizes.includes(r.size_code)) {
+            map[r.productid].sizes.push(r.size_code);
+          }
+        });
 
-      setDesigns(Object.values(map));
-
-      // 2️⃣ Load existing SKUs for this marketplace
-      const skuRes = await api.get(`/online/sku/${marketplace.toLowerCase()}`);
-      const skuRows = skuRes.data || [];
-
-      const skuTemp = {};
-      skuRows.forEach(r => {
-        skuTemp[`${r.productid}_${r.size_code}`] = r.sku_code;
-      });
-
-      setSkuMap(skuTemp);
+        setDesigns(Object.values(map));
+      } catch (err) {
+        console.error("Failed to load designs", err);
+      }
     }
+    load();
+  }, []);
 
-    load().catch(() =>
-      alert(`Failed to load ${marketplace} SKU data`)
-    );
+  // --------------------------------
+  // LOAD EXISTING SKU MAPPINGS
+  // --------------------------------
+  useEffect(() => {
+    async function loadSkus() {
+      try {
+        const res = await api.get(`/online/skus?marketplace=${marketplace}`);
+        const existing = res.data || [];
+        const m = {};
+        existing.forEach(s => {
+          m[`${s.productid}_${s.size_code}`] = s.sku_code;
+        });
+        setSkuMap(m);
+      } catch (err) {
+        console.error("Failed to load SKUs", err);
+      }
+    }
+    loadSkus();
   }, [marketplace]);
 
-  // --------------------------------
-  // HANDLE SKU INPUT
-  // --------------------------------
   const setSku = (pid, size, val) => {
-    setSkuMap(prev => ({
-      ...prev,
-      [`${pid}_${size}`]: val
-    }));
+    setSkuMap(prev => ({ ...prev, [`${pid}_${size}`]: val }));
   };
 
-  // --------------------------------
-  // SAVE TO SUPABASE
-  // --------------------------------
   const onSave = async () => {
     if (!selected) return;
+    try {
+      const payload = selected.sizes.map(sz => ({
+        productid: selected.productid,
+        size_code: sz,
+        marketplace: marketplace,
+        sku_code: skuMap[`${selected.productid}_${sz}`] || ""
+      }));
 
-    const rows = selected.sizes.map(sz => ({
-      marketplace,
-      productid: selected.productid,
-      size_code: sz,
-      sku_code: skuMap[`${selected.productid}_${sz}`] || null
-    }));
-
-    await api.post("/online/sku", rows);
-    alert(`${marketplace} SKUs saved`);
+      await api.post("/online/skus/bulk", { mappings: payload });
+      alert(`${marketplace} SKUs updated successfully!`);
+    } catch (err) {
+      alert("Save failed: " + err.message);
+    }
   };
 
-  // --------------------------------
-  // RENDER
-  // --------------------------------
   return (
-    <div style={{ padding: 20, display: "flex", gap: 20 }}>
+    <div style={{ display: "flex", gap: 20, padding: 20 }}>
       {/* LEFT: DESIGN LIST */}
-      <div style={{ width: 320 }}>
-        <h3>Online Designs</h3>
+      <div style={{ width: 300, borderRight: "1px solid #ccc", pr: 20 }}>
+        <h2>Online Products</h2>
+        <p style={{ fontSize: '0.8em', color: '#666' }}>Select a product to map {marketplace} SKUs</p>
         {designs.map(d => (
           <div
             key={d.productid}
             onClick={() => setSelected(d)}
             style={{
-              padding: 6,
+              padding: 10,
               cursor: "pointer",
-              background:
-                selected?.productid === d.productid ? "#eef" : "#fff"
+              borderBottom: "1px solid #eee",
+              background: selected?.productid === d.productid ? "#e3f2fd" : "#fff"
             }}
           >
-            {d.productid} — {d.item}
+            <strong>{d.item}</strong> (ID: {d.productid})
           </div>
         ))}
       </div>
@@ -113,33 +111,26 @@ export default function OnlineSkuManager({ marketplace = "AMAZON", onExit }) {
       {selected && (
         <div style={{ flex: 1 }}>
           <h3>
-            {selected.item} — {marketplace} SKU
+            Mapping: {selected.item} — {marketplace}
           </h3>
 
-          <table border="1" cellPadding="6">
+          <table border="1" cellPadding="10" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr>
-                <th>Size</th>
-                <th>{marketplace} SKU</th>
+              <tr style={{ background: "#f5f5f5" }}>
+                <th>Size Code</th>
+                <th>{marketplace} SKU Code</th>
               </tr>
             </thead>
             <tbody>
               {selected.sizes.map(sz => (
                 <tr key={sz}>
-                  <td>{sz}</td>
+                  <td align="center"><strong>{sz}</strong></td>
                   <td>
                     <input
-                      value={
-                        skuMap[`${selected.productid}_${sz}`] || ""
-                      }
-                      placeholder={`Enter ${marketplace} SKU`}
-                      onChange={e =>
-                        setSku(
-                          selected.productid,
-                          sz,
-                          e.target.value
-                        )
-                      }
+                      style={{ width: "95%", padding: "5px" }}
+                      value={skuMap[`${selected.productid}_${sz}`] || ""}
+                      placeholder={`Enter SKU for ${marketplace}`}
+                      onChange={e => setSku(selected.productid, sz, e.target.value)}
                     />
                   </td>
                 </tr>
@@ -147,13 +138,32 @@ export default function OnlineSkuManager({ marketplace = "AMAZON", onExit }) {
             </tbody>
           </table>
 
-          <button onClick={onSave} style={{ marginTop: 12 }}>
-            Save
-          </button>
+          <div style={{ marginTop: 20 }}>
+            <button 
+              onClick={onSave} 
+              style={{ 
+                padding: "10px 20px", 
+                background: "#4CAF50", 
+                color: "white", 
+                border: "none", 
+                borderRadius: "4px",
+                cursor: "pointer"
+              }}
+            >
+              Update {marketplace} SKUs
+            </button>
 
-          <button onClick={onExit} style={{ marginLeft: 8 }}>
-            Back
-          </button>
+            <button 
+              onClick={onExit} 
+              style={{ 
+                marginLeft: 10, 
+                padding: "10px 20px",
+                cursor: "pointer"
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
     </div>
