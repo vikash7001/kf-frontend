@@ -304,7 +304,61 @@ export default function SalesVoucher() {
           Add
         </button>
       </div>
+{/* SIZE INPUT */}
 
+{isOnlineEnabled && (
+  <div
+    style={{
+      marginTop: 12,
+      padding: 10,
+      border: "1px solid #ddd",
+      borderRadius: 6,
+      background: "#fafafa"
+    }}
+  >
+
+    <b>Size Qty</b>
+
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+        flexWrap: "wrap",
+        marginTop: 8
+      }}
+    >
+
+      {enabledSizes.map(sz => (
+        <div key={sz}>
+
+          <div>{sz}</div>
+
+          <input
+            type="number"
+            value={sizeQty[sz] || ""}
+            onChange={e =>
+              setSizeQty({
+                ...sizeQty,
+                [sz]: Number(e.target.value)
+              })
+            }
+            style={{
+              width: 70
+            }}
+          />
+        </div>
+      ))}
+
+    </div>
+
+    <div style={{ marginTop: 10 }}>
+      <strong>
+        Total: {totalSizeQty} / {qty || 0}
+      </strong>
+    </div>
+
+  </div>
+)}
       {/* TABLE */}
       <div className="table-box">
         <table className="modern-table">
