@@ -17,6 +17,10 @@ export default function PurchaseVoucher() {
   const [itemSuggestions, setItemSuggestions] = useState([]);
   const [showItemSug, setShowItemSug] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
+const [selectedProduct, setSelectedProduct] = useState(null);
+const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
+const [enabledSizes, setEnabledSizes] = useState([]);
+const [sizeQty, setSizeQty] = useState({});
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -78,53 +82,100 @@ export default function PurchaseVoucher() {
     setShowItemSug(matches.length > 0);
   };
 
-  const selectProduct = p => {
-    setItem(p.item);
-    setSeries(p.seriesname);
-    setCategory(p.categoryname);
-    setShowItemSug(false);
-    setHighlightIndex(-1);
-  };
+const selectProduct = async (p) => {
 
-  // ---------------- ADD ROW ----------------
+  setSelectedProduct(p);
 
-  const onAddRow = () => {
-    if (!item || !qty) {
-      alert("Enter Item and Quantity");
-      return;
+  setItem(p.item);
+  setSeries(p.seriesname);
+  setCategory(p.categoryname);
+
+  setShowItemSug(false);
+  setHighlightIndex(-1);
+
+  try {
+
+    const res = await api.get(
+      `/online/status-by-item/${p.item}`
+    );
+
+    if (
+      res.data?.is_online &&
+      location === "Jaipur"
+    ) {
+      setIsOnlineEnabled(true);
+      setEnabledSizes(res.data.sizes || []);
+      setSizeQty({});
+    } else {
+      setIsOnlineEnabled(false);
+      setEnabledSizes([]);
+      setSizeQty({});
     }
 
-    setRows(prev => [
-      ...prev,
-      {
-        Item: item,
-        SeriesName: series,
-        CategoryName: category,
-        Quantity: Number(qty)
-      }
-    ]);
+  } catch {
 
-    setItem("");
-    setSeries("");
-    setCategory("");
-    setQty("");
-    setItemSuggestions([]);
-    setShowItemSug(false);
-    setHighlightIndex(-1);
+    setIsOnlineEnabled(false);
+    setEnabledSizes([]);
+    setSizeQty({});
+  }
+};
+const totalSizeQty = Object.values(sizeQty)
+  .map(Number)
+  .reduce((a, b) => a + b, 0);
+  // ---------------- ADD ROW ----------------
 
-    setTimeout(() => {
-      itemInputRef.current?.focus();
-    }, 0);
-  };
+const onAddRow = () => {
 
-  const removeRow = i =>
-    setRows(rows.filter((_, idx) => idx !== i));
+  if (!selectedProduct || !qty) {
+    alert("Select item and quantity");
+    return;
+  }
 
-  const totalQty = rows.reduce(
-    (sum, r) => sum + Number(r.Quantity || 0),
-    0
-  );
+  if (isOnlineEnabled && location === "Jaipur") {
 
+    if (totalSizeQty !== Number(qty)) {
+
+      alert("Size total must equal quantity");
+      return;
+    }
+  }
+
+  setRows(prev => [
+    ...prev,
+    {
+      Item: item,
+      SeriesName: series,
+      CategoryName: category,
+      Quantity: Number(qty),
+      SizeQty: isOnlineEnabled ? sizeQty : null
+    }
+  ]);
+
+  setItem("");
+  setSeries("");
+  setCategory("");
+  setQty("");
+
+  setSelectedProduct(null);
+
+  setIsOnlineEnabled(false);
+  setEnabledSizes([]);
+  setSizeQty({});
+
+  setItemSuggestions([]);
+  setShowItemSug(false);
+  setHighlightIndex(-1);
+
+  setTimeout(() => {
+    itemInputRef.current?.focus();
+  }, 0);
+};
+const removeRow = i =>
+  setRows(rows.filter((_, idx) => idx !== i));
+const totalQty = rows.reduce(
+  (sum, r) => sum + Number(r.Quantity || 0),
+  0
+);
   // ---------------- SUBMIT ----------------
 
   const onSubmit = () => {
@@ -161,156 +212,281 @@ export default function PurchaseVoucher() {
 
   // ---------------- UI ----------------
 
-  return (
-    <div className="voucher-wrapper">
+return (
+  <div className="voucher-wrapper">
 
-      <div className="voucher-top">
-        <h2>Purchase Voucher</h2>
+    <div className="voucher-top">
+      <h2>Purchase Voucher</h2>
 
-        <div className="location-group">
-          <label>Location</label>
-          <select
-            value={location}
-            onChange={e => setLocation(e.target.value)}
-            disabled={loading}
-          >
-            {LOCATIONS.map(l => (
-              <option key={l}>{l}</option>
-            ))}
-          </select>
-        </div>
+      <div className="location-group">
+        <label>Location</label>
+
+        <select
+          value={location}
+          onChange={e => setLocation(e.target.value)}
+          disabled={loading}
+        >
+          {LOCATIONS.map(l => (
+            <option key={l}>{l}</option>
+          ))}
+        </select>
       </div>
+    </div>
 
-      <div className="voucher-entry">
+    <div className="voucher-entry">
 
-        <div ref={itemRef} className="entry-item">
-          <input
-            ref={itemInputRef}
-            placeholder="Search Item..."
-            value={item}
-            onChange={e => onItemChange(e.target.value)}
-            disabled={loading}
-            onKeyDown={e => {
-              if (!showItemSug) return;
-
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setHighlightIndex(prev =>
-                  prev < itemSuggestions.length - 1 ? prev + 1 : prev
-                );
-              }
-
-              if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setHighlightIndex(prev =>
-                  prev > 0 ? prev - 1 : 0
-                );
-              }
-
-              if (e.key === "Enter") {
-                e.preventDefault();
-                if (highlightIndex >= 0) {
-                  selectProduct(itemSuggestions[highlightIndex]);
-                }
-              }
-            }}
-          />
-
-          {showItemSug && (
-            <div className="suggestion-box">
-              {itemSuggestions.map((p, i) => (
-                <div
-                  key={i}
-                  onClick={() => selectProduct(p)}
-                  className={`suggestion-item ${
-                    i === highlightIndex ? "active-suggestion" : ""
-                  }`}
-                >
-                  {p.item}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      <div ref={itemRef} className="entry-item">
 
         <input
-          type="number"
-          placeholder="Qty"
-          value={qty}
-          onChange={e => setQty(e.target.value)}
+          ref={itemInputRef}
+          placeholder="Search Item..."
+          value={item}
+          onChange={e => onItemChange(e.target.value)}
           disabled={loading}
           onKeyDown={e => {
-            if (e.key === "Enter") onAddRow();
+
+            if (!showItemSug) return;
+
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+
+              setHighlightIndex(prev =>
+                prev < itemSuggestions.length - 1
+                  ? prev + 1
+                  : prev
+              );
+            }
+
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+
+              setHighlightIndex(prev =>
+                prev > 0
+                  ? prev - 1
+                  : 0
+              );
+            }
+
+            if (e.key === "Enter") {
+              e.preventDefault();
+
+              if (highlightIndex >= 0) {
+                selectProduct(itemSuggestions[highlightIndex]);
+              }
+            }
           }}
         />
 
-        <button onClick={onAddRow} disabled={loading}>
-          Add
-        </button>
+        {showItemSug && (
+          <div className="suggestion-box">
 
-        <input value={series} placeholder="Series" readOnly />
-        <input value={category} placeholder="Category" readOnly />
-      </div>
-
-      <div className="table-box">
-        <table className="modern-table">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Series</th>
-              <th>Category</th>
-              <th className="qty-col">Qty</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i}>
-                <td>{r.Item}</td>
-                <td>{r.SeriesName}</td>
-                <td>{r.CategoryName}</td>
-                <td className="qty-col">{r.Quantity}</td>
-                <td>
-                  <button
-                    className="remove-btn"
-                    onClick={() => removeRow(i)}
-                  >
-                    ×
-                  </button>
-                </td>
-              </tr>
+            {itemSuggestions.map((p, i) => (
+              <div
+                key={i}
+                onClick={() => selectProduct(p)}
+                className={`suggestion-item ${
+                  i === highlightIndex
+                    ? "active-suggestion"
+                    : ""
+                }`}
+              >
+                {p.item}
+              </div>
             ))}
-          </tbody>
-        </table>
+
+          </div>
+        )}
       </div>
 
-      <div className="voucher-footer">
-        <div>Total Pieces: <strong>{totalQty}</strong></div>
-        <button className="submit-btn" onClick={onSubmit}>
-          Submit Incoming
-        </button>
-      </div>
+      <input
+        type="number"
+        placeholder="Qty"
+        value={qty}
+        onChange={e => setQty(e.target.value)}
+        disabled={loading}
+        onKeyDown={e => {
+          if (e.key === "Enter") {
+            onAddRow();
+          }
+        }}
+      />
 
-      {showConfirm && (
-        <div className="confirm-overlay">
-          <div className="confirm-box">
-            <h3>Confirm Posting</h3>
-            <div><strong>Location:</strong> {location}</div>
-            <div><strong>Total Pieces:</strong> {totalQty}</div>
-            <div className="confirm-actions">
-              <button onClick={() => setShowConfirm(false)}>Back</button>
-              <button onClick={confirmSubmit}>Confirm</button>
+      <button
+        onClick={onAddRow}
+        disabled={loading}
+      >
+        Add
+      </button>
+
+      <input
+        value={series}
+        placeholder="Series"
+        readOnly
+      />
+
+      <input
+        value={category}
+        placeholder="Category"
+        readOnly
+      />
+    </div>
+
+    {/* ONLINE SIZE INPUT */}
+
+    {isOnlineEnabled && (
+      <div
+        style={{
+          marginTop: 12,
+          padding: 10,
+          border: "1px solid #ddd",
+          borderRadius: 6,
+          background: "#fafafa"
+        }}
+      >
+
+        <b>Size Qty</b>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+            marginTop: 8
+          }}
+        >
+
+          {enabledSizes.map(sz => (
+            <div key={sz}>
+
+              <div>{sz}</div>
+
+              <input
+                type="number"
+                value={sizeQty[sz] || ""}
+                onChange={e =>
+                  setSizeQty({
+                    ...sizeQty,
+                    [sz]: Number(e.target.value)
+                  })
+                }
+                style={{
+                  width: 70
+                }}
+              />
             </div>
+          ))}
+
+        </div>
+
+        <div style={{ marginTop: 10 }}>
+          <strong>
+            Total: {totalSizeQty} / {qty || 0}
+          </strong>
+        </div>
+
+      </div>
+    )}
+
+    <div className="table-box">
+
+      <table className="modern-table">
+
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Series</th>
+            <th>Category</th>
+            <th className="qty-col">Qty</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          {rows.map((r, i) => (
+            <tr key={i}>
+
+              <td>{r.Item}</td>
+
+              <td>{r.SeriesName}</td>
+
+              <td>{r.CategoryName}</td>
+
+              <td className="qty-col">
+                {r.Quantity}
+              </td>
+
+              <td>
+                <button
+                  className="remove-btn"
+                  onClick={() => removeRow(i)}
+                >
+                  ×
+                </button>
+              </td>
+
+            </tr>
+          ))}
+
+        </tbody>
+      </table>
+    </div>
+
+    <div className="voucher-footer">
+
+      <div>
+        Total Pieces:
+        <strong> {totalQty}</strong>
+      </div>
+
+      <button
+        className="submit-btn"
+        onClick={onSubmit}
+      >
+        Submit Incoming
+      </button>
+    </div>
+
+    {showConfirm && (
+      <div className="confirm-overlay">
+
+        <div className="confirm-box">
+
+          <h3>Confirm Posting</h3>
+
+          <div>
+            <strong>Location:</strong> {location}
+          </div>
+
+          <div>
+            <strong>Total Pieces:</strong> {totalQty}
+          </div>
+
+          <div className="confirm-actions">
+
+            <button
+              onClick={() => setShowConfirm(false)}
+            >
+              Back
+            </button>
+
+            <button
+              onClick={confirmSubmit}
+            >
+              Confirm
+            </button>
+
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {loading && (
-        <div className="loading-overlay">
-          Posting... Please wait
-        </div>
-      )}
+    {loading && (
+      <div className="loading-overlay">
+        Posting... Please wait
+      </div>
+    )}
 
-    </div>
-  );
+  </div>
+);
 }
