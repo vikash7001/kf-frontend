@@ -99,10 +99,7 @@ const selectProduct = async (p) => {
       `/online/status-by-item/${p.item}`
     );
 
-    if (
-      res.data?.is_online &&
-      location === "Jaipur"
-    ) {
+    if (res.data?.is_online) {
       setIsOnlineEnabled(true);
       setEnabledSizes(res.data.sizes || []);
       setSizeQty({});
