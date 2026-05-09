@@ -2,7 +2,11 @@ import React, { useEffect, useState, useRef } from "react";
 import { api } from "../services/api";
 
 const LOCATIONS = ["Jaipur", "Ahmedabad", "Kolkata"];
-
+const LOCATION_MAP = {
+  Jaipur: 1,
+  Ahmedabad: 3,
+  Kolkata: 2
+};
 export default function StockTransfer() {
   const user = JSON.parse(localStorage.getItem("kf_user"));
 
@@ -27,7 +31,7 @@ export default function StockTransfer() {
   const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
   const [enabledSizes, setEnabledSizes] = useState([]);
   const [sizeQty, setSizeQty] = useState({});
-
+const [sizeStock, setSizeStock] = useState({});
   const itemRef = useRef();
   const qtyRef = useRef();
 
@@ -37,12 +41,20 @@ export default function StockTransfer() {
       const p = await api.get("/products");
 
       setProducts(
-        (p.data || []).map(r => ({
-          item: r.Item,
-          seriesname: r.SeriesName,
-          categoryname: r.CategoryName
-        }))
-      );
+  (p.data || []).map(r => ({
+    ProductID:
+      r.ProductID,
+
+    item:
+      r.Item,
+
+    seriesname:
+      r.SeriesName,
+
+    categoryname:
+      r.CategoryName
+  }))
+);
     }
 
     load().catch(() => alert("Failed to load products"));
@@ -70,27 +82,75 @@ export default function StockTransfer() {
 
   // ---------------- SELECT PRODUCT ----------------
   const selectProduct = async (p) => {
-    setSelectedProduct(p);
-    setItem(p.item);
-    setShowItemSug(false);
 
-    setTimeout(() => qtyRef.current?.focus(), 100);
+  setSelectedProduct(p);
 
-    try {
-      const res = await api.get(`/online/status-by-item/${p.item}`);
-      if (res.data?.is_online) {
-        setIsOnlineEnabled(true);
-        setEnabledSizes(res.data.sizes || []);
-        setSizeQty({});
-      } else {
-        setIsOnlineEnabled(false);
-        setEnabledSizes([]);
-      }
-    } catch {
+  setItem(p.item);
+
+  setShowItemSug(false);
+
+  setTimeout(
+    () => qtyRef.current?.focus(),
+    100
+  );
+
+  try {
+
+    const res =
+      await api.get(
+        `/online/status-by-item/${p.item}`
+      );
+
+    if (res.data?.is_online) {
+
+      setIsOnlineEnabled(true);
+
+      setEnabledSizes(
+        res.data.sizes || []
+      );
+
+      setSizeQty({});
+
+      // --------------------------
+      // LOAD SOURCE LOCATION STOCK
+      // --------------------------
+
+      const locationid =
+        LOCATION_MAP[fromLocation];
+
+      const stockRes =
+        await api.get(
+          `/online/location-size-stock/${p.ProductID || p.productid}/${locationid}`
+        );
+
+      const stockMap = {};
+
+      (stockRes.data || []).forEach(s => {
+
+        stockMap[s.size_code] =
+          Number(s.qty || 0);
+      });
+
+      setSizeStock(stockMap);
+
+    } else {
+
       setIsOnlineEnabled(false);
+
       setEnabledSizes([]);
+
+      setSizeStock({});
     }
-  };
+
+  } catch {
+
+    setIsOnlineEnabled(false);
+
+    setEnabledSizes([]);
+
+    setSizeStock({});
+  }
+};
 
   // ---------------- SIZE TOTAL ----------------
   const totalSizeQty = Object.values(sizeQty)
@@ -313,6 +373,10 @@ export default function StockTransfer() {
           {enabledSizes.map(sz => (
             <div key={sz}>
               {sz}
+(
+Available:
+{sizeStock[sz] || 0}
+)
               <input
                 type="number"
                 value={sizeQty[sz] || ""}
