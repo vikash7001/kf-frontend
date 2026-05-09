@@ -43,12 +43,18 @@ const [availableSizeStock, setAvailableSizeStock] =
       const cu = await api.get("/customers");
 
       setProducts(
-        (p.data || []).map(r => ({
-          item: r.Item,
-          seriesname: r.SeriesName,
-          categoryname: r.CategoryName
-        }))
-      );
+  (p.data || []).map(r => ({
+    productid: r.productID,
+
+    item: r.Item,
+
+    seriesname:
+      r.SeriesName,
+
+    categoryname:
+      r.CategoryName
+  }))
+);
 
       setCustomers(cu.data || []);
     }
@@ -127,7 +133,7 @@ const [availableSizeStock, setAvailableSizeStock] =
 
           const stockRes =
             await api.get(
-              `/online/location-size-stock/${res.data.productid}/${locationid}`
+              `/online/location-size-stock/${p.productid}/${locationid}`
             );
 
           const stockMap = {};
