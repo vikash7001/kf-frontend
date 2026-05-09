@@ -40,6 +40,7 @@ const [availableSizeStock, setAvailableSizeStock] =
   useEffect(() => {
     async function load() {
       const p = await api.get("/products");
+console.log(p.data[0]);
       const cu = await api.get("/customers");
 
       setProducts(
