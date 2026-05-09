@@ -44,7 +44,7 @@ const [availableSizeStock, setAvailableSizeStock] =
 
       setProducts(
   (p.data || []).map(r => ({
-    productid: r.productID,
+    productid: r.productid,
 
     item: r.Item,
 
