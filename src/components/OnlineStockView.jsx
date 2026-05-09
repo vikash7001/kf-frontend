@@ -6,12 +6,13 @@ export default function OnlineStockView({ onExit }) {
 
   useEffect(() => {
     async function load() {
-      const res = await api.get("/online/config");
+
+      const res = await api.get("/online/allocation/list");
       const rows = res.data || [];
 
       const map = {};
+
       rows.forEach(r => {
-        if (!r.is_online) return;
 
         if (!map[r.productid]) {
           map[r.productid] = {
@@ -19,27 +20,42 @@ export default function OnlineStockView({ onExit }) {
             item: r.item,
             seriesname: r.seriesname,
             categoryname: r.categoryname,
-            jaipurqty: Number(r.jaipurqty),
-            sizes: {}
+            locations: {}
           };
         }
 
-        if (r.size_code) {
-          map[r.productid].sizes[r.size_code] = Number(r.qty);
+        // -----------------------------------
+        // LOCATION GROUP
+        // -----------------------------------
+
+        if (!map[r.productid].locations[r.locationname]) {
+          map[r.productid].locations[r.locationname] = {};
         }
+
+        // -----------------------------------
+        // SIZE QTY
+        // -----------------------------------
+
+        map[r.productid]
+          .locations[r.locationname][r.size_code] = Number(r.qty);
+
       });
 
       setItems(Object.values(map));
+
     }
 
     load().catch(() => alert("Failed to load online stock"));
+
   }, []);
 
   return (
     <div style={{ padding: 20 }}>
-      <h3>Online-Enabled Stock (Jaipur)</h3>
+
+      <h3>Online Variant Stock</h3>
 
       {items.map(p => (
+
         <div
           key={p.productid}
           style={{
@@ -48,34 +64,72 @@ export default function OnlineStockView({ onExit }) {
             marginBottom: 12
           }}
         >
-          <div>
+
+          <div style={{ marginBottom: 10 }}>
             <b>{p.item}</b> — {p.seriesname} / {p.categoryname}
           </div>
 
-          <table border="1" cellPadding="6" style={{ marginTop: 8 }}>
-            <thead>
-              <tr>
-                <th>Size</th>
-                <th>Qty</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(p.sizes).map(([sz, qty]) => (
-                <tr key={sz}>
-                  <td>{sz}</td>
-                  <td>{qty}</td>
-                </tr>
-              ))}
-              <tr>
-                <td><b>Total</b></td>
-                <td><b>{p.jaipurqty}</b></td>
-              </tr>
-            </tbody>
-          </table>
+          {/* -------------------------------- */}
+          {/* LOCATIONS */}
+          {/* -------------------------------- */}
+
+          {Object.entries(p.locations).map(([location, sizes]) => (
+
+            <div
+              key={location}
+              style={{
+                marginBottom: 12,
+                padding: 10,
+                background: "#fafafa"
+              }}
+            >
+
+              <div style={{ marginBottom: 6 }}>
+                <b>{location}</b>
+              </div>
+
+              <table
+                border="1"
+                cellPadding="6"
+                style={{
+                  borderCollapse: "collapse"
+                }}
+              >
+
+                <thead>
+                  <tr>
+                    <th>Size</th>
+                    <th>Qty</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+
+                  {Object.entries(sizes).map(([sz, qty]) => (
+
+                    <tr key={sz}>
+                      <td>{sz}</td>
+                      <td>{qty}</td>
+                    </tr>
+
+                  ))}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          ))}
+
         </div>
+
       ))}
 
-      <button onClick={onExit}>Back</button>
+      <button onClick={onExit}>
+        Back
+      </button>
+
     </div>
   );
 }
