@@ -128,7 +128,7 @@ const onAddRow = () => {
     return;
   }
 
-  if (isOnlineEnabled && location === "Jaipur") {
+    if (isOnlineEnabled) {
 
     if (totalSizeQty !== Number(qty)) {
 
@@ -141,12 +141,33 @@ const onAddRow = () => {
     ...prev,
     {
       Item: item,
+
       SeriesName: series,
+
       CategoryName: category,
+
       Quantity: Number(qty),
-      SizeQty: isOnlineEnabled ? sizeQty : null
+
+      // ------------------------------
+      // BACKEND EXPECTS SizeRows
+      // ------------------------------
+
+      SizeRows:
+        isOnlineEnabled
+          ? Object.entries(sizeQty)
+              .filter(
+                ([, q]) => Number(q || 0) > 0
+              )
+              .map(
+                ([size_code, q]) => ({
+                  size_code,
+                  qty: Number(q)
+                })
+              )
+          : []
     }
   ]);
+  
 
   setItem("");
   setSeries("");

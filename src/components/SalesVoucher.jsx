@@ -27,7 +27,8 @@ export default function SalesVoucher() {
   const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
   const [enabledSizes, setEnabledSizes] = useState([]);
   const [sizeQty, setSizeQty] = useState({});
-
+const [availableSizeStock, setAvailableSizeStock] =
+  useState({});
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -99,10 +100,50 @@ export default function SalesVoucher() {
 
     try {
       const res = await api.get(`/online/status-by-item/${p.item}`);
-      if (res.data?.is_online) {
+            if (res.data?.is_online) {
+
         setIsOnlineEnabled(true);
-        setEnabledSizes(res.data.sizes || []);
+
+        setEnabledSizes(
+          res.data.sizes || []
+        );
+
         setSizeQty({});
+
+        // ------------------------------
+        // LOAD LIVE SIZE STOCK
+        // ------------------------------
+
+        const locationMap = {
+          Jaipur: 1,
+          Kolkata: 2,
+          Ahmedabad: 3
+        };
+
+        const locationid =
+          locationMap[location];
+
+        if (locationid) {
+
+          const stockRes =
+            await api.get(
+              `/online/location-size-stock/${res.data.productid}/${locationid}`
+            );
+
+          const stockMap = {};
+
+          (stockRes.data || [])
+            .forEach(r => {
+
+            stockMap[r.size_code] =
+              Number(r.qty || 0);
+
+          });
+
+          setAvailableSizeStock(
+            stockMap
+          );
+        }
       }
     } catch {}
   };
@@ -123,22 +164,75 @@ export default function SalesVoucher() {
       alert("Select item and quantity");
       return;
     }
+    if (isOnlineEnabled) {
 
-    if (isOnlineEnabled && location === "Jaipur") {
-      if (totalSizeQty !== Number(qty)) {
-        alert("Size total must equal quantity");
+      if (
+        totalSizeQty !== Number(qty)
+      ) {
+
+        alert(
+          "Size total must equal quantity"
+        );
+
         return;
+      }
+
+      // --------------------------------
+      // VALIDATE AVAILABLE STOCK
+      // --------------------------------
+
+      for (const [sz, q] of Object.entries(sizeQty)) {
+
+        const enteredQty =
+          Number(q || 0);
+
+        const availableQty =
+          Number(
+            availableSizeStock[sz] || 0
+          );
+
+        if (enteredQty > availableQty) {
+
+          alert(
+            `${sz} exceeds available stock`
+          );
+
+          return;
+        }
       }
     }
 
-    setRows(r => [
+        setRows(r => [
       ...r,
       {
         Item: selectedProduct.item,
-        SeriesName: selectedProduct.seriesname,
-        CategoryName: selectedProduct.categoryname,
-        Quantity: Number(qty),
-        SizeQty: isOnlineEnabled ? sizeQty : null
+
+        SeriesName:
+          selectedProduct.seriesname,
+
+        CategoryName:
+          selectedProduct.categoryname,
+
+        Quantity:
+          Number(qty),
+
+        // --------------------------------
+        // BACKEND EXPECTS SizeRows
+        // --------------------------------
+
+        SizeRows:
+          isOnlineEnabled
+            ? Object.entries(sizeQty)
+                .filter(
+                  ([, q]) => Number(q || 0) > 0
+                )
+                .map(
+                  ([size_code, q]) => ({
+                    size_code,
+                    qty: Number(q)
+                  })
+                )
+            : []
       }
     ]);
 
@@ -331,7 +425,25 @@ export default function SalesVoucher() {
       {enabledSizes.map(sz => (
         <div key={sz}>
 
-          <div>{sz}</div>
+<div>
+  {sz}
+
+  <span
+    style={{
+      marginLeft: 6,
+      color: "#666",
+      fontSize: 12
+    }}
+  >
+    (
+    Available:
+    {" "}
+    {
+      availableSizeStock[sz] || 0
+    }
+    )
+  </span>
+</div>
 
           <input
             type="number"

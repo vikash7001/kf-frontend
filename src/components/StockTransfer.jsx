@@ -104,24 +104,45 @@ export default function StockTransfer() {
       return;
     }
 
-    const jaipurInvolved =
-      fromLocation === "Jaipur" || toLocation === "Jaipur";
-
-    if (isOnlineEnabled && jaipurInvolved) {
+        if (isOnlineEnabled) {
       if (totalSizeQty !== Number(qty)) {
         alert("Size total must equal quantity");
         return;
       }
     }
 
-    setRows(r => [
+        setRows(r => [
       ...r,
       {
-        Item: selectedProduct.item,
-        SeriesName: selectedProduct.seriesname,
-        CategoryName: selectedProduct.categoryname,
-        Quantity: Number(qty),
-        SizeQty: isOnlineEnabled ? sizeQty : null
+        Item:
+          selectedProduct.item,
+
+        SeriesName:
+          selectedProduct.seriesname,
+
+        CategoryName:
+          selectedProduct.categoryname,
+
+        Quantity:
+          Number(qty),
+
+        // ------------------------------
+        // BACKEND EXPECTS SizeRows
+        // ------------------------------
+
+        SizeRows:
+          isOnlineEnabled
+            ? Object.entries(sizeQty)
+                .filter(
+                  ([, q]) => Number(q || 0) > 0
+                )
+                .map(
+                  ([size_code, q]) => ({
+                    size_code,
+                    qty: Number(q)
+                  })
+                )
+            : []
       }
     ]);
 
