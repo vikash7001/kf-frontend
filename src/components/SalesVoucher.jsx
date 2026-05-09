@@ -45,7 +45,7 @@ console.log(p.data[0]);
 
       setProducts(
   (p.data || []).map(r => ({
-    productid: r.productid,
+    productid: r.ProductID,
 
     item: r.Item,
 
