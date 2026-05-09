@@ -1,129 +1,198 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 
-const ALL_SIZES = ["S","M","L","XL","XXL","3XL","4XL","5XL","6XL","7XL"];
+const ALL_SIZES = [
+  "S","M","L","XL","XXL",
+  "3XL","4XL","5XL","6XL","7XL"
+];
+
+const LOCATIONS = [
+  {
+    locationid: 1,
+    locationname: "Jaipur",
+    stockField: "jaipurqty"
+  },
+  {
+    locationid: 2,
+    locationname: "Kolkata",
+    stockField: "kolkataqty"
+  },
+  {
+    locationid: 3,
+    locationname: "Ahmedabad",
+    stockField: "ahmedabadqty"
+  }
+];
 
 export default function OnlineEnablement({ onExit }) {
 
   const [products, setProducts] = useState([]);
   const [selected, setSelected] = useState(null);
 
-  const [onlineEnabled, setOnlineEnabled] = useState(false);
+  const [onlineEnabled, setOnlineEnabled] =
+    useState(false);
 
-  const [enabledSizes, setEnabledSizes] = useState([]);
+  const [enabledSizes, setEnabledSizes] =
+    useState([]);
 
-  // --------------------------------------
-  // STRUCTURE:
-  // {
-  //   Jaipur: { M: 5, L: 3 },
-  //   Kolkata: { XL: 4 }
-  // }
-  // --------------------------------------
-  const [sizeQty, setSizeQty] = useState({});
+  const [sizeQty, setSizeQty] =
+    useState({});
 
-  // --------------------------------------
-  // LOAD ONLINE ALLOCATION
-  // --------------------------------------
+  const [availableStock, setAvailableStock] =
+    useState({});
+
+  const [enabledLocations, setEnabledLocations] =
+    useState([]);
+
+  // ------------------------------------------------
+  // LOAD PRODUCTS
+  // ------------------------------------------------
+
   useEffect(() => {
 
     async function load() {
 
-const res = await api.get("/online/products");
+      const res =
+        await api.get("/online/products");
+
       const rows = res.data || [];
 
       const map = {};
 
-rows.forEach(r => {
+      rows.forEach(r => {
 
-  map[r.productid] = {
-    productid: r.productid,
-    item: r.item,
-    seriesname: r.seriesname,
-    categoryname: r.categoryname,
-    is_online: r.is_online === true,
-    enabledSizes: [],
-    sizeQty: {}
-  };
+        map[r.productid] = {
+          productid: r.productid,
+          item: r.item,
+          seriesname: r.seriesname,
+          categoryname: r.categoryname,
+          is_online: r.is_online === true
+        };
 
-});
+      });
 
       setProducts(Object.values(map));
 
     }
 
     load().catch(() => {
-      alert("Failed to load online allocation");
+      alert("Failed to load products");
     });
 
   }, []);
 
-  // --------------------------------------
+  // ------------------------------------------------
   // SELECT PRODUCT
-  // --------------------------------------
-const selectProduct = async (p) => {
+  // ------------------------------------------------
 
-  try {
+  const selectProduct = async (p) => {
 
-    setSelected(p);
+    try {
 
-    setOnlineEnabled(p.is_online);
+      setSelected(p);
 
-    // --------------------------------
-    // LOAD PRODUCT ALLOCATIONS
-    // --------------------------------
+      setOnlineEnabled(p.is_online);
 
-    const res = await api.get(
-      `/online/allocation/${p.productid}`
-    );
+      // --------------------------------------------
+      // LOAD ALLOCATIONS
+      // --------------------------------------------
 
-    const rows = res.data || [];
+      const allocRes =
+        await api.get(
+          `/online/allocation/${p.productid}`
+        );
 
-    const sizes = [];
-    const qtyMap = {};
+      const allocRows =
+        allocRes.data || [];
 
-    rows.forEach(r => {
+      const sizes = [];
 
-      // ------------------------------
-      // ENABLED SIZE
-      // ------------------------------
+      const qtyMap = {};
 
-      if (!sizes.includes(r.size_code)) {
-        sizes.push(r.size_code);
-      }
+      const locationList = [];
 
-      // ------------------------------
-      // LOCATION GROUP
-      // ------------------------------
+      allocRows.forEach(r => {
 
-      if (!qtyMap[r.locationname]) {
-        qtyMap[r.locationname] = {};
-      }
+        // ----------------------------------------
+        // ENABLED SIZE
+        // ----------------------------------------
 
-      // ------------------------------
-      // SIZE QTY
-      // ------------------------------
+        if (!sizes.includes(r.size_code)) {
+          sizes.push(r.size_code);
+        }
 
-      qtyMap[r.locationname][r.size_code] =
-        Number(r.qty);
+        // ----------------------------------------
+        // ENABLED LOCATION
+        // ----------------------------------------
 
-    });
+        if (
+          !locationList.includes(r.locationname)
+        ) {
+          locationList.push(r.locationname);
+        }
 
-    setEnabledSizes(sizes);
+        // ----------------------------------------
+        // LOCATION GROUP
+        // ----------------------------------------
 
-    setSizeQty(qtyMap);
+        if (!qtyMap[r.locationname]) {
+          qtyMap[r.locationname] = {};
+        }
 
-  } catch (e) {
+        // ----------------------------------------
+        // SIZE QTY
+        // ----------------------------------------
 
-    console.error(e);
+        qtyMap[r.locationname][r.size_code] =
+          Number(r.qty);
 
-    alert("Failed to load allocation");
+      });
 
-  }
-};
+      setEnabledSizes(sizes);
 
-  // --------------------------------------
+      setSizeQty(qtyMap);
+
+      setEnabledLocations(locationList);
+
+      // --------------------------------------------
+      // LOAD AVAILABLE STOCK
+      // --------------------------------------------
+
+      const stockRes =
+        await api.post("/stock", {
+          search: p.item
+        });
+
+      const stockRows =
+        stockRes.data || [];
+
+      const stock =
+        stockRows[0] || {};
+
+      setAvailableStock({
+        Jaipur:
+          Number(stock.jaipurqty || 0),
+
+        Kolkata:
+          Number(stock.kolkataqty || 0),
+
+        Ahmedabad:
+          Number(stock.ahmedabadqty || 0)
+      });
+
+    } catch (e) {
+
+      console.error(e);
+
+      alert("Failed to load product");
+
+    }
+  };
+
+  // ------------------------------------------------
   // TOGGLE SIZE
-  // --------------------------------------
+  // ------------------------------------------------
+
   const toggleSize = (sz) => {
 
     setEnabledSizes(prev =>
@@ -133,37 +202,103 @@ const selectProduct = async (p) => {
     );
   };
 
-  // --------------------------------------
+  // ------------------------------------------------
+  // TOGGLE LOCATION
+  // ------------------------------------------------
+
+  const toggleLocation = (loc) => {
+
+    setEnabledLocations(prev =>
+      prev.includes(loc)
+        ? prev.filter(x => x !== loc)
+        : [...prev, loc]
+    );
+  };
+
+  // ------------------------------------------------
+  // UPDATE QTY
+  // ------------------------------------------------
+
+  const updateQty = (
+    location,
+    size,
+    value
+  ) => {
+
+    setSizeQty(prev => ({
+      ...prev,
+
+      [location]: {
+        ...(prev[location] || {}),
+        [size]: Number(value)
+      }
+    }));
+  };
+
+  // ------------------------------------------------
   // SAVE
-  // --------------------------------------
+  // ------------------------------------------------
+
   const onSave = async () => {
 
     if (!selected) return;
 
     const allocations = [];
 
-    Object.entries(sizeQty).forEach(([locationname, sizes]) => {
+    LOCATIONS.forEach(loc => {
 
-const locationMap = {
-  Jaipur: 1,
-  Kolkata: 2,
-  Ahmedabad: 3
-};
+      const locationname =
+        loc.locationname;
 
-const locationid = locationMap[locationname];
+      if (
+        !enabledLocations.includes(
+          locationname
+        )
+      ) {
+        return;
+      }
 
-      if (!locationid) return;
+      const sizes =
+        sizeQty[locationname] || {};
 
-      Object.entries(sizes).forEach(([size, qty]) => {
+      Object.entries(sizes)
+        .forEach(([size, qty]) => {
 
-        if (!enabledSizes.includes(size)) return;
+        if (
+          !enabledSizes.includes(size)
+        ) {
+          return;
+        }
 
-        const q = Number(qty || 0);
+        const q =
+          Number(qty || 0);
+
+        // ----------------------------------------
+        // VALIDATION
+        // ----------------------------------------
+
+        if (
+          q >
+          Number(
+            availableStock[
+              locationname
+            ] || 0
+          )
+        ) {
+
+          alert(
+            `${locationname} allocation exceeds available stock`
+          );
+
+          throw new Error(
+            "Allocation exceeds stock"
+          );
+        }
 
         if (q <= 0) return;
 
         allocations.push({
-          locationid,
+          locationid: loc.locationid,
           size_code: size,
           qty: q
         });
@@ -172,36 +307,38 @@ const locationid = locationMap[locationname];
 
     });
 
-    await api.post("/online/allocation/save", {
-  productid: selected.productid,
-  is_online: onlineEnabled,
-  enabledSizes,
-  allocations
-});
+    await api.post(
+      "/online/allocation/save",
+      {
+        productid:
+          selected.productid,
+
+        is_online:
+          onlineEnabled,
+
+        enabledSizes,
+
+        allocations
+      }
+    );
 
     alert("Saved");
+
   };
 
-  // --------------------------------------
-  // UPDATE SIZE QTY
-  // --------------------------------------
-  const updateQty = (location, size, value) => {
-
-    setSizeQty(prev => ({
-      ...prev,
-      [location]: {
-        ...(prev[location] || {}),
-        [size]: Number(value)
-      }
-    }));
-  };
-
-  // --------------------------------------
+  // ------------------------------------------------
   // RENDER
-  // --------------------------------------
+  // ------------------------------------------------
+
   return (
 
-    <div style={{ padding: 20, display: "flex", gap: 20 }}>
+    <div
+      style={{
+        padding: 20,
+        display: "flex",
+        gap: 20
+      }}
+    >
 
       {/* -------------------------------- */}
       {/* LEFT PANEL */}
@@ -215,17 +352,34 @@ const locationid = locationMap[locationname];
 
           <div
             key={p.productid}
-            onClick={() => selectProduct(p)}
+            onClick={() =>
+              selectProduct(p)
+            }
+
             style={{
               padding: 6,
               cursor: "pointer",
+
               background:
-                selected?.productid === p.productid
+                selected?.productid ===
+                p.productid
                   ? "#eef"
                   : "#fff"
             }}
           >
+
             {p.item}
+
+            {p.is_online && (
+              <span
+                style={{
+                  color: "green"
+                }}
+              >
+                {" "}●
+              </span>
+            )}
+
           </div>
 
         ))}
@@ -245,31 +399,50 @@ const locationid = locationMap[locationname];
           </h3>
 
           <label>
+
             <input
               type="checkbox"
+
               checked={onlineEnabled}
-              onChange={e => setOnlineEnabled(e.target.checked)}
+
+              onChange={e =>
+                setOnlineEnabled(
+                  e.target.checked
+                )
+              }
             />
 
             Enable Online
+
           </label>
 
           {/* -------------------------------- */}
           {/* SIZES */}
           {/* -------------------------------- */}
 
-          <h4>Enabled Sizes</h4>
+          <h4 style={{ marginTop: 20 }}>
+            Enabled Sizes
+          </h4>
 
           {ALL_SIZES.map(sz => (
 
             <label
               key={sz}
-              style={{ marginRight: 8 }}
+              style={{
+                marginRight: 10
+              }}
             >
+
               <input
                 type="checkbox"
-                checked={enabledSizes.includes(sz)}
-                onChange={() => toggleSize(sz)}
+
+                checked={
+                  enabledSizes.includes(sz)
+                }
+
+                onChange={() =>
+                  toggleSize(sz)
+                }
               />
 
               {sz}
@@ -279,60 +452,136 @@ const locationid = locationMap[locationname];
           ))}
 
           {/* -------------------------------- */}
-          {/* JAIPUR */}
+          {/* LOCATIONS */}
           {/* -------------------------------- */}
 
-          <div style={{ marginTop: 20 }}>
+          <div style={{ marginTop: 25 }}>
 
-            <h4>Jaipur</h4>
+            {LOCATIONS.map(loc => {
 
-            {enabledSizes.map(sz => (
+              const locationname =
+                loc.locationname;
 
-              <div key={`J-${sz}`} style={{ marginBottom: 6 }}>
+              const enabled =
+                enabledLocations.includes(
+                  locationname
+                );
 
-                {sz}
+              return (
 
-                <input
-                  type="number"
-                  value={sizeQty?.Jaipur?.[sz] || ""}
-                  onChange={e =>
-                    updateQty("Jaipur", sz, e.target.value)
-                  }
-                  style={{ marginLeft: 8 }}
-                />
+                <div
+                  key={locationname}
 
-              </div>
+                  style={{
+                    border: "1px solid #ddd",
+                    padding: 12,
+                    marginBottom: 20
+                  }}
+                >
 
-            ))}
+                  {/* ------------------------ */}
+                  {/* LOCATION HEADER */}
+                  {/* ------------------------ */}
 
-          </div>
+                  <div
+                    style={{
+                      marginBottom: 12
+                    }}
+                  >
 
-          {/* -------------------------------- */}
-          {/* KOLKATA */}
-          {/* -------------------------------- */}
+                    <label>
 
-          <div style={{ marginTop: 20 }}>
+                      <input
+                        type="checkbox"
 
-            <h4>Kolkata</h4>
+                        checked={enabled}
 
-            {enabledSizes.map(sz => (
+                        onChange={() =>
+                          toggleLocation(
+                            locationname
+                          )
+                        }
+                      />
 
-              <div key={`K-${sz}`} style={{ marginBottom: 6 }}>
+                      <b>
+                        {" "}
+                        {locationname}
+                      </b>
 
-                {sz}
+                    </label>
 
-                <input
-                  type="number"
-                  value={sizeQty?.Kolkata?.[sz] || ""}
-                  onChange={e =>
-                    updateQty("Kolkata", sz, e.target.value)
-                  }
-                  style={{ marginLeft: 8 }}
-                />
+                    <span
+                      style={{
+                        marginLeft: 12,
+                        color: "#555"
+                      }}
+                    >
+                      Available:
+                      {" "}
+                      {
+                        availableStock[
+                          locationname
+                        ] || 0
+                      }
+                    </span>
 
-              </div>
+                  </div>
 
-            ))}
+                  {/* ------------------------ */}
+                  {/* SIZE INPUTS */}
+                  {/* ------------------------ */}
+
+                  {enabled && (
+
+                    <div>
+
+                      {enabledSizes.map(sz => (
+
+                        <div
+                          key={`${locationname}-${sz}`}
+
+                          style={{
+                            marginBottom: 8
+                          }}
+                        >
+
+                          {sz}
+
+                          <input
+                            type="number"
+
+                            value={
+                              sizeQty?.[
+                                locationname
+                              ]?.[sz] || ""
+                            }
+
+                            onChange={e =>
+                              updateQty(
+                                locationname,
+                                sz,
+                                e.target.value
+                              )
+                            }
+
+                            style={{
+                              marginLeft: 8
+                            }}
+                          />
+
+                        </div>
+
+                      ))}
+
+                    </div>
+
+                  )}
+
+                </div>
+
+              );
+
+            })}
 
           </div>
 
@@ -340,16 +589,15 @@ const locationid = locationMap[locationname];
           {/* ACTIONS */}
           {/* -------------------------------- */}
 
-          <button
-            onClick={onSave}
-            style={{ marginTop: 20 }}
-          >
+          <button onClick={onSave}>
             Save
           </button>
 
           <button
             onClick={onExit}
-            style={{ marginLeft: 8 }}
+            style={{
+              marginLeft: 8
+            }}
           >
             Back
           </button>
