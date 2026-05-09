@@ -28,53 +28,24 @@ export default function OnlineEnablement({ onExit }) {
 
     async function load() {
 
-      const res = await api.get("/online/allocation/list");
+const res = await api.get("/online/products");
       const rows = res.data || [];
 
       const map = {};
 
-      rows.forEach(r => {
+rows.forEach(r => {
 
-        if (!map[r.productid]) {
+  map[r.productid] = {
+    productid: r.productid,
+    item: r.item,
+    seriesname: r.seriesname,
+    categoryname: r.categoryname,
+    is_online: r.is_online === true,
+    enabledSizes: [],
+    sizeQty: {}
+  };
 
-          map[r.productid] = {
-            productid: r.productid,
-            item: r.item,
-            seriesname: r.seriesname,
-            categoryname: r.categoryname,
-            is_online: true,
-            enabledSizes: [],
-            sizeQty: {}
-          };
-        }
-
-        // --------------------------------
-        // ENABLED SIZE
-        // --------------------------------
-
-        if (
-          r.size_code &&
-          !map[r.productid].enabledSizes.includes(r.size_code)
-        ) {
-          map[r.productid].enabledSizes.push(r.size_code);
-        }
-
-        // --------------------------------
-        // LOCATION GROUP
-        // --------------------------------
-
-        if (!map[r.productid].sizeQty[r.locationname]) {
-          map[r.productid].sizeQty[r.locationname] = {};
-        }
-
-        // --------------------------------
-        // SIZE QTY
-        // --------------------------------
-
-        map[r.productid]
-          .sizeQty[r.locationname][r.size_code] = Number(r.qty);
-
-      });
+});
 
       setProducts(Object.values(map));
 
@@ -89,16 +60,66 @@ export default function OnlineEnablement({ onExit }) {
   // --------------------------------------
   // SELECT PRODUCT
   // --------------------------------------
-  const selectProduct = (p) => {
+const selectProduct = async (p) => {
+
+  try {
 
     setSelected(p);
 
     setOnlineEnabled(p.is_online);
 
-    setEnabledSizes(p.enabledSizes || []);
+    // --------------------------------
+    // LOAD PRODUCT ALLOCATIONS
+    // --------------------------------
 
-    setSizeQty(p.sizeQty || {});
-  };
+    const res = await api.get(
+      `/online/allocation/${p.productid}`
+    );
+
+    const rows = res.data || [];
+
+    const sizes = [];
+    const qtyMap = {};
+
+    rows.forEach(r => {
+
+      // ------------------------------
+      // ENABLED SIZE
+      // ------------------------------
+
+      if (!sizes.includes(r.size_code)) {
+        sizes.push(r.size_code);
+      }
+
+      // ------------------------------
+      // LOCATION GROUP
+      // ------------------------------
+
+      if (!qtyMap[r.locationname]) {
+        qtyMap[r.locationname] = {};
+      }
+
+      // ------------------------------
+      // SIZE QTY
+      // ------------------------------
+
+      qtyMap[r.locationname][r.size_code] =
+        Number(r.qty);
+
+    });
+
+    setEnabledSizes(sizes);
+
+    setSizeQty(qtyMap);
+
+  } catch (e) {
+
+    console.error(e);
+
+    alert("Failed to load allocation");
+
+  }
+};
 
   // --------------------------------------
   // TOGGLE SIZE
@@ -123,12 +144,13 @@ export default function OnlineEnablement({ onExit }) {
 
     Object.entries(sizeQty).forEach(([locationname, sizes]) => {
 
-      const locationid =
-        locationname === "Jaipur"
-          ? 1
-          : locationname === "Kolkata"
-          ? 2
-          : null;
+const locationMap = {
+  Jaipur: 1,
+  Kolkata: 2,
+  Ahmedabad: 3
+};
+
+const locationid = locationMap[locationname];
 
       if (!locationid) return;
 
@@ -151,9 +173,11 @@ export default function OnlineEnablement({ onExit }) {
     });
 
     await api.post("/online/allocation/save", {
-      productid: selected.productid,
-      allocations
-    });
+  productid: selected.productid,
+  is_online: onlineEnabled,
+  enabledSizes,
+  allocations
+});
 
     alert("Saved");
   };
