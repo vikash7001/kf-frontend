@@ -159,15 +159,12 @@ export default function OnlineEnablement({ onExit }) {
       // --------------------------------------------
 
       const stockRes =
-        await api.post("/stock", {
-          search: p.item
-        });
+  await api.get(
+    `/online/product-stock/${p.productid}`
+  );
 
-      const stockRows =
-        stockRes.data || [];
-
-      const stock =
-        stockRows[0] || {};
+const stock =
+  stockRes.data || {};
 
       setAvailableStock({
         Jaipur:
