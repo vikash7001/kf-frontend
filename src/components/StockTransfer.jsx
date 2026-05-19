@@ -26,6 +26,7 @@ export default function StockTransfer() {
 
   const [itemSuggestions, setItemSuggestions] = useState([]);
   const [showItemSug, setShowItemSug] = useState(false);
+const [loading, setLoading] = useState(false);
 
   // size logic
   const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
@@ -42,18 +43,21 @@ const [sizeStock, setSizeStock] = useState({});
 
       setProducts(
   (p.data || []).map(r => ({
-    ProductID:
-      r.ProductID,
+  ProductID:
+    r.ProductID,
 
-    item:
-      r.Item,
+  item:
+    r.Item,
 
-    seriesname:
-      r.SeriesName,
+  seriesname:
+    r.SeriesName,
 
-    categoryname:
-      r.CategoryName
-  }))
+  categoryname:
+    r.CategoryName,
+
+  isonline:
+    r.IsOnline
+}))
 );
     }
 
@@ -239,16 +243,32 @@ const [sizeStock, setSizeStock] = useState({});
       Rows: rows
     };
 
-    try {
-      const res = await api.post("/stock/transfer", payload);
-      if (res.data?.success) {
+try {
+
+  setLoading(true);
+
+  const res =
+    await api.post(
+      "/stock/transfer",
+      payload
+    );
+
+  if (res.data?.success) {
         alert("Stock transferred successfully");
         setRows([]);
         itemRef.current?.focus();
       }
     } catch (e) {
-      alert(e.response?.data?.error || "Transfer failed");
-    }
+
+  alert(
+    e.response?.data?.error ||
+    "Transfer failed"
+  );
+
+} finally {
+
+  setLoading(false);
+}
   };
 
   // ---------------- UI ----------------
@@ -333,10 +353,26 @@ const [sizeStock, setSizeStock] = useState({});
                     borderBottom: "1px solid #eee"
                   }}
                 >
-                  <strong>{p.item}</strong>
-                  <div style={{ fontSize: 11 }}>
-                    {p.seriesname} | {p.categoryname}
-                  </div>
+                  <div>
+  <strong>{p.item}</strong>
+
+  {p.isonline && (
+    <span
+      style={{
+        marginLeft: 8,
+        color: "green",
+        fontWeight: "bold",
+        fontSize: 12
+      }}
+    >
+      ONLINE
+    </span>
+  )}
+
+  <div style={{ fontSize: 11 }}>
+    {p.seriesname} | {p.categoryname}
+  </div>
+</div>
                 </div>
               ))}
             </div>
@@ -417,9 +453,31 @@ Available:
         </tbody>
       </table>
 
-      <button onClick={onSubmit} style={{ marginTop: 12 }}>
+      <button
+  onClick={onSubmit}
+  disabled={loading}
+  style={{ marginTop: 12 }}
+>
         Submit Transfer
       </button>
+{loading && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.25)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 9999,
+      color: "#fff",
+      fontSize: 20,
+      fontWeight: "bold"
+    }}
+  >
+    Posting Transfer... Please wait
+  </div>
+)}
     </div>
   );
 }

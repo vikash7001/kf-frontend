@@ -45,16 +45,19 @@ console.log(p.data[0]);
 
       setProducts(
   (p.data || []).map(r => ({
-    productid: r.ProductID,
+  productid: r.ProductID,
 
-    item: r.Item,
+  item: r.Item,
 
-    seriesname:
-      r.SeriesName,
+  seriesname:
+    r.SeriesName,
 
-    categoryname:
-      r.CategoryName
-  }))
+  categoryname:
+    r.CategoryName,
+
+  isonline:
+    r.IsOnline
+}))
 );
 
       setCustomers(cu.data || []);
@@ -383,7 +386,21 @@ console.log(p.data[0]);
                     i === highlightIndex ? "active-suggestion" : ""
                   }`}
                 >
-                  {p.item}
+                  <>
+  {p.item}
+
+  {p.isonline && (
+    <span
+      style={{
+        marginLeft: 8,
+        color: "green",
+        fontWeight: "bold"
+      }}
+    >
+      ONLINE
+    </span>
+  )}
+</>
                 </div>
               ))}
             </div>

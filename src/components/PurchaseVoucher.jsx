@@ -37,10 +37,11 @@ const [sizeQty, setSizeQty] = useState({});
         const p = await api.get("/products");
         setProducts(
           (p.data || []).map(r => ({
-            item: r.Item,
-            seriesname: r.SeriesName,
-            categoryname: r.CategoryName
-          }))
+  item: r.Item,
+  seriesname: r.SeriesName,
+  categoryname: r.CategoryName,
+  isonline: r.IsOnline
+}))
         );
       } catch {
         alert("Failed to load products");
@@ -308,7 +309,21 @@ return (
                     : ""
                 }`}
               >
-                {p.item}
+               <>
+  {p.item}
+
+  {p.isonline && (
+    <span
+      style={{
+        marginLeft: 8,
+        color: "green",
+        fontWeight: "bold"
+      }}
+    >
+      ONLINE
+    </span>
+  )}
+</>
               </div>
             ))}
 
