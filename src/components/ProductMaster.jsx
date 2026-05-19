@@ -6,9 +6,10 @@ export default function ProductMaster({ onExit }) {
   const [seriesName, setSeriesName] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [origin, setOrigin] = useState("");
-
+const [totalPcs, setTotalPcs] = useState("");
   const [seriesList, setSeriesList] = useState([]);
   const [list, setList] = useState([]);
+const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     load();
@@ -27,26 +28,38 @@ export default function ProductMaster({ onExit }) {
     setCategoryName(s?.CategoryName || "");
   };
 
-  const save = async () => {
-    if (!item || !seriesName || !categoryName || !origin) {
-      alert("Item, Series, Category and Origin required");
-      return;
-    }
+const save = async () => {
+  if (!item || !seriesName || !categoryName || !origin) {
+    alert("Item, Series, Category and Origin required");
+    return;
+  }
 
-    await api.post("/products", {
-      Item: item,
-      SeriesName: seriesName,
-      CategoryName: categoryName,
-      Origin: origin
-    });
-
-    setItem("");
-    setSeriesName("");
-    setCategoryName("");
-    setOrigin("");
-    load();
+  const payload = {
+    Item: item,
+    SeriesName: seriesName,
+    CategoryName: categoryName,
+    Origin: origin,
+    TotalPcs: totalPcs
   };
 
+  if (editingId) {
+    await api.put("/products", {
+      ProductID: editingId,
+      ...payload
+    });
+  } else {
+    await api.post("/products", payload);
+  }
+
+  setItem("");
+  setSeriesName("");
+  setCategoryName("");
+  setOrigin("");
+  setTotalPcs("");
+  setEditingId(null);
+
+  load();
+};
   return (
     <div style={{ padding: 16 }}>
       <h3>Product Master</h3>
@@ -86,10 +99,18 @@ export default function ProductMaster({ onExit }) {
         <option value="Kolkata">Kolkata</option>
         <option value="Ahmedabad">Ahmedabad</option>
       </select>
-
+<input
+  type="number"
+  placeholder="Total PCS"
+  value={totalPcs}
+  onChange={e => setTotalPcs(e.target.value)}
+  style={{ width: 120, marginLeft: 8 }}
+/>
       <br /><br />
 
-      <button onClick={save}>Save</button>
+      <button onClick={save}>
+  {editingId ? "Update" : "Save"}
+</button>
       <button onClick={onExit} style={{ marginLeft: 8 }}>Back</button>
 
       <hr />
@@ -97,8 +118,22 @@ export default function ProductMaster({ onExit }) {
       <ul>
         {list.map(p => (
           <li key={p.ProductID}>
-            {p.Item} ({p.SeriesName}) - {p.Origin}
-          </li>
+  {p.Item} ({p.SeriesName}) - {p.Origin} - PCS: {p.TotalPcs || 0}
+
+  <button
+    style={{ marginLeft: 8 }}
+    onClick={() => {
+      setEditingId(p.ProductID);
+      setItem(p.Item || "");
+      setSeriesName(p.SeriesName || "");
+      setCategoryName(p.CategoryName || "");
+      setOrigin(p.Origin || "");
+      setTotalPcs(p.TotalPcs || "");
+    }}
+  >
+    Edit
+  </button>
+</li>
         ))}
       </ul>
     </div>
