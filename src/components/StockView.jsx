@@ -130,7 +130,8 @@ export default function StockView({ user }) {
         jaipurqty: Number(r.JaipurQty || 0),
         kolkataqty: Number(r.KolkataQty || 0),
         ahmedabadqty: Number(r.AhmedabadQty || 0),
-        totalqty: Number(r.TotalQty || 0)
+        totalqty: Number(r.TotalQty || 0),
+totalpcs: Number(r.TotalPcs || 0)
       }));
 
       setStock(normalized);
@@ -276,6 +277,9 @@ export default function StockView({ user }) {
                 <th onClick={() => handleSort("kolkataqty")}>Kolkata{sortArrow("kolkataqty")}</th>
                 <th onClick={() => handleSort("ahmedabadqty")}>Ahmedabad{sortArrow("ahmedabadqty")}</th>
                 <th onClick={() => handleSort("totalqty")}>Total{sortArrow("totalqty")}</th>
+<th onClick={() => handleSort("totalpcs")}>
+  Total PCS{sortArrow("totalpcs")}
+</th>
               </tr>
             </thead>
             <tbody>
@@ -289,6 +293,7 @@ export default function StockView({ user }) {
                   <td align="right">{s.kolkataqty}</td>
                   <td align="right">{s.ahmedabadqty}</td>
                   <td align="right">{s.totalqty}</td>
+<td align="right">{s.totalpcs}</td>
                 </tr>
               ))}
             </tbody>
