@@ -269,29 +269,49 @@ lastmovementdate: r.LastMovementDate
             }}
           >
             <thead>
-              <tr>
-                <th onClick={() => handleSort("item")}>Product{sortArrow("item")}</th>
-                <th onClick={() => handleSort("seriesname")}>Series{sortArrow("seriesname")}</th>
-                <th onClick={() => handleSort("categoryname")}>Category{sortArrow("categoryname")}</th>
-                <th onClick={() => handleSort("origin")}>Origin{sortArrow("origin")}</th>
-                <th onClick={() => handleSort("jaipurqty")}>Jaipur{sortArrow("jaipurqty")}</th>
-                <th onClick={() => handleSort("kolkataqty")}>Kolkata{sortArrow("kolkataqty")}</th>
-                <th onClick={() => handleSort("ahmedabadqty")}>Ahmedabad{sortArrow("ahmedabadqty")}</th>
-                <th onClick={() => handleSort("totalqty")}>
-  Total{sortArrow("totalqty")}
-</th>
+              <thead>
+  <tr>
+    <th onClick={() => handleSort("item")}>
+      Product{sortArrow("item")}
+    </th>
 
-<th onClick={() => handleSort("totalpcs")}>
-  Total PCS{sortArrow("totalpcs")}
-</th>
+    <th onClick={() => handleSort("seriesname")}>
+      Series{sortArrow("seriesname")}
+    </th>
 
-<th onClick={() => handleSort("lastmovementdate")}>
-  Last Movement{sortArrow("lastmovementdate")}
-</th>
-  Total PCS{sortArrow("totalpcs")}
-</th>
-              </tr>
-            </thead>
+    <th onClick={() => handleSort("categoryname")}>
+      Category{sortArrow("categoryname")}
+    </th>
+
+    <th onClick={() => handleSort("origin")}>
+      Origin{sortArrow("origin")}
+    </th>
+
+    <th onClick={() => handleSort("jaipurqty")}>
+      Jaipur{sortArrow("jaipurqty")}
+    </th>
+
+    <th onClick={() => handleSort("kolkataqty")}>
+      Kolkata{sortArrow("kolkataqty")}
+    </th>
+
+    <th onClick={() => handleSort("ahmedabadqty")}>
+      Ahmedabad{sortArrow("ahmedabadqty")}
+    </th>
+
+    <th onClick={() => handleSort("totalqty")}>
+      Total{sortArrow("totalqty")}
+    </th>
+
+    <th onClick={() => handleSort("totalpcs")}>
+      Total PCS{sortArrow("totalpcs")}
+    </th>
+
+    <th onClick={() => handleSort("lastmovementdate")}>
+      Last Movement{sortArrow("lastmovementdate")}
+    </th>
+  </tr>
+</thead>
             <tbody>
               {filteredAndSortedStock.map(s => (
                 <tr key={s.productid}>
