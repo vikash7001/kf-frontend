@@ -178,27 +178,29 @@ function LedgerTable({ rows }) {
     >
       <thead style={{ background: "#f1f1f1" }}>
         <tr>
-          <th style={th}>Date</th>
-          <th style={th}>Ref</th>
-          <th style={th}>Qty</th>
-          <th style={th}>Location</th>
-          <th style={th}>User</th>
+    <th style={th}>Date</th>
+<th style={th}>Ref</th>
+<th style={th}>Qty</th>
+<th style={th}>Location</th>
+<th style={th}>Customer</th>
+<th style={th}>User</th>
         </tr>
       </thead>
       <tbody>
         {rows.map(r => (
           <tr key={r.ledgerid}>
-            <td style={td}>{new Date(r.movementdate).toLocaleString()}</td>
-            <td style={td}>{r.referenceid}</td>
-            <td style={td}>{r.quantity}</td>
-            <td style={td}>{r.locationname}</td>
-            <td style={td}>{r.username}</td>
+           <td style={td}>{new Date(r.movementdate).toLocaleString()}</td>
+<td style={td}>{r.referenceid}</td>
+<td style={td}>{r.quantity}</td>
+<td style={td}>{r.locationname}</td>
+<td style={td}>{r.customer || "-"}</td>
+<td style={td}>{r.username}</td>
           </tr>
         ))}
 
         {rows.length === 0 && (
           <tr>
-            <td colSpan="5" style={{ textAlign: "center", padding: 10 }}>
+            <td colSpan="6" style={{ textAlign: "center", padding: 10 }}>
               No records
             </td>
           </tr>
