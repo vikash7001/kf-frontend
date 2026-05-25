@@ -81,16 +81,16 @@ export default function OnlineStockView({ onExit }) {
 
   return (
 
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: 10 }}>
 
-      <h2 style={{ marginBottom: 15 }}>
+      <h2 style={{ marginBottom: 10 }}>
         Online Variant Stock
       </h2>
 
       <div
         style={{
           overflow: "auto",
-          maxHeight: "80vh",
+          maxHeight: "82vh",
           border: "1px solid #999",
           background: "#fff"
         }}
@@ -99,15 +99,15 @@ export default function OnlineStockView({ onExit }) {
         <table
           style={{
             borderCollapse: "collapse",
-            minWidth: 1800
+            minWidth: 980
           }}
         >
 
-          {/* ====================================== */}
-          {/* HEADER ROW 1 */}
-          {/* ====================================== */}
-
           <thead>
+
+            {/* ================================= */}
+            {/* HEADER ROW 1 */}
+            {/* ================================= */}
 
             <tr>
 
@@ -117,14 +117,16 @@ export default function OnlineStockView({ onExit }) {
                   position: "sticky",
                   left: 0,
                   top: 0,
-                  zIndex: 5,
+                  zIndex: 10,
                   background: "#f5f5f5",
                   border: "1px solid #666",
-                  padding: 8,
-                  minWidth: 120
+                  padding: 4,
+                  minWidth: 70,
+                  width: 70,
+                  fontSize: 12
                 }}
               >
-                Design No
+                Design
               </th>
 
               {LOCATIONS.map(loc => (
@@ -135,11 +137,12 @@ export default function OnlineStockView({ onExit }) {
                   style={{
                     position: "sticky",
                     top: 0,
-                    zIndex: 4,
+                    zIndex: 9,
                     background: loc.color,
                     border: "1px solid #666",
-                    padding: 8,
-                    textAlign: "center"
+                    padding: 4,
+                    textAlign: "center",
+                    fontSize: 12
                   }}
                 >
                   {loc.name.toUpperCase()}
@@ -149,9 +152,9 @@ export default function OnlineStockView({ onExit }) {
 
             </tr>
 
-            {/* ====================================== */}
+            {/* ================================= */}
             {/* HEADER ROW 2 */}
-            {/* ====================================== */}
+            {/* ================================= */}
 
             <tr>
 
@@ -163,14 +166,15 @@ export default function OnlineStockView({ onExit }) {
                     key={`${loc.name}-${sz}`}
                     style={{
                       position: "sticky",
-                      top: 42,
-                      zIndex: 3,
+                      top: 28,
+                      zIndex: 8,
                       background: loc.color,
                       border: "1px solid #666",
-                      padding: 6,
-                      minWidth: 50,
+                      padding: 2,
+                      minWidth: 28,
+                      width: 28,
                       textAlign: "center",
-                      fontSize: 12
+                      fontSize: 10
                     }}
                   >
                     {sz}
@@ -184,9 +188,9 @@ export default function OnlineStockView({ onExit }) {
 
           </thead>
 
-          {/* ====================================== */}
+          {/* ================================= */}
           {/* BODY */}
-          {/* ====================================== */}
+          {/* ================================= */}
 
           <tbody>
 
@@ -200,17 +204,18 @@ export default function OnlineStockView({ onExit }) {
                   style={{
                     position: "sticky",
                     left: 0,
-                    zIndex: 2,
-                    background: idx % 2 === 0 ? "#fff" : "#f9f9f9",
+                    zIndex: 7,
+                    background: idx % 2 === 0 ? "#fff" : "#f8f8f8",
                     border: "1px solid #ccc",
-                    padding: 6,
-                    fontWeight: "bold"
+                    padding: 3,
+                    fontWeight: "bold",
+                    fontSize: 12
                   }}
                 >
                   {p.item}
                 </td>
 
-                {/* LOCATION + SIZE CELLS */}
+                {/* STOCK CELLS */}
 
                 {LOCATIONS.map(loc => (
 
@@ -225,10 +230,10 @@ export default function OnlineStockView({ onExit }) {
                         key={`${p.productid}-${loc.name}-${sz}`}
                         style={{
                           border: "1px solid #ddd",
-                          padding: 6,
+                          padding: 2,
                           textAlign: "center",
                           background: loc.color,
-                          fontSize: 13
+                          fontSize: 11
                         }}
                       >
                         {qty > 0 ? qty : "-"}
@@ -253,7 +258,7 @@ export default function OnlineStockView({ onExit }) {
       <button
         onClick={onExit}
         style={{
-          marginTop: 20
+          marginTop: 12
         }}
       >
         Back
