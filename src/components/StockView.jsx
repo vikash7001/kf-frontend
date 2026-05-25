@@ -268,7 +268,7 @@ lastmovementdate: r.LastMovementDate
               marginTop: 10
             }}
           >
-            <thead>
+            
               <thead>
   <tr>
     <th onClick={() => handleSort("item")}>
