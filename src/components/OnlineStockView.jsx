@@ -1,135 +1,266 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 
+const SIZE_ORDER = [
+  "M",
+  "L",
+  "XL",
+  "XXL",
+  "3XL",
+  "4XL",
+  "5XL",
+  "6XL",
+  "7XL"
+];
+
+const LOCATIONS = [
+  {
+    name: "Jaipur",
+    color: "#fff176"
+  },
+  {
+    name: "Kolkata",
+    color: "#90caf9"
+  },
+  {
+    name: "Ahmedabad",
+    color: "#aed581"
+  }
+];
+
 export default function OnlineStockView({ onExit }) {
+
   const [items, setItems] = useState([]);
 
   useEffect(() => {
+
     async function load() {
 
-      const res = await api.get("/online/allocation/list");
-      const rows = res.data || [];
+      try {
 
-      const map = {};
+        const res = await api.get("/online/allocation/list");
+        const rows = res.data || [];
 
-      rows.forEach(r => {
+        const map = {};
 
-        if (!map[r.productid]) {
-          map[r.productid] = {
-            productid: r.productid,
-            item: r.item,
-            seriesname: r.seriesname,
-            categoryname: r.categoryname,
-            locations: {}
-          };
-        }
+        rows.forEach(r => {
 
-        // -----------------------------------
-        // LOCATION GROUP
-        // -----------------------------------
+          if (!map[r.productid]) {
 
-        if (!map[r.productid].locations[r.locationname]) {
-          map[r.productid].locations[r.locationname] = {};
-        }
+            map[r.productid] = {
+              productid: r.productid,
+              item: r.item,
+              stock: {}
+            };
 
-        // -----------------------------------
-        // SIZE QTY
-        // -----------------------------------
+          }
 
-        map[r.productid]
-          .locations[r.locationname][r.size_code] = Number(r.qty);
+          if (!map[r.productid].stock[r.locationname]) {
+            map[r.productid].stock[r.locationname] = {};
+          }
 
-      });
+          map[r.productid]
+            .stock[r.locationname][r.size_code] = Number(r.qty);
 
-      setItems(Object.values(map));
+        });
+
+        setItems(Object.values(map));
+
+      } catch (e) {
+
+        console.error(e);
+        alert("Failed to load online stock");
+
+      }
 
     }
 
-    load().catch(() => alert("Failed to load online stock"));
+    load();
 
   }, []);
 
   return (
+
     <div style={{ padding: 20 }}>
 
-      <h3>Online Variant Stock</h3>
+      <h2 style={{ marginBottom: 15 }}>
+        Online Variant Stock
+      </h2>
 
-      {items.map(p => (
+      <div
+        style={{
+          overflow: "auto",
+          maxHeight: "80vh",
+          border: "1px solid #999",
+          background: "#fff"
+        }}
+      >
 
-        <div
-          key={p.productid}
+        <table
           style={{
-            border: "1px solid #ccc",
-            padding: 10,
-            marginBottom: 12
+            borderCollapse: "collapse",
+            minWidth: 1800
           }}
         >
 
-          <div style={{ marginBottom: 10 }}>
-            <b>{p.item}</b> — {p.seriesname} / {p.categoryname}
-          </div>
+          {/* ====================================== */}
+          {/* HEADER ROW 1 */}
+          {/* ====================================== */}
 
-          {/* -------------------------------- */}
-          {/* LOCATIONS */}
-          {/* -------------------------------- */}
+          <thead>
 
-          {Object.entries(p.locations).map(([location, sizes]) => (
+            <tr>
 
-            <div
-              key={location}
-              style={{
-                marginBottom: 12,
-                padding: 10,
-                background: "#fafafa"
-              }}
-            >
-
-              <div style={{ marginBottom: 6 }}>
-                <b>{location}</b>
-              </div>
-
-              <table
-                border="1"
-                cellPadding="6"
+              <th
+                rowSpan="2"
                 style={{
-                  borderCollapse: "collapse"
+                  position: "sticky",
+                  left: 0,
+                  top: 0,
+                  zIndex: 5,
+                  background: "#f5f5f5",
+                  border: "1px solid #666",
+                  padding: 8,
+                  minWidth: 120
                 }}
               >
+                Design No
+              </th>
 
-                <thead>
-                  <tr>
-                    <th>Size</th>
-                    <th>Qty</th>
-                  </tr>
-                </thead>
+              {LOCATIONS.map(loc => (
 
-                <tbody>
+                <th
+                  key={loc.name}
+                  colSpan={SIZE_ORDER.length}
+                  style={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 4,
+                    background: loc.color,
+                    border: "1px solid #666",
+                    padding: 8,
+                    textAlign: "center"
+                  }}
+                >
+                  {loc.name.toUpperCase()}
+                </th>
 
-                  {Object.entries(sizes).map(([sz, qty]) => (
+              ))}
 
-                    <tr key={sz}>
-                      <td>{sz}</td>
-                      <td>{qty}</td>
-                    </tr>
+            </tr>
 
-                  ))}
+            {/* ====================================== */}
+            {/* HEADER ROW 2 */}
+            {/* ====================================== */}
 
-                </tbody>
+            <tr>
 
-              </table>
+              {LOCATIONS.map(loc => (
 
-            </div>
+                SIZE_ORDER.map(sz => (
 
-          ))}
+                  <th
+                    key={`${loc.name}-${sz}`}
+                    style={{
+                      position: "sticky",
+                      top: 42,
+                      zIndex: 3,
+                      background: loc.color,
+                      border: "1px solid #666",
+                      padding: 6,
+                      minWidth: 50,
+                      textAlign: "center",
+                      fontSize: 12
+                    }}
+                  >
+                    {sz}
+                  </th>
 
-        </div>
+                ))
 
-      ))}
+              ))}
 
-      <button onClick={onExit}>
+            </tr>
+
+          </thead>
+
+          {/* ====================================== */}
+          {/* BODY */}
+          {/* ====================================== */}
+
+          <tbody>
+
+            {items.map((p, idx) => (
+
+              <tr key={p.productid}>
+
+                {/* DESIGN COLUMN */}
+
+                <td
+                  style={{
+                    position: "sticky",
+                    left: 0,
+                    zIndex: 2,
+                    background: idx % 2 === 0 ? "#fff" : "#f9f9f9",
+                    border: "1px solid #ccc",
+                    padding: 6,
+                    fontWeight: "bold"
+                  }}
+                >
+                  {p.item}
+                </td>
+
+                {/* LOCATION + SIZE CELLS */}
+
+                {LOCATIONS.map(loc => (
+
+                  SIZE_ORDER.map(sz => {
+
+                    const qty =
+                      p.stock?.[loc.name]?.[sz];
+
+                    return (
+
+                      <td
+                        key={`${p.productid}-${loc.name}-${sz}`}
+                        style={{
+                          border: "1px solid #ddd",
+                          padding: 6,
+                          textAlign: "center",
+                          background: loc.color,
+                          fontSize: 13
+                        }}
+                      >
+                        {qty > 0 ? qty : "-"}
+                      </td>
+
+                    );
+
+                  })
+
+                ))}
+
+              </tr>
+
+            ))}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+      <button
+        onClick={onExit}
+        style={{
+          marginTop: 20
+        }}
+      >
         Back
       </button>
 
     </div>
+
   );
+
 }
