@@ -31,6 +31,10 @@ const api = {
   post(path, data) {
     return apiInstance.post(path, data);
   },
+
+  put(path, data) {
+    return apiInstance.put(path, data);
+  },
 };
 
 export { api };
