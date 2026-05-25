@@ -131,7 +131,8 @@ export default function StockView({ user }) {
         kolkataqty: Number(r.KolkataQty || 0),
         ahmedabadqty: Number(r.AhmedabadQty || 0),
         totalqty: Number(r.TotalQty || 0),
-totalpcs: Number(r.TotalPcs || 0)
+totalpcs: Number(r.TotalPcs || 0),
+lastmovementdate: r.LastMovementDate
       }));
 
       setStock(normalized);
@@ -276,8 +277,17 @@ totalpcs: Number(r.TotalPcs || 0)
                 <th onClick={() => handleSort("jaipurqty")}>Jaipur{sortArrow("jaipurqty")}</th>
                 <th onClick={() => handleSort("kolkataqty")}>Kolkata{sortArrow("kolkataqty")}</th>
                 <th onClick={() => handleSort("ahmedabadqty")}>Ahmedabad{sortArrow("ahmedabadqty")}</th>
-                <th onClick={() => handleSort("totalqty")}>Total{sortArrow("totalqty")}</th>
+                <th onClick={() => handleSort("totalqty")}>
+  Total{sortArrow("totalqty")}
+</th>
+
 <th onClick={() => handleSort("totalpcs")}>
+  Total PCS{sortArrow("totalpcs")}
+</th>
+
+<th onClick={() => handleSort("lastmovementdate")}>
+  Last Movement{sortArrow("lastmovementdate")}
+</th>
   Total PCS{sortArrow("totalpcs")}
 </th>
               </tr>
@@ -294,6 +304,12 @@ totalpcs: Number(r.TotalPcs || 0)
                   <td align="right">{s.ahmedabadqty}</td>
                   <td align="right">{s.totalqty}</td>
 <td align="right">{s.totalpcs}</td>
+
+<td>
+  {s.lastmovementdate
+    ? new Date(s.lastmovementdate).toLocaleDateString()
+    : "-"}
+</td>
                 </tr>
               ))}
             </tbody>
