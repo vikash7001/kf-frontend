@@ -301,7 +301,14 @@ console.log(p.data[0]);
   };
 
   // ---------------- UI ----------------
+const seriesTotals = rows.reduce((acc, r) => {
+  const series = r.SeriesName || "Unknown";
 
+  acc[series] =
+    (acc[series] || 0) + Number(r.Quantity || 0);
+
+  return acc;
+}, {});
   return (
     <div className="voucher-wrapper">
 
@@ -539,15 +546,30 @@ console.log(p.data[0]);
       {showConfirm && (
         <div className="confirm-overlay">
           <div className="confirm-box">
-            <h3>Confirm Sales Posting</h3>
-            <div><strong>Location:</strong> {location}</div>
-            <div><strong>Customer:</strong> {customer || "-"}</div>
-            <div><strong>Total Pieces:</strong> {totalQty}</div>
-            <div className="confirm-actions">
-              <button onClick={() => setShowConfirm(false)}>Back</button>
-              <button onClick={confirmSubmit}>Confirm</button>
-            </div>
-          </div>
+  <h3>Confirm Sales Posting</h3>
+
+  <div><strong>Location:</strong> {location}</div>
+
+  <div><strong>Customer:</strong> {customer || "-"}</div>
+
+  {Object.entries(seriesTotals).map(([series, qty]) => (
+    <div key={series}>
+      <strong>{series}</strong> - {qty} pcs
+    </div>
+  ))}
+
+  <div><strong>Total Pieces:</strong> {totalQty}</div>
+
+  <div className="confirm-actions">
+    <button onClick={() => setShowConfirm(false)}>
+      Back
+    </button>
+
+    <button onClick={confirmSubmit}>
+      Confirm
+    </button>
+  </div>
+</div>
         </div>
       )}
 
