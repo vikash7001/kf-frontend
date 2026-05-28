@@ -3,7 +3,7 @@ import { api } from "../services/api";
 
 const ALL_SIZES = [
   "S","M","L","XL","XXL",
-  "3XL","4XL","5XL","6XL","7XL"
+  "3XL","4XL","5XL","6XL","7XL","N/A"
 ];
 
 const LOCATIONS = [
