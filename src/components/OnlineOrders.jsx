@@ -15,6 +15,9 @@ export default function OnlineOrders() {
   const [loading, setLoading] =
     useState(false);
 
+const [location, setLocation] =
+  useState("All");
+
   async function loadOrders() {
 
     try {
@@ -48,7 +51,23 @@ export default function OnlineOrders() {
     loadOrders();
 
   }, []);
+const filteredOrders =
+  location === "All"
+    ? orders
+    : orders.filter(
+        o =>
+          o.dispatch_location ===
+          location
+      );
 
+const locations = [
+  "All",
+  ...new Set(
+    orders.map(
+      o => o.dispatch_location
+    )
+  )
+];
   return (
 
     <div>
@@ -82,21 +101,107 @@ export default function OnlineOrders() {
         </div>
       )}
 
-      <pre
-        style={{
-          whiteSpace:
-            "pre-wrap",
-          fontSize: 12
-        }}
+      <div
+  style={{
+    marginBottom: 15
+  }}
+>
+  <select
+    value={location}
+    onChange={e =>
+      setLocation(
+        e.target.value
+      )
+    }
+  >
+    {locations.map(l => (
+      <option
+        key={l}
+        value={l}
       >
-        {
-          JSON.stringify(
-            orders,
-            null,
-            2
-          )
-        }
-      </pre>
+        {l}
+      </option>
+    ))}
+  </select>
+</div>
+
+<table
+  className="modern-table"
+>
+  <thead>
+    <tr>
+      <th>
+        Order No
+      </th>
+
+      <th>
+        Customer
+      </th>
+
+      <th>
+        Location
+      </th>
+
+      <th>
+        Pieces
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+
+    {filteredOrders.map(
+      order => (
+
+      <tr
+        key={order.id}
+      >
+
+        <td>
+          {
+            order.order_number
+          }
+        </td>
+
+        <td>
+          {
+            order
+              .addresses
+              ?.full_name
+          }
+        </td>
+
+        <td>
+          {
+            order
+              .dispatch_location
+          }
+        </td>
+
+        <td>
+          {
+            order
+              .order_items
+              ?.reduce(
+                (
+                  a,
+                  b
+                ) =>
+                  a +
+                  Number(
+                    b.qty || 0
+                  ),
+                0
+              )
+          }
+        </td>
+
+      </tr>
+    ))}
+
+  </tbody>
+
+</table>
 
     </div>
 
