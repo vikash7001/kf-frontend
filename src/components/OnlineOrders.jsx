@@ -343,15 +343,48 @@ const selectedLocation =
 <button
   onClick={async () => {
 
-    const res =
-      await importOnlineOrders({
-        orderIds:
-          selectedOrders
-      });
+    try {
 
-    console.log(
-      res.data
-    );
+      const user =
+        JSON.parse(
+          localStorage.getItem(
+            "kf_user"
+          )
+        );
+console.log(user);
+      const res =
+        await importOnlineOrders({
+
+          orderIds:
+            selectedOrders,
+
+          userName:
+            user?.UserName
+
+        });
+
+      console.log(
+        res.data
+      );
+
+      alert(
+        JSON.stringify(
+          res.data,
+          null,
+          2
+        )
+      );
+
+    } catch (err) {
+
+      console.error(err);
+
+      alert(
+        err.response?.data?.error ||
+        err.message
+      );
+
+    }
 
   }}
 >
