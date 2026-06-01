@@ -12,6 +12,9 @@ export default function OnlineOrders() {
   const [orders, setOrders] =
     useState([]);
 
+const [expandedOrder, setExpandedOrder] =
+  useState(null);
+
   const [loading, setLoading] =
     useState(false);
 
@@ -129,77 +132,63 @@ const locations = [
   className="modern-table"
 >
   <thead>
-    <tr>
-      <th>
-        Order No
-      </th>
-
-      <th>
-        Customer
-      </th>
-
-      <th>
-        Location
-      </th>
-
-      <th>
-        Pieces
-      </th>
-    </tr>
+  <tr>
+    <th>Order No</th>
+    <th>Customer</th>
+    <th>Location</th>
+    <th>Pieces</th>
+    <th>Details</th>
+  </tr>
+</thead>
   </thead>
 
-  <tbody>
+<tbody>
 
-    {filteredOrders.map(
-      order => (
+{filteredOrders.map(order => (
 
-      <tr
-        key={order.id}
-      >
+  <React.Fragment key={order.id}>
 
-        <td>
-          {
-            order.order_number
+    <tr>
+      <td>{order.order_number}</td>
+      <td>{order.addresses?.full_name}</td>
+      <td>{order.dispatch_location}</td>
+      <td>
+        {order.order_items?.reduce(
+          (a,b) => a + Number(b.qty || 0),
+          0
+        )}
+      </td>
+
+      <td>
+        <button
+          onClick={() =>
+            setExpandedOrder(
+              expandedOrder === order.id
+                ? null
+                : order.id
+            )
           }
-        </td>
+        >
+          {expandedOrder === order.id
+            ? "Hide"
+            : "View"}
+        </button>
+      </td>
+    </tr>
 
-        <td>
-          {
-            order
-              .addresses
-              ?.full_name
-          }
+    {expandedOrder === order.id && (
+      <tr>
+        <td colSpan="5">
+          DETAILS TABLE HERE
         </td>
-
-        <td>
-          {
-            order
-              .dispatch_location
-          }
-        </td>
-
-        <td>
-          {
-            order
-              .order_items
-              ?.reduce(
-                (
-                  a,
-                  b
-                ) =>
-                  a +
-                  Number(
-                    b.qty || 0
-                  ),
-                0
-              )
-          }
-        </td>
-
       </tr>
-    ))}
+    )}
 
-  </tbody>
+  </React.Fragment>
+
+))}
+
+</tbody>
 
 </table>
 
