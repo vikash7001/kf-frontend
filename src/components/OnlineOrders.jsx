@@ -177,9 +177,57 @@ const locations = [
 
     {expandedOrder === order.id && (
       <tr>
-        <td colSpan="5">
-          DETAILS TABLE HERE
-        </td>
+<td colSpan="5">
+
+  <table
+    className="modern-table"
+    style={{
+      marginTop: 10
+    }}
+  >
+
+    <thead>
+      <tr>
+        <th>Design</th>
+        <th>Product</th>
+        <th>Size</th>
+        <th>Qty</th>
+      </tr>
+    </thead>
+
+    <tbody>
+
+      {order.order_items.map(
+        item => (
+
+          <tr key={item.id}>
+
+            <td>
+              {item.design_no}
+            </td>
+
+            <td>
+              {item.product_name}
+            </td>
+
+            <td>
+              {item.size}
+            </td>
+
+            <td>
+              {item.qty}
+            </td>
+
+          </tr>
+
+        )
+      )}
+
+    </tbody>
+
+  </table>
+
+</td>
       </tr>
     )}
 
