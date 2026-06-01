@@ -416,7 +416,9 @@ setIsImporting(false);
           2
         )
       );
+setSelectedOrders([]);
 
+loadOrders();
 } catch (err) {
 
   setIsImporting(false);
@@ -432,7 +434,7 @@ setIsImporting(false);
 
   }}
 >
-  Test Import
+  Import Selected Orders
 </button>
     </div>
 
