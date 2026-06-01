@@ -139,7 +139,6 @@ const locations = [
     <th>Pieces</th>
     <th>Details</th>
   </tr>
-</thead>
   </thead>
 
 <tbody>
