@@ -15,6 +15,9 @@ export default function OnlineOrders() {
 const [expandedOrder, setExpandedOrder] =
   useState(null);
 
+const [selectedOrders, setSelectedOrders] =
+  useState([]);
+
   const [loading, setLoading] =
     useState(false);
 
@@ -127,18 +130,28 @@ const locations = [
     ))}
   </select>
 </div>
-
+<div
+  style={{
+    marginBottom: 10,
+    fontWeight: "bold"
+  }}
+>
+  Selected Orders:
+  {" "}
+  {selectedOrders.length}
+</div>
 <table
   className="modern-table"
 >
   <thead>
-  <tr>
-    <th>Order No</th>
-    <th>Customer</th>
-    <th>Location</th>
-    <th>Pieces</th>
-    <th>Details</th>
-  </tr>
+<tr>
+  <th>Select</th>
+  <th>Order No</th>
+  <th>Customer</th>
+  <th>Location</th>
+  <th>Pieces</th>
+  <th>Details</th>
+</tr>
   </thead>
 
 <tbody>
@@ -147,91 +160,142 @@ const locations = [
 
   <React.Fragment key={order.id}>
 
-    <tr>
-      <td>{order.order_number}</td>
-      <td>{order.addresses?.full_name}</td>
-      <td>{order.dispatch_location}</td>
-      <td>
-        {order.order_items?.reduce(
-          (a,b) => a + Number(b.qty || 0),
-          0
-        )}
-      </td>
+  <tr>
 
-      <td>
-        <button
-          onClick={() =>
-            setExpandedOrder(
-              expandedOrder === order.id
-                ? null
-                : order.id
+    <td>
+      <input
+        type="checkbox"
+        checked={
+          selectedOrders.includes(
+            order.id
+          )
+        }
+        onChange={() => {
+
+          if (
+            selectedOrders.includes(
+              order.id
             )
+          ) {
+
+            setSelectedOrders(
+              selectedOrders.filter(
+                x => x !== order.id
+              )
+            );
+
+          } else {
+
+            setSelectedOrders([
+              ...selectedOrders,
+              order.id
+            ]);
+
           }
-        >
-          {expandedOrder === order.id
-            ? "Hide"
-            : "View"}
-        </button>
-      </td>
-    </tr>
 
-    {expandedOrder === order.id && (
-      <tr>
-<td colSpan="5">
+        }}
+      />
+    </td>
 
-  <table
-    className="modern-table"
-    style={{
-      marginTop: 10
-    }}
-  >
+    <td>
+      {order.order_number}
+    </td>
 
-    <thead>
-      <tr>
-        <th>Design</th>
-        <th>Product</th>
-        <th>Size</th>
-        <th>Qty</th>
-      </tr>
-    </thead>
+    <td>
+      {order.addresses?.full_name}
+    </td>
 
-    <tbody>
+    <td>
+      {order.dispatch_location}
+    </td>
 
-      {order.order_items.map(
-        item => (
-
-          <tr key={item.id}>
-
-            <td>
-              {item.design_no}
-            </td>
-
-            <td>
-              {item.product_name}
-            </td>
-
-            <td>
-              {item.size}
-            </td>
-
-            <td>
-              {item.qty}
-            </td>
-
-          </tr>
-
-        )
+    <td>
+      {order.order_items?.reduce(
+        (a, b) =>
+          a + Number(b.qty || 0),
+        0
       )}
+    </td>
 
-    </tbody>
+    <td>
 
-  </table>
+      <button
+        onClick={() =>
+          setExpandedOrder(
+            expandedOrder === order.id
+              ? null
+              : order.id
+          )
+        }
+      >
+        {expandedOrder === order.id
+          ? "Hide"
+          : "View"}
+      </button>
 
-</td>
-      </tr>
-    )}
+    </td>
 
-  </React.Fragment>
+  </tr>
+
+  {expandedOrder === order.id && (
+    <tr>
+
+      <td colSpan="6">
+
+        <table
+          className="modern-table"
+          style={{
+            marginTop: 10
+          }}
+        >
+
+          <thead>
+            <tr>
+              <th>Design</th>
+              <th>Product</th>
+              <th>Size</th>
+              <th>Qty</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            {order.order_items.map(
+              item => (
+
+                <tr key={item.id}>
+
+                  <td>
+                    {item.design_no}
+                  </td>
+
+                  <td>
+                    {item.product_name}
+                  </td>
+
+                  <td>
+                    {item.size}
+                  </td>
+
+                  <td>
+                    {item.qty}
+                  </td>
+
+                </tr>
+
+              )
+            )}
+
+          </tbody>
+
+        </table>
+
+      </td>
+
+    </tr>
+  )}
+
+</React.Fragment>
 
 ))}
 
