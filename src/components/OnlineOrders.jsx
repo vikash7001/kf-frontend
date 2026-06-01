@@ -19,6 +19,8 @@ const [expandedOrder, setExpandedOrder] =
 const [selectedOrders, setSelectedOrders] =
   useState([]);
 
+const [isImporting, setIsImporting] =
+  useState(false);
 
   const [loading, setLoading] =
     useState(false);
@@ -83,9 +85,35 @@ const selectedLocation =
         o =>
           o.id === selectedOrders[0]
       )?.dispatch_location;
-  return (
+return (
 
-    <div>
+  <div>
+
+    {isImporting && (
+
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background:
+            "rgba(0,0,0,0.5)",
+          zIndex: 9999,
+          color: "white",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 22,
+          fontWeight: "bold"
+        }}
+      >
+        Importing Orders...
+        Please Wait
+      </div>
+
+    )}
 
       <div
         style={{
@@ -101,10 +129,11 @@ const selectedLocation =
         </h2>
 
         <button
-          onClick={
-            loadOrders
-          }
-        >
+  disabled={isImporting}
+  onClick={
+    loadOrders
+  }
+>
           Refresh
         </button>
 
@@ -122,7 +151,9 @@ const selectedLocation =
   }}
 >
   <select
-    value={location}
+  disabled={isImporting}
+
+  value={location}
     onChange={e =>
       setLocation(
         e.target.value
@@ -191,13 +222,18 @@ const selectedLocation =
   type="checkbox"
 
   disabled={
-    selectedLocation &&
-    selectedLocation !==
-      order.dispatch_location &&
-    !selectedOrders.includes(
-      order.id
+    isImporting ||
+    (
+      selectedLocation &&
+      selectedLocation !==
+        order.dispatch_location &&
+      !selectedOrders.includes(
+        order.id
+      )
     )
   }
+
+
 
   checked={
     selectedOrders.includes(
@@ -258,7 +294,9 @@ const selectedLocation =
     <td>
 
       <button
-        onClick={() =>
+  disabled={isImporting}
+
+  onClick={() =>
           setExpandedOrder(
             expandedOrder === order.id
               ? null
@@ -341,10 +379,15 @@ const selectedLocation =
 
 </table>
 <button
+  disabled={
+    isImporting ||
+    selectedOrders.length === 0
+  }
+
   onClick={async () => {
 
     try {
-
+setIsImporting(true);
       const user =
         JSON.parse(
           localStorage.getItem(
@@ -365,7 +408,7 @@ user?.username
       console.log(
         res.data
       );
-
+setIsImporting(false);
       alert(
         JSON.stringify(
           res.data,
@@ -374,7 +417,9 @@ user?.username
         )
       );
 
-    } catch (err) {
+} catch (err) {
+
+  setIsImporting(false);
 
       console.error(err);
 
