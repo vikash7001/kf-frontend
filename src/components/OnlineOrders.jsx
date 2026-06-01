@@ -18,6 +18,7 @@ const [expandedOrder, setExpandedOrder] =
 const [selectedOrders, setSelectedOrders] =
   useState([]);
 
+
   const [loading, setLoading] =
     useState(false);
 
@@ -74,6 +75,13 @@ const locations = [
     )
   )
 ];
+const selectedLocation =
+  selectedOrders.length === 0
+    ? null
+    : orders.find(
+        o =>
+          o.id === selectedOrders[0]
+      )?.dispatch_location;
   return (
 
     <div>
@@ -139,6 +147,21 @@ const locations = [
   Selected Orders:
   {" "}
   {selectedOrders.length}
+{selectedLocation && (
+
+  <div
+    style={{
+      marginTop: 5,
+      color: "green",
+      fontWeight: "bold"
+    }}
+  >
+    Location Locked:
+    {" "}
+    {selectedLocation}
+  </div>
+
+)}
 </div>
 <table
   className="modern-table"
@@ -164,37 +187,51 @@ const locations = [
 
     <td>
       <input
-        type="checkbox"
-        checked={
-          selectedOrders.includes(
-            order.id
-          )
-        }
-        onChange={() => {
+  type="checkbox"
 
-          if (
-            selectedOrders.includes(
-              order.id
-            )
-          ) {
+  disabled={
+    selectedLocation &&
+    selectedLocation !==
+      order.dispatch_location &&
+    !selectedOrders.includes(
+      order.id
+    )
+  }
 
-            setSelectedOrders(
-              selectedOrders.filter(
-                x => x !== order.id
-              )
-            );
+  checked={
+    selectedOrders.includes(
+      order.id
+    )
+  }
 
-          } else {
+  onChange={() => {
 
-            setSelectedOrders([
-              ...selectedOrders,
-              order.id
-            ]);
+    if (
+      selectedOrders.includes(
+        order.id
+      )
+    ) {
 
-          }
+      const newSelection =
+        selectedOrders.filter(
+          x => x !== order.id
+        );
 
-        }}
-      />
+      setSelectedOrders(
+        newSelection
+      );
+
+    } else {
+
+      setSelectedOrders([
+        ...selectedOrders,
+        order.id
+      ]);
+
+    }
+
+  }}
+/>
     </td>
 
     <td>
