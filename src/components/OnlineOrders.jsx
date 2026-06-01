@@ -78,13 +78,7 @@ const locations = [
     )
   )
 ];
-const selectedLocation =
-  selectedOrders.length === 0
-    ? null
-    : orders.find(
-        o =>
-          o.id === selectedOrders[0]
-      )?.dispatch_location;
+
 return (
 
   <div>
@@ -179,21 +173,7 @@ return (
   Selected Orders:
   {" "}
   {selectedOrders.length}
-{selectedLocation && (
 
-  <div
-    style={{
-      marginTop: 5,
-      color: "green",
-      fontWeight: "bold"
-    }}
-  >
-    Location Locked:
-    {" "}
-    {selectedLocation}
-  </div>
-
-)}
 </div>
 <table
   className="modern-table"
@@ -222,16 +202,14 @@ return (
   type="checkbox"
 
   disabled={
-    isImporting ||
-    (
-      selectedLocation &&
-      selectedLocation !==
-        order.dispatch_location &&
-      !selectedOrders.includes(
-        order.id
-      )
+  isImporting ||
+  (
+    selectedOrders.length > 0 &&
+    !selectedOrders.includes(
+      order.id
     )
-  }
+  )
+}
 
 
 
@@ -243,31 +221,23 @@ return (
 
   onChange={() => {
 
-    if (
-      selectedOrders.includes(
-        order.id
-      )
-    ) {
+  if (
+    selectedOrders.includes(
+      order.id
+    )
+  ) {
 
-      const newSelection =
-        selectedOrders.filter(
-          x => x !== order.id
-        );
+    setSelectedOrders([]);
 
-      setSelectedOrders(
-        newSelection
-      );
+  } else {
 
-    } else {
+    setSelectedOrders([
+      order.id
+    ]);
 
-      setSelectedOrders([
-        ...selectedOrders,
-        order.id
-      ]);
+  }
 
-    }
-
-  }}
+}}
 />
     </td>
 
