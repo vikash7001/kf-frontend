@@ -20,7 +20,7 @@ import OnlineEnablement from './OnlineEnablement';
 import OnlineStockView from './OnlineStockView';
 import OnlineSkuPendingAmazon from './OnlineSkuPendingAmazon';
 import OnlineSkuManager from './OnlineSkuManager';
-
+import OnlineOrders from "./OnlineOrders";
 
 export default function AdminDashboard({ user }) {
 
@@ -51,7 +51,7 @@ export default function AdminDashboard({ user }) {
     sales: <SalesVoucher user={user} />,
     stock: <StockView user={user} />,
     transfer: <StockTransfer user={user} />,
-
+    onlineOrders: <OnlineOrders />,
     // IMAGES
     images: <ImageViewer user={user} />,
     manageImages: <ManageImages user={user} />,
@@ -93,6 +93,7 @@ itemDetails: (
         { key: 'purchase', label: 'Purchase' },
         { key: 'sales', label: 'Sales' },
         { key: 'stock', label: 'Stock' },
+{ key: "onlineOrders", label: "Online Orders" },
         { key: 'transfer', label: 'Stock Transfer' },
       ]
     },

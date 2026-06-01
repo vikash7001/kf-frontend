@@ -52,3 +52,6 @@ export function postSales(data) {
   return apiInstance.post("/sales", data);
 }
 
+export function getOnlineOrders() {
+  return api.get("/online-orders");
+}
