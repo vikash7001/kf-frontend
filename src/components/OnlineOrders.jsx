@@ -4,7 +4,8 @@ import React, {
 } from "react";
 
 import {
-  getOnlineOrders
+  getOnlineOrders,
+  importOnlineOrders
 } from "../services/api";
 
 export default function OnlineOrders() {
@@ -339,7 +340,23 @@ const selectedLocation =
 </tbody>
 
 </table>
+<button
+  onClick={async () => {
 
+    const res =
+      await importOnlineOrders({
+        orderIds:
+          selectedOrders
+      });
+
+    console.log(
+      res.data
+    );
+
+  }}
+>
+  Test Import
+</button>
     </div>
 
   );

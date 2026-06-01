@@ -55,3 +55,10 @@ export function postSales(data) {
 export function getOnlineOrders() {
   return api.get("/online-orders");
 }
+
+export function importOnlineOrders(data) {
+  return api.post(
+    "/online-orders/import",
+    data
+  );
+}
