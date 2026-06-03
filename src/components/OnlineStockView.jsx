@@ -10,7 +10,8 @@ const SIZE_ORDER = [
   "4XL",
   "5XL",
   "6XL",
-  "7XL"
+  "7XL",
+  "N/A"
 ];
 
 const LOCATIONS = [
@@ -48,10 +49,11 @@ export default function OnlineStockView({ onExit }) {
           if (!map[r.productid]) {
 
             map[r.productid] = {
-              productid: r.productid,
-              item: r.item,
-              stock: {}
-            };
+  productid: r.productid,
+  item: r.item,
+  series: r.series,
+  stock: {}
+};
 
           }
 
@@ -212,7 +214,7 @@ export default function OnlineStockView({ onExit }) {
                     fontSize: 12
                   }}
                 >
-                  {p.item}
+                  {p.series} - {p.item}
                 </td>
 
                 {/* STOCK CELLS */}
