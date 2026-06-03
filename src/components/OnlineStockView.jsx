@@ -214,7 +214,7 @@ export default function OnlineStockView({ onExit }) {
                     fontSize: 12
                   }}
                 >
-                  {p.series} - {p.item}
+                  {p.item}
                 </td>
 
                 {/* STOCK CELLS */}
