@@ -43,7 +43,14 @@ export default function OnlineEnablement({ onExit }) {
 
   const [enabledLocations, setEnabledLocations] =
     useState([]);
+const [saving, setSaving] =
+  useState(false);
 
+const [searchText, setSearchText] =
+  useState("");
+
+const [showSearch, setShowSearch] =
+  useState(false);
   // ------------------------------------------------
   // LOAD PRODUCTS
   // ------------------------------------------------
@@ -231,14 +238,29 @@ const stock =
       }
     }));
   };
-
+const filteredProducts =
+  searchText.trim() === ""
+    ? []
+    : products
+        .filter(p =>
+          String(p.item)
+            .toLowerCase()
+            .includes(
+              searchText.toLowerCase()
+            )
+        )
+        .slice(0, 25);
   // ------------------------------------------------
   // SAVE
   // ------------------------------------------------
 
   const onSave = async () => {
 
-    if (!selected) return;
+  if (saving) return;
+
+  if (!selected) return;
+
+  
 
     const allocations = [];
 
@@ -304,22 +326,33 @@ const stock =
 
     });
 
-    await api.post(
-      "/online/allocation/save",
-      {
-        productid:
-          selected.productid,
+try {
 
-        is_online:
-          onlineEnabled,
+  setSaving(true);
 
-        enabledSizes,
+  await api.post(
+    "/online/allocation/save",
+    {
+      productid:
+        selected.productid,
 
-        allocations
-      }
-    );
+      is_online:
+        onlineEnabled,
 
-    alert("Saved");
+      enabledSizes,
+
+      allocations
+    }
+  );
+
+  alert("Saved");
+
+}
+finally {
+
+  setSaving(false);
+
+}
 
   };
 
@@ -391,9 +424,89 @@ const stock =
 
         <div style={{ flex: 1 }}>
 
-          <h3>
-            {selected.item}
-          </h3>
+<h3>
+  {selected.item}
+</h3>
+
+<div
+  style={{
+    marginBottom: 20,
+    position: "relative"
+  }}
+>
+
+  <input
+    type="text"
+    placeholder="Search Design..."
+    value={searchText}
+
+    disabled={saving}
+
+    onChange={(e) => {
+
+      setSearchText(
+        e.target.value
+      );
+
+      setShowSearch(true);
+
+    }}
+
+    style={{
+      width: 250,
+      padding: 6
+    }}
+  />
+
+  {showSearch &&
+   filteredProducts.length > 0 && (
+
+    <div
+      style={{
+        position: "absolute",
+        top: "100%",
+        left: 0,
+        width: 250,
+        border: "1px solid #ccc",
+        background: "#fff",
+        maxHeight: 250,
+        overflowY: "auto",
+        zIndex: 1000
+      }}
+    >
+
+      {filteredProducts.map(p => (
+
+        <div
+          key={p.productid}
+
+          style={{
+            padding: 6,
+            cursor: "pointer"
+          }}
+
+          onClick={() => {
+
+            setSearchText(
+              p.item
+            );
+
+            setShowSearch(false);
+
+            selectProduct(p);
+
+          }}
+        >
+          {p.item}
+        </div>
+
+      ))}
+
+    </div>
+
+  )}
+
+</div>
 
           <label>
 
@@ -603,6 +716,34 @@ const stock =
 
       )}
 
+{saving && (
+
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background:
+        "rgba(0,0,0,0.35)",
+
+      zIndex: 999999,
+
+      display: "flex",
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      color: "#fff",
+
+      fontSize: 24,
+
+      fontWeight: "bold"
+    }}
+  >
+    Saving...
+  </div>
+
+)}
     </div>
   );
 }
