@@ -1,6 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { api } from "../services/api";
+import React, {
+  useEffect,
+  useState,
+  useRef
+} from "react";
 
+import { api } from "../services/api";
 const ALL_SIZES = [
   "S","M","L","XL","XXL",
   "3XL","4XL","5XL","6XL","7XL","N/A"
@@ -25,7 +29,7 @@ const LOCATIONS = [
 ];
 
 export default function OnlineEnablement({ onExit }) {
-
+const searchRef = useRef(null);
   const [products, setProducts] = useState([]);
   const [selected, setSelected] = useState(null);
 
@@ -51,6 +55,8 @@ const [searchText, setSearchText] =
 
 const [showSearch, setShowSearch] =
   useState(false);
+const [highlightedIndex, setHighlightedIndex] =
+  useState(-1);
   // ------------------------------------------------
   // LOAD PRODUCTS
   // ------------------------------------------------
@@ -346,7 +352,8 @@ try {
   );
 
   alert("Saved");
-
+searchRef.current?.focus();
+searchRef.current?.select();
 }
 finally {
 
@@ -435,28 +442,76 @@ finally {
   }}
 >
 
-  <input
-    type="text"
-    placeholder="Search Design..."
-    value={searchText}
+<input
+  ref={searchRef}
+  type="text"
+  placeholder="Search Design..."
+  value={searchText}
+  disabled={saving}
 
-    disabled={saving}
+  onChange={(e) => {
 
-    onChange={(e) => {
+    setSearchText(
+      e.target.value
+    );
+
+    setHighlightedIndex(-1);
+
+    setShowSearch(true);
+
+  }}
+
+  onKeyDown={(e) => {
+
+    if (!filteredProducts.length) return;
+
+    if (e.key === "ArrowDown") {
+
+      e.preventDefault();
+
+      setHighlightedIndex(prev =>
+        Math.min(
+          prev + 1,
+          filteredProducts.length - 1
+        )
+      );
+    }
+
+    if (e.key === "ArrowUp") {
+
+      e.preventDefault();
+
+      setHighlightedIndex(prev =>
+        Math.max(prev - 1, 0)
+      );
+    }
+
+    if (
+      e.key === "Enter" &&
+      highlightedIndex >= 0
+    ) {
+
+      e.preventDefault();
+
+      const p =
+        filteredProducts[highlightedIndex];
 
       setSearchText(
-        e.target.value
+        String(p.item)
       );
 
-      setShowSearch(true);
+      setShowSearch(false);
 
-    }}
+      selectProduct(p);
+    }
 
-    style={{
-      width: 250,
-      padding: 6
-    }}
-  />
+  }}
+
+  style={{
+    width: 250,
+    padding: 6
+  }}
+/>
 
   {showSearch &&
    filteredProducts.length > 0 && (
@@ -475,15 +530,20 @@ finally {
       }}
     >
 
-      {filteredProducts.map(p => (
+      {filteredProducts.map((p, index) => (
 
         <div
           key={p.productid}
 
           style={{
-            padding: 6,
-            cursor: "pointer"
-          }}
+  padding: 6,
+  cursor: "pointer",
+
+  background:
+    highlightedIndex === index
+      ? "#dbeafe"
+      : "#fff"
+}}
 
           onClick={() => {
 
