@@ -327,14 +327,31 @@ export default function ViewSales({ onExit }) {
         bodyRows.push(`<tr><td colspan="${4 + sizes.length}" style="text-align:center">No sale details found</td></tr>`);
       }
 
+      const header = detail?.header || {};
+
+      const printDate = header.date || sale.Date;
+      const printCustomer = header.customer ?? sale.Customer ?? "";
+      const printLocation = header.locationname ?? header.Location ?? "";
+      const printInvoiceNo =
+        header.voucherno ??
+        header.VoucherNo ??
+        header.invoice_no ??
+        "";
+
       const info = `
         <div class="info">
           <div class="label">Sale ID</div>
           <div></div>
           <div class="label">Date</div>
-          <div>${escapeHtml(new Date(sale.Date).toLocaleDateString())}</div>
+          <div>${escapeHtml(new Date(printDate).toLocaleDateString())}</div>
+
           <div class="label">Customer</div>
-          <div>${escapeHtml(sale.Customer)}</div>
+          <div>${escapeHtml(printCustomer)}</div>
+          <div class="label">Location</div>
+          <div>${escapeHtml(printLocation)}</div>
+
+          <div class="label">Invoice No.</div>
+          <div>${escapeHtml(printInvoiceNo)}</div>
           <div class="label">Total Qty</div>
           <div>${escapeHtml(sale.TotalQty)}</div>
         </div>
