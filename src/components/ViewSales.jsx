@@ -103,8 +103,7 @@ export default function ViewSales({ onExit }) {
       const category = getCategory(d);
       const series = getSeries(d);
       const design = getDesign(d);
-      const size = getSize(d);
-      const quantity = getQuantity(d);
+      const baseQuantity = getQuantity(d);
 
       const key = `${category}|||${series}|||${design}`;
 
@@ -119,11 +118,23 @@ export default function ViewSales({ onExit }) {
       }
 
       const row = grouped.get(key);
-      row.total += quantity;
 
-      if (SIZES.includes(size)) {
-        row.sizes[size] += quantity;
-      }
+      const sizeRows = Array.isArray(d.sizeRows)
+        ? d.sizeRows
+        : Array.isArray(d.size_rows)
+          ? d.size_rows
+          : [];
+
+      sizeRows.forEach(sz => {
+        const size = getSize(sz);
+        const quantity = getQuantity(sz);
+
+        if (SIZES.includes(size)) {
+          row.sizes[size] += quantity;
+        }
+      });
+
+      row.total += baseQuantity;
     });
 
     return Array.from(grouped.values());
@@ -144,7 +155,7 @@ export default function ViewSales({ onExit }) {
         <head>
           <title>Sale ${escapeHtml(sale.ID)}</title>
           <style>
-            @page { size: A4 landscape; margin: 10mm; }
+            @page { size: A4 portrait; margin: 10mm; }
             * { box-sizing: border-box; }
             body {
               font-family: Arial, Helvetica, sans-serif;
@@ -277,7 +288,7 @@ export default function ViewSales({ onExit }) {
       const info = `
         <div class="info">
           <div class="label">Sale ID</div>
-          <div>${escapeHtml(sale.ID)}</div>
+          <div></div>
           <div class="label">Date</div>
           <div>${escapeHtml(new Date(sale.Date).toLocaleDateString())}</div>
           <div class="label">Customer</div>
@@ -312,7 +323,7 @@ export default function ViewSales({ onExit }) {
       `;
 
       printWindow.focus();
-      printWindow.print();
+      setTimeout(() => printWindow.print(), 100);
     } catch (e) {
       console.error(e);
       printWindow.document.getElementById("content").innerHTML =
