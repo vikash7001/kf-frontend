@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 
-const SIZES = ["M", "L", "XL", "XXL", "3XL", "4XL", "5XL"];
-
 export default function ViewSales({ onExit }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +75,11 @@ export default function ViewSales({ onExit }) {
     getField(d, ["category", "Category", "CATEGORY"], "");
 
   const getSize = (d) => {
-    const value = getField(d, ["size", "Size", "SIZE"], "");
+    const value = getField(
+      d,
+      ["size_code", "sizeCode", "size", "Size", "SIZE"],
+      ""
+    );
     return String(value).trim().toUpperCase();
   };
 
@@ -98,6 +100,35 @@ export default function ViewSales({ onExit }) {
 
   const buildPrintRows = (detailRows = []) => {
     const grouped = new Map();
+    const sizeSet = new Set();
+
+    // Collect only sizes actually present in this sale.
+    detailRows.forEach(d => {
+      const sizeRows = Array.isArray(d.sizeRows)
+        ? d.sizeRows
+        : Array.isArray(d.size_rows)
+          ? d.size_rows
+          : [];
+
+      sizeRows.forEach(sz => {
+        const size = getSize(sz);
+        if (size) sizeSet.add(size);
+      });
+    });
+
+    const sizeOrder = [
+      "M", "L", "XL", "XXL", "3XL", "4XL", "5XL", "6XL", "7XL"
+    ];
+
+    const sizes = Array.from(sizeSet).sort((a, b) => {
+      const ai = sizeOrder.indexOf(a);
+      const bi = sizeOrder.indexOf(b);
+
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return a.localeCompare(b);
+    });
 
     detailRows.forEach(d => {
       const category = getCategory(d);
@@ -113,7 +144,7 @@ export default function ViewSales({ onExit }) {
           series,
           design,
           total: 0,
-          sizes: Object.fromEntries(SIZES.map(s => [s, 0]))
+          sizes: {}
         });
       }
 
@@ -129,15 +160,18 @@ export default function ViewSales({ onExit }) {
         const size = getSize(sz);
         const quantity = getQuantity(sz);
 
-        if (SIZES.includes(size)) {
-          row.sizes[size] += quantity;
+        if (size) {
+          row.sizes[size] = (row.sizes[size] || 0) + quantity;
         }
       });
 
       row.total += baseQuantity;
     });
 
-    return Array.from(grouped.values());
+    return {
+      rows: Array.from(grouped.values()),
+      sizes
+    };
   };
 
   const printSale = async (sale) => {
@@ -187,8 +221,14 @@ export default function ViewSales({ onExit }) {
             }
             th, td {
               border: 1px solid #000;
-              padding: 5px 6px;
+              padding: 4px 4px;
               height: 25px;
+            }
+            th:nth-child(n+5),
+            td:nth-child(n+5) {
+              width: 28px;
+              min-width: 28px;
+              text-align: center;
             }
             th {
               background: #e9e9e9;
@@ -226,7 +266,9 @@ export default function ViewSales({ onExit }) {
 
     try {
       const detail = await loadDetails(sale.ID);
-      const printRows = buildPrintRows(detail?.rows || []);
+      const printData = buildPrintRows(detail?.rows || []);
+      const printRows = printData.rows;
+      const sizes = printData.sizes;
 
       const categories = [];
       const categoryMap = new Map();
@@ -247,13 +289,13 @@ export default function ViewSales({ onExit }) {
         series.rows.push(row);
       });
 
-      const grandTotals = Object.fromEntries(SIZES.map(s => [s, 0]));
+      const grandTotals = Object.fromEntries(sizes.map(s => [s, 0]));
       let grandTotal = 0;
 
       printRows.forEach(row => {
         grandTotal += row.total;
-        SIZES.forEach(size => {
-          grandTotals[size] += row.sizes[size];
+        sizes.forEach(size => {
+          grandTotals[size] += row.sizes[size] || 0;
         });
       });
 
@@ -273,7 +315,7 @@ export default function ViewSales({ onExit }) {
                 ${index === 0 ? `<td class="series" rowspan="${series.rows.length}">${escapeHtml(series.name)}</td>` : ""}
                 <td>${escapeHtml(row.design)}</td>
                 <td class="num">${row.total || ""}</td>
-                ${SIZES.map(size => `<td class="num">${row.sizes[size] || ""}</td>`).join("")}
+                ${sizes.map(size => `<td class="num">${row.sizes[size] || ""}</td>`).join("")}
               </tr>
             `);
             categoryFirstRow = false;
@@ -282,7 +324,7 @@ export default function ViewSales({ onExit }) {
       });
 
       if (!bodyRows.length) {
-        bodyRows.push(`<tr><td colspan="11" style="text-align:center">No sale details found</td></tr>`);
+        bodyRows.push(`<tr><td colspan="${4 + sizes.length}" style="text-align:center">No sale details found</td></tr>`);
       }
 
       const info = `
@@ -307,7 +349,7 @@ export default function ViewSales({ onExit }) {
               <th>SERIES</th>
               <th>DESIGN</th>
               <th>TOTAL</th>
-              ${SIZES.map(size => `<th>${size}</th>`).join("")}
+              ${sizes.map(size => `<th>${size}</th>`).join("")}
             </tr>
           </thead>
           <tbody>
@@ -315,7 +357,7 @@ export default function ViewSales({ onExit }) {
             <tr class="total-row">
               <td colspan="3">GRAND TOTAL</td>
               <td class="num">${grandTotal || ""}</td>
-              ${SIZES.map(size => `<td class="num">${grandTotals[size] || ""}</td>`).join("")}
+              ${sizes.map(size => `<td class="num">${grandTotals[size] || ""}</td>`).join("")}
             </tr>
           </tbody>
         </table>
