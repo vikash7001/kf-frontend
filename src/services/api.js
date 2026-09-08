@@ -56,6 +56,9 @@ export function getOnlineOrders() {
   return api.get("/online-orders");
 }
 
+export function createBarcode(data) {
+  return apiInstance.post("/barcode/create", data);
+}
 export function importOnlineOrders(data) {
   return api.post(
     "/online-orders/import",
