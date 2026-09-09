@@ -96,6 +96,61 @@ export default function BarcodeDesign() {
     reader.readAsDataURL(file);
   };
 
+  const code128BPattern = value => {
+    const patterns = [
+      "11011001100","11001101100","11001100110","10010011000","10010001100","10001001100",
+      "10011001000","10011000100","10001100100","11001001000","11001000100","11000100100",
+      "10110011100","10011011100","10011001110","10111001100","10011101100","10011100110",
+      "11001110010","11001011100","11001001110","11011100100","11001110100","11101101110",
+      "11101001100","11100101100","11100100110","11101100100","11100110100","11100110010",
+      "11011011000","11011000110","11000110110","10100011000","10001011000","10001000110",
+      "10110001000","10001101000","10001100010","11010001000","11000101000","11000100010",
+      "10110111000","10110001110","10001101110","10111011000","10111000110","10001110110",
+      "11101110110","11010001110","11000101110","11011101000","11011100010","11011101110",
+      "11101011000","11101000110","11100010110","11101101000","11101100010","11100011010",
+      "11101111010","11001000010","11110001010","10100110000","10100001100","10010110000",
+      "10010000110","10000110100","10000110010","11000010010","11001010000","11110111010",
+      "11000010100","10001111010","10100111100","10010111100","10010011110","10111100100",
+      "10011110100","10011110010","11110100100","11110010100","11110010010","11011011110",
+      "11011011000","11000111010","11011110110","11010001110","11010011100","11010000110",
+      "11000010110","11000010010","11101001010","11101000100","11101000010","11100010100",
+      "11100010010","11100001010","11011001010","11000011010","11101111010","10110000100",
+      "10110010000","10011010000","10011000010","10000101100","10000100110","10000010110",
+      "10001001100","10001000110","10000110100","10000110010","11001010010","11001000110",
+      "11000100110","11000100010","11000010110","11000010010","10110111000","10110001110",
+      "10001101110","10111011000","10111000110","10001110110","11101110110","11010001110",
+      "11000101110","11011101000","11011100010","11011101110","11101011000","11101000110",
+      "11100010110","11101101000","11101100010","11100011010","11101111010","11001000010",
+      "11110001010","10100110000","10100001100","10010110000","10010000110","10000110100",
+      "10000110010","11000010010","11001010000","11110111010","11000010100","10001111010",
+      "10100111100","10010111100","10010011110","10111100100","10011110100","10011110010",
+      "11110100100","11110010100","11110010010","11011011110","11011000110","11000111010",
+      "11011110110","11010001110","11010011100","11010000110","11000010110","11000010010",
+      "11101001010","11101000100","11101000010","11100010100","11100010010","11100001010",
+      "11001000011"
+    ];
+
+    const start = 104;
+    const stop = 106;
+    const values = [start];
+
+    for (const ch of String(value)) {
+      const code = ch.charCodeAt(0);
+      if (code < 32 || code > 127) return null;
+      values.push(code - 32);
+    }
+
+    let checksum = start;
+    for (let i = 1; i < values.length; i++) {
+      checksum += values[i] * i;
+    }
+    checksum %= 103;
+    values.push(checksum);
+    values.push(stop);
+
+    return values.map(v => patterns[v]).join("");
+  };
+
   const printSample = () => {
     const popup = window.open("", "_blank", "width=900,height=700");
     if (!popup) {
@@ -131,11 +186,22 @@ export default function BarcodeDesign() {
         </div>`
       : "";
 
+    const barcodeBits = code128BPattern(SAMPLE.barcode);
     const barcodeHtml = design.showBarcode
       ? `<div class="barcode">
-          <div class="bars">${Array.from({ length: 42 }).map((_, i) =>
-            `<span style="width:${i % 5 === 0 ? 2 : 1}px;margin-right:${i % 3 === 0 ? 1 : 0}px;background:${i % 7 === 0 ? "#fff" : "#000"}"></span>`
-          ).join("")}</div>
+          ${barcodeBits ? `
+          <svg class="barcode-svg"
+               viewBox="0 0 ${barcodeBits.length} 80"
+               preserveAspectRatio="none"
+               role="img"
+               aria-label="Sample barcode">
+            <rect width="${barcodeBits.length}" height="80" fill="#fff"/>
+            ${barcodeBits.split("").map((bit, i) =>
+              bit === "1"
+                ? `<rect x="${i}" y="0" width="1" height="80" fill="#000"/>`
+                : ""
+            ).join("")}
+          </svg>` : ""}
           <div class="barcode-text">${SAMPLE.barcode}</div>
         </div>`
       : "";
@@ -157,8 +223,8 @@ export default function BarcodeDesign() {
 <title>Karni Fashions - Sample Barcode Print</title>
 <style>
   @page {
-    size: ${labelWidth}mm ${labelHeight}mm;
-    margin: ${margin}mm;
+    size: ${labelWidth * columns}mm ${labelHeight}mm;
+    margin: 0;
   }
 
   * { box-sizing: border-box; }
@@ -177,7 +243,9 @@ export default function BarcodeDesign() {
   .page {
     display: grid;
     grid-template-columns: repeat(${columns}, ${labelWidth}mm);
+    width: ${labelWidth * columns}mm;
     gap: 0;
+    padding: ${margin}mm;
   }
 
   .label {
@@ -251,19 +319,13 @@ export default function BarcodeDesign() {
   .barcode {
     margin-top: 1.5mm;
     text-align: center;
+    width: 100%;
   }
 
-  .bars {
-    height: 7mm;
-    display: flex;
-    justify-content: center;
-    align-items: stretch;
-    overflow: hidden;
-  }
-
-  .bars span {
+  .barcode-svg {
     display: block;
-    height: 100%;
+    width: 100%;
+    height: 8mm;
   }
 
   .barcode-text {
