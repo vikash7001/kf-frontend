@@ -254,7 +254,7 @@ export default function BarcodeDesign() {
   .label {
     width: ${labelWidth}mm;
     height: ${labelHeight}mm;
-    padding: ${Math.min(Math.max(margin, 0), 1.2)}mm;
+    padding: 0.7mm;
     margin: 0;
     overflow: hidden;
     border: 0.2mm solid #000;
@@ -264,38 +264,38 @@ export default function BarcodeDesign() {
   .brand {
     text-align: center;
     font-weight: 800;
-    font-size: min(${Number(design.brandSize) || 16}px, 10px);
+    font-size: min(${Number(design.brandSize) || 16}px, 11px);
     line-height: 1;
     white-space: nowrap;
-    height: 4mm;
+    height: 3.5mm;
     overflow: hidden;
   }
 
   .brand img {
     display: block;
     margin: 0 auto;
-    max-height: 4mm !important;
+    max-height: 3.5mm !important;
   }
 
   .location {
     text-align: center;
     font-weight: 700;
-    font-size: 6px;
+    font-size: 6.5px;
     line-height: 1;
-    margin-top: 0.5mm;
-    padding-bottom: 0.7mm;
+    margin-top: 0.2mm;
+    padding-bottom: 0.5mm;
     border-bottom: 0.2mm solid #000;
   }
 
   .details {
-    margin-top: 0.8mm;
-    font-size: min(${Number(design.bodySize) || 8}px, 7px);
-    line-height: 1.12;
+    margin-top: 0.5mm;
+    font-size: min(${Number(design.bodySize) || 8}px, 11px);
+    line-height: 1.05;
     padding-right: 0.2mm;
   }
 
   .details > div {
-    height: 2.25mm;
+    height: 2.6mm;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -309,16 +309,16 @@ export default function BarcodeDesign() {
 
   .sizes {
     width: 100%;
-    margin-top: 0.7mm;
+    margin-top: 0.5mm;
     border: 0.2mm solid #000;
-    font-size: 5.3px;
+    font-size: 6px;
     line-height: 1;
   }
 
   .size-row {
     display: grid;
     grid-template-columns: repeat(${SAMPLE.sizes.length}, 1fr);
-    height: 2.4mm;
+    height: 2.7mm;
   }
 
   .size-row > div {
@@ -338,9 +338,9 @@ export default function BarcodeDesign() {
 
   .barcode {
     position: absolute;
-    left: 12%;
-    right: 12%;
-    bottom: ${Math.min(Math.max(margin, 0), 1.2) + 2.2}mm;
+    left: 17%;
+    right: 17%;
+    bottom: 5mm;
     text-align: center;
     width: auto;
   }
@@ -348,12 +348,12 @@ export default function BarcodeDesign() {
   .barcode-svg {
     display: block;
     width: 100%;
-    height: 8mm;
+    height: 9.5mm;
   }
 
   .barcode-text {
     margin-top: 0.3mm;
-    font-size: 5.5px;
+    font-size: 6px;
     font-weight: 700;
     line-height: 1;
     letter-spacing: 0.7px;
