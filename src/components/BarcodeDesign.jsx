@@ -223,7 +223,7 @@ export default function BarcodeDesign() {
 <title>Karni Fashions - Sample Barcode Print</title>
 <style>
   @page {
-    size: ${labelWidth * columns}mm ${labelHeight}mm;
+    size: ${labelWidth}mm ${labelHeight}mm;
     margin: 0;
   }
 
@@ -241,47 +241,65 @@ export default function BarcodeDesign() {
   }
 
   .page {
-    display: grid;
-    grid-template-columns: repeat(${columns}, ${labelWidth}mm);
-    width: ${labelWidth * columns}mm;
-    gap: 0;
-    padding: ${margin}mm;
+    width: ${labelWidth}mm;
+    padding: 0;
+    margin: 0;
   }
 
   .label {
     width: ${labelWidth}mm;
     height: ${labelHeight}mm;
-    padding: 1.5mm;
+    padding: ${Math.min(Math.max(margin, 0), 1.5)}mm;
     overflow: hidden;
     border: 0.2mm solid #000;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .label:last-child {
+    page-break-after: auto;
+    break-after: auto;
   }
 
   .brand {
     text-align: center;
     font-weight: 800;
-    font-size: ${Number(design.brandSize) || 16}px;
-    line-height: 1.05;
+    font-size: min(${Number(design.brandSize) || 16}px, 10px);
+    line-height: 1;
     white-space: nowrap;
+    height: 4mm;
+    overflow: hidden;
   }
 
   .brand img {
     display: block;
     margin: 0 auto;
+    max-height: 4mm !important;
   }
 
   .location {
     text-align: center;
     font-weight: 700;
-    font-size: 7px;
-    margin-top: 1mm;
-    padding-bottom: 1mm;
+    font-size: 6px;
+    line-height: 1;
+    margin-top: 0.5mm;
+    padding-bottom: 0.7mm;
     border-bottom: 0.2mm solid #000;
   }
 
   .details {
-    margin-top: 1.5mm;
-    font-size: ${Number(design.bodySize) || 8}px;
-    line-height: 1.25;
+    margin-top: 1mm;
+    font-size: min(${Number(design.bodySize) || 8}px, 7px);
+    line-height: 1.12;
+  }
+
+  .details > div {
+    height: 2.2mm;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .nowrap {
@@ -292,20 +310,23 @@ export default function BarcodeDesign() {
 
   .sizes {
     width: 100%;
-    margin-top: 1.5mm;
+    margin-top: 1mm;
     border: 0.2mm solid #000;
-    font-size: 6px;
+    font-size: 5.5px;
+    line-height: 1;
   }
 
   .size-row {
     display: grid;
     grid-template-columns: repeat(${SAMPLE.sizes.length}, 1fr);
+    height: 2.7mm;
   }
 
   .size-row > div {
     text-align: center;
     padding: 0.5mm 0;
     border-right: 0.2mm solid #000;
+    overflow: hidden;
   }
 
   .size-row > div:last-child {
@@ -317,7 +338,7 @@ export default function BarcodeDesign() {
   }
 
   .barcode {
-    margin-top: 1.5mm;
+    margin-top: 1mm;
     text-align: center;
     width: 100%;
   }
@@ -325,14 +346,15 @@ export default function BarcodeDesign() {
   .barcode-svg {
     display: block;
     width: 100%;
-    height: 8mm;
+    height: 6.5mm;
   }
 
   .barcode-text {
-    margin-top: 0.5mm;
-    font-size: 7px;
+    margin-top: 0.3mm;
+    font-size: 6px;
     font-weight: 700;
-    letter-spacing: 1px;
+    line-height: 1;
+    letter-spacing: 0.8px;
   }
 
   @media print {
@@ -343,7 +365,12 @@ export default function BarcodeDesign() {
 </style>
 </head>
 <body>
-  <div class="page">${labelHtml.repeat(columns)}</div>
+  <div class="page">
+    ${labelHtml}
+    ${labelHtml}
+    ${labelHtml}
+    ${labelHtml}
+  </div>
   <script>
     window.onload = function () {
       setTimeout(function () {
