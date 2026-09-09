@@ -353,7 +353,7 @@ export default function BarcodeDesign() {
 
   .barcode-text {
     margin-top: 0.3mm;
-    font-size: 6px;
+    font-size: 8px;
     font-weight: 700;
     line-height: 1;
     letter-spacing: 0.7px;
