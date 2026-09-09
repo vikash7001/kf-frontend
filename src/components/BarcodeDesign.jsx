@@ -249,13 +249,14 @@ export default function BarcodeDesign() {
   .label {
     width: ${labelWidth}mm;
     height: ${labelHeight}mm;
-    padding: ${Math.min(Math.max(margin, 0), 1.5)}mm;
+    padding: ${Math.min(Math.max(margin, 0), 1.2)}mm;
     overflow: hidden;
     border: 0.2mm solid #000;
     break-inside: avoid;
     page-break-inside: avoid;
     page-break-after: always;
     break-after: page;
+    position: relative;
   }
 
   .label:last-child {
@@ -290,13 +291,14 @@ export default function BarcodeDesign() {
   }
 
   .details {
-    margin-top: 1mm;
-    font-size: min(${Number(design.bodySize) || 8}px, 7px);
-    line-height: 1.12;
+    margin-top: 0.8mm;
+    font-size: min(${Number(design.bodySize) || 8}px, 6.5px);
+    line-height: 1.08;
+    padding-right: 0.2mm;
   }
 
   .details > div {
-    height: 2.2mm;
+    height: 2.05mm;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -310,16 +312,16 @@ export default function BarcodeDesign() {
 
   .sizes {
     width: 100%;
-    margin-top: 1mm;
+    margin-top: 0.7mm;
     border: 0.2mm solid #000;
-    font-size: 5.5px;
+    font-size: 5px;
     line-height: 1;
   }
 
   .size-row {
     display: grid;
     grid-template-columns: repeat(${SAMPLE.sizes.length}, 1fr);
-    height: 2.7mm;
+    height: 2.4mm;
   }
 
   .size-row > div {
@@ -338,23 +340,26 @@ export default function BarcodeDesign() {
   }
 
   .barcode {
-    margin-top: 1mm;
+    position: absolute;
+    left: ${Math.min(Math.max(margin, 0), 1.2)}mm;
+    right: ${Math.min(Math.max(margin, 0), 1.2)}mm;
+    bottom: ${Math.min(Math.max(margin, 0), 1.2)}mm;
     text-align: center;
-    width: 100%;
+    width: auto;
   }
 
   .barcode-svg {
     display: block;
     width: 100%;
-    height: 6.5mm;
+    height: 5.5mm;
   }
 
   .barcode-text {
-    margin-top: 0.3mm;
-    font-size: 6px;
+    margin-top: 0.2mm;
+    font-size: 5.5px;
     font-weight: 700;
     line-height: 1;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.7px;
   }
 
   @media print {
