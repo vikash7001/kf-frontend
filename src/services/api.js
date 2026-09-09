@@ -59,6 +59,9 @@ export function getOnlineOrders() {
 export function createBarcode(data) {
   return apiInstance.post("/barcode/create", data);
 }
+export function getIncomingBarcodeAvailability(incomingId) {
+  return apiInstance.get(`/barcode/incoming/${incomingId}`);
+}
 export function importOnlineOrders(data) {
   return api.post(
     "/online-orders/import",
