@@ -14,7 +14,7 @@ import CategoryMaster from './CategoryMaster';
 import SeriesMaster from './SeriesMaster';
 import ProductMaster from './ProductMaster';
 import CustomerMaster from './CustomerMaster';
-
+import BarcodeDesign from './BarcodeDesign';
 import ItemDetails from './ItemDetails';
 import OnlineEnablement from './OnlineEnablement';
 import OnlineStockView from './OnlineStockView';
@@ -75,7 +75,8 @@ itemDetails: (
 ),
 
 
-
+// BARCODE
+barcodeDesign: <BarcodeDesign />,
 
     // ONLINE
     onlineEnablement: <OnlineEnablement />,
@@ -125,6 +126,13 @@ itemDetails: (
 
       ]
     },
+
+{
+  title: "BARCODE",
+  items: [
+    { key: 'barcodeDesign', label: 'Barcode Design' },
+  ]
+},
 
     {
       title: "ONLINE",
