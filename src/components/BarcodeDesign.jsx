@@ -267,10 +267,10 @@ export default function BarcodeDesign() {
     const barcodeBits = code128BPattern(SAMPLE.barcode);
     const quietModules = 9;
     const moduleDots = 2;
-    const barcodeDots = barcodeWithQuietZone.length * moduleDots;
     const barcodeWithQuietZone = barcodeBits
       ? `${"0".repeat(quietModules)}${barcodeBits}${"0".repeat(quietModules)}`
       : "";
+    const barcodeDots = barcodeWithQuietZone.length * moduleDots;
 
     const barcodeHtml = design.showBarcode
       ? `<div class="barcode">
