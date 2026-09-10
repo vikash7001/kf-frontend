@@ -672,7 +672,7 @@ const totalQty = rows.reduce(
 
   .size-row {
     display: grid;
-    grid-template-columns: repeat(${SAMPLE.sizes.length}, 1fr);
+    grid-template-columns: repeat(${Math.max(sizes.length, 1)}, 1fr);
     height: 2.9mm;
   }
 
@@ -719,7 +719,7 @@ const totalQty = rows.reduce(
   @media print {
     html, body {
       width: ${labelWidth}mm !important;
-      height: ${labelHeight}mm !important;
+      height: ${labelHeight * 2}mm !important;
       margin: 0 !important;
       padding: 0 !important;
       overflow: hidden !important;
@@ -729,6 +729,8 @@ const totalQty = rows.reduce(
       width: ${labelWidth}mm !important;
       height: ${labelHeight * 2}mm !important;
       margin: 0 !important;
+      page-break-after: always;
+      break-after: page;
     }
 
     .label {
