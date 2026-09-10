@@ -428,7 +428,7 @@ export default function BarcodeDesign() {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 3.5mm;
+    bottom: 5.5mm;
     text-align: center;
     width: auto;
   }
