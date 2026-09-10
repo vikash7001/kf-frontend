@@ -265,7 +265,9 @@ export default function BarcodeDesign() {
       : "";
 
     const barcodeBits = code128BPattern(SAMPLE.barcode);
-    const quietModules = 10;
+    const quietModules = 9;
+    const moduleDots = 2;
+    const barcodeDots = barcodeWithQuietZone.length * moduleDots;
     const barcodeWithQuietZone = barcodeBits
       ? `${"0".repeat(quietModules)}${barcodeBits}${"0".repeat(quietModules)}`
       : "";
@@ -274,15 +276,17 @@ export default function BarcodeDesign() {
       ? `<div class="barcode">
           ${barcodeWithQuietZone ? `
           <svg class="barcode-svg"
-               viewBox="0 0 ${barcodeWithQuietZone.length} 80"
+               width="${barcodeDots}"
+               height="80"
+               viewBox="0 0 ${barcodeDots} 80"
                preserveAspectRatio="none"
                role="img"
                aria-label="Sample barcode"
                shape-rendering="crispEdges">
-            <rect width="${barcodeWithQuietZone.length}" height="80" fill="#fff"/>
+            <rect width="${barcodeDots}" height="80" fill="#fff"/>
             ${barcodeWithQuietZone.split("").map((bit, i) =>
               bit === "1"
-                ? `<rect x="${i}" y="0" width="1" height="80" fill="#000"/>`
+                ? `<rect x="${i * moduleDots}" y="0" width="${moduleDots}" height="80" fill="#000"/>`
                 : ""
             ).join("")}
           </svg>` : ""}
@@ -422,9 +426,9 @@ export default function BarcodeDesign() {
 
   .barcode {
     position: absolute;
-    left: 1mm;
-    right: 1mm;
-    bottom: 1mm;
+    left: 0;
+    right: 0;
+    bottom: 1.5mm;
     text-align: center;
     width: auto;
   }
@@ -432,7 +436,7 @@ export default function BarcodeDesign() {
   .barcode-svg {
     display: block;
     width: 100%;
-    height: 8.5mm;
+    height: 10mm;
     shape-rendering: crispEdges;
     image-rendering: pixelated;
   }
