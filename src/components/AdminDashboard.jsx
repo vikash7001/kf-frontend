@@ -10,28 +10,42 @@ import ViewIncoming from './ViewIncoming';
 import ViewSales from './ViewSales';
 import ViewTransfers from './ViewTransfers';
 import RateList from './RateList';
+import Communication from './Communication';
 import CategoryMaster from './CategoryMaster';
 import SeriesMaster from './SeriesMaster';
 import ProductMaster from './ProductMaster';
 import CustomerMaster from './CustomerMaster';
-import BarcodeDesign from './BarcodeDesign';
+
 import ItemDetails from './ItemDetails';
 import OnlineEnablement from './OnlineEnablement';
 import OnlineStockView from './OnlineStockView';
 import OnlineSkuPendingAmazon from './OnlineSkuPendingAmazon';
 import OnlineSkuManager from './OnlineSkuManager';
-import OnlineOrders from "./OnlineOrders";
+
+import FabricIncoming from './FabricIncoming';
+import FabricIssue from './FabricIssue';
+import ProductionDashboard from './ProductionDashboard';
+import ViewFabricIncoming from './ViewFabricIncoming';
+import ViewFabricIssue from './ViewFabricIssue';
+
+import VendorMaster from './VendorMaster';
+import JobWorkerMaster from './JobWorkerMaster';
+import ProcessMaster from './ProcessMaster';
+import BarcodeDesign from './BarcodeDesign';
 
 export default function AdminDashboard({ user }) {
 
   const [screen, setScreen] = useState('purchase');
+  const [barcodePurchase, setBarcodePurchase] = useState(null);
 
   // Collapsible sections
   const [openSections, setOpenSections] = useState({
     CORE: true,
+    COMMUNICATION: false,
     IMAGES: false,
     MASTERS: false,
     REPORTS: false,
+    PRODUCTION: true,
     ONLINE: false
   });
 
@@ -47,11 +61,19 @@ export default function AdminDashboard({ user }) {
   const screens = {
 
     // CORE
-    purchase: <PurchaseVoucher user={user} />,
+    purchase: <PurchaseVoucher
+      user={user}
+      initialBarcodePurchaseId={barcodePurchase?.id || null}
+      initialBarcodeLocation={barcodePurchase?.location || null}
+    />,
     sales: <SalesVoucher user={user} />,
     stock: <StockView user={user} />,
     transfer: <StockTransfer user={user} />,
-    onlineOrders: <OnlineOrders />,
+    communication: <Communication user={user} />,
+
+    // BARCODE
+    barcodeDesign: <BarcodeDesign />,
+
     // IMAGES
     images: <ImageViewer user={user} />,
     manageImages: <ManageImages user={user} />,
@@ -62,21 +84,31 @@ export default function AdminDashboard({ user }) {
     product: <ProductMaster />,
     customer: <CustomerMaster />,
     rateList: <RateList />,
-
+    vendor: <VendorMaster />,
+    jobworker: <JobWorkerMaster />,
+    process: <ProcessMaster />,
 
     // REPORTS
-    viewIncoming: <ViewIncoming />,
+    viewIncoming: <ViewIncoming
+      onCreateBarcode={(id, location) => {
+        setBarcodePurchase({ id, location });
+        setScreen("purchase");
+      }}
+    />,
     viewSales: <ViewSales />,
     viewTransfers: <ViewTransfers />,
-itemDetails: (
-  <ItemDetails
-    onExit={() => setScreen('stock')}
-  />
-),
+    itemDetails: (
+      <ItemDetails
+        onExit={() => setScreen('stock')}
+      />
+    ),
 
-
-// BARCODE
-barcodeDesign: <BarcodeDesign />,
+    // PRODUCTION
+    fabricIncoming: <FabricIncoming />,
+    fabricIssue: <FabricIssue />,
+    productionDashboard: <ProductionDashboard />,
+    viewFabricIncoming: <ViewFabricIncoming />,
+    viewFabricIssue: <ViewFabricIssue />,
 
     // ONLINE
     onlineEnablement: <OnlineEnablement />,
@@ -94,11 +126,21 @@ barcodeDesign: <BarcodeDesign />,
         { key: 'purchase', label: 'Purchase' },
         { key: 'sales', label: 'Sales' },
         { key: 'stock', label: 'Stock' },
-{ key: "onlineOrders", label: "Online Orders" },
         { key: 'transfer', label: 'Stock Transfer' },
       ]
     },
-
+    {
+      title: "BARCODE",
+      items: [
+        { key: 'barcodeDesign', label: 'Barcode Design' },
+      ]
+    },
+    {
+      title: "COMMUNICATION",
+      items: [
+        { key: 'communication', label: 'Communication' },
+      ]
+    },
     {
       title: "IMAGES",
       items: [
@@ -113,6 +155,9 @@ barcodeDesign: <BarcodeDesign />,
         { key: 'series', label: 'Series' },
         { key: 'product', label: 'Product' },
         { key: 'customer', label: 'Customer' },
+        { key: 'vendor', label: 'Vendor' },
+        { key: 'jobworker', label: 'Job Worker' },
+        { key: 'process', label: 'Process' },
         { key: 'rateList', label: 'Rate List' },
       ]
     },
@@ -123,17 +168,18 @@ barcodeDesign: <BarcodeDesign />,
         { key: 'viewSales', label: 'View Sales' },
         { key: 'viewTransfers', label: 'Stock Transfers' },
         { key: 'itemDetails', label: 'Item Details' },
-
       ]
     },
-
-{
-  title: "BARCODE",
-  items: [
-    { key: 'barcodeDesign', label: 'Barcode Design' },
-  ]
-},
-
+    {
+      title: "PRODUCTION",
+      items: [
+        { key: 'fabricIncoming', label: 'Fabric Incoming' },
+        { key: 'fabricIssue', label: 'Fabric Issue' },
+        { key: 'viewFabricIncoming', label: 'View Fabric Incoming' },
+        { key: 'viewFabricIssue', label: 'View Fabric Issue' },
+        { key: 'productionDashboard', label: 'Production Dashboard' },
+      ]
+    },
     {
       title: "ONLINE",
       items: [

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 
-export default function ViewIncoming({ onExit }) {
+export default function ViewIncoming({ onExit, onCreateBarcode }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -65,12 +65,13 @@ export default function ViewIncoming({ onExit }) {
               <th>Date</th>
               <th>Location</th>
               <th>Total Qty</th>
+              <th>Barcode</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan="4" align="center">
+                <td colSpan="5" align="center">
                   No records found
                 </td>
               </tr>
@@ -86,11 +87,21 @@ export default function ViewIncoming({ onExit }) {
                   <td>{new Date(r.Date).toLocaleString()}</td>
                   <td>{r.Location}</td>
                   <td align="right">{r.TotalQty}</td>
+                  <td>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCreateBarcode?.(r.ID, r.Location);
+                      }}
+                    >
+                      Create Barcode
+                    </button>
+                  </td>
                 </tr>
 
                 {openId === r.ID && (
                   <tr>
-                    <td colSpan="4">
+                    <td colSpan="5">
                       {!details[r.ID] ? (
                         <div>Loading details...</div>
                       ) : (
