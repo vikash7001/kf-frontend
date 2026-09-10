@@ -444,9 +444,10 @@ const totalQty = rows.reduce(
       }
     })();
 
-    const cfg = {
-      labelWidth: Number(saved.labelWidth) || 38,
-      labelHeight: Number(saved.labelHeight) || 38,
+    const labelWidth = Number(saved.labelWidth) || 38;
+    const labelHeight = Number(saved.labelHeight) || 38;
+
+    const design = {
       logo: saved.logo || "",
       logoWidth: Number(saved.logoWidth) || 55,
       showBrand: saved.showBrand !== false,
@@ -469,17 +470,18 @@ const totalQty = rows.reduce(
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
 
-    const makeBarcodeSvg = barcode => {
-      const bits = code128BPattern(barcode);
-      if (!bits) return "";
-
+    const makeBarcode = barcode => {
+      const barcodeBits = code128BPattern(barcode);
       const quietModules = 9;
       const moduleDots = 2;
-      const fullBits =
-        `${"0".repeat(quietModules)}${bits}${"0".repeat(quietModules)}`;
-      const barcodeDots = fullBits.length * moduleDots;
 
-      return `
+      const barcodeWithQuietZone = barcodeBits
+        ? `${"0".repeat(quietModules)}${barcodeBits}${"0".repeat(quietModules)}`
+        : "";
+
+      const barcodeDots = barcodeWithQuietZone.length * moduleDots;
+
+      return barcodeWithQuietZone ? `
         <svg class="barcode-svg"
              width="${barcodeDots}"
              height="80"
@@ -489,52 +491,50 @@ const totalQty = rows.reduce(
              aria-label="Barcode"
              shape-rendering="crispEdges">
           <rect width="${barcodeDots}" height="80" fill="#fff"/>
-          ${fullBits.split("").map((bit, i) =>
+          ${barcodeWithQuietZone.split("").map((bit, i) =>
             bit === "1"
               ? `<rect x="${i * moduleDots}" y="0" width="${moduleDots}" height="80" fill="#000"/>`
               : ""
           ).join("")}
         </svg>
-      `;
+      ` : "";
     };
 
     const makeLabel = bundle => {
       const sizes = (bundle.sizes || []).filter(s => Number(s.qty || 0) > 0);
 
-      const brandHtml = cfg.showBrand
-        ? `<div class="brand">${
-            cfg.logo
-              ? `<img src="${cfg.logo}" alt="Logo" style="max-width:${cfg.logoWidth}%;max-height:3.5mm;object-fit:contain;">`
-              : "KARNI FASHIONS"
-          }</div>`
+      const brandHtml = design.showBrand
+        ? `<div class="brand">${design.logo
+            ? `<img src="${design.logo}" alt="Logo" style="max-width:${design.logoWidth}%;max-height:3.5mm;object-fit:contain;">`
+            : "KARNI FASHIONS"}</div>`
         : "";
 
-      const locationHtml = cfg.showLocation
+      const locationHtml = design.showLocation
         ? `<div class="location">${escapeHtml(location)}</div>`
         : "";
 
       const details = [];
-      if (cfg.showItem) details.push(`<div><b>ITEM:</b> ${escapeHtml(bundle.item)}</div>`);
-      if (cfg.showSeries) details.push(`<div><b>SER:</b> ${escapeHtml(bundle.seriesname || bundle.series || "")}</div>`);
-      if (cfg.showCategory) details.push(`<div class="nowrap"><b>CAT:</b> ${escapeHtml(bundle.categoryname || bundle.category || "")}</div>`);
-      if (cfg.showPurchase) details.push(`<div><b>PUR:</b> ${escapeHtml(incomingId)}</div>`);
+      if (design.showItem) details.push(`<div><b>ITEM:</b> ${escapeHtml(bundle.item)}</div>`);
+      if (design.showSeries) details.push(`<div><b>SER:</b> ${escapeHtml(bundle.seriesname || bundle.series || "")}</div>`);
+      if (design.showCategory) details.push(`<div class="nowrap"><b>CAT:</b> ${escapeHtml(bundle.categoryname || bundle.category || "")}</div>`);
+      if (design.showPurchase) details.push(`<div><b>PUR:</b> ${escapeHtml(incomingId)}</div>`);
 
-      const sizeHtml = cfg.showSizes && sizes.length
-        ? `<div class="sizes" style="--size-count:${sizes.length}">
-             <div class="size-row">
-               ${sizes.map(s => `<div>${escapeHtml(s.size_code)}</div>`).join("")}
-             </div>
-             <div class="size-row qty">
-               ${sizes.map(s => `<div>${Number(s.qty)}</div>`).join("")}
-             </div>
-           </div>`
+      const sizeHtml = design.showSizes
+        ? `<div class="sizes">
+            <div class="size-row">
+              ${sizes.map(s => `<div>${escapeHtml(s.size_code)}</div>`).join("")}
+            </div>
+            <div class="size-row qty">
+              ${sizes.map(s => `<div>${Number(s.qty)}</div>`).join("")}
+            </div>
+          </div>`
         : "";
 
-      const barcodeHtml = cfg.showBarcode
+      const barcodeHtml = design.showBarcode
         ? `<div class="barcode">
-             ${makeBarcodeSvg(bundle.barcode)}
-             <div class="barcode-text">${escapeHtml(bundle.barcode)}</div>
-           </div>`
+            ${makeBarcode(bundle.barcode)}
+            <div class="barcode-text">${escapeHtml(bundle.barcode)}</div>
+          </div>`
         : "";
 
       return `
@@ -548,10 +548,12 @@ const totalQty = rows.reduce(
       `;
     };
 
-    const printRows = [];
+    // Two labels are physically one above the other on the 2-UP stock.
+    const sheets = [];
+
     for (let i = 0; i < createdBundles.length; i += 2) {
-      printRows.push(`
-        <div class="print-row">
+      sheets.push(`
+        <div class="page">
           ${makeLabel(createdBundles[i])}
           ${createdBundles[i + 1]
             ? makeLabel(createdBundles[i + 1])
@@ -560,7 +562,8 @@ const totalQty = rows.reduce(
       `);
     }
 
-    const popup = window.open("", "_blank", "width=900,height=700");
+    const popup = window.open("", "_blank", "width=700,height=900");
+
     if (!popup) {
       alert("Please allow pop-ups to print barcode labels.");
       return;
@@ -573,7 +576,7 @@ const totalQty = rows.reduce(
 <title>Karni Fashions - Barcode Labels</title>
 <style>
   @page {
-    size: ${cfg.labelWidth * 2}mm ${cfg.labelHeight}mm;
+    size: ${labelWidth}mm ${labelHeight * 2}mm;
     margin: 0;
   }
 
@@ -582,6 +585,8 @@ const totalQty = rows.reduce(
   html, body {
     margin: 0;
     padding: 0;
+    width: ${labelWidth}mm;
+    height: ${labelHeight * 2}mm;
     background: white;
     overflow: hidden;
   }
@@ -591,28 +596,19 @@ const totalQty = rows.reduce(
     color: #000;
   }
 
-  .print-row {
-    width: ${cfg.labelWidth * 2}mm;
-    height: ${cfg.labelHeight}mm;
-    display: flex;
-    flex-direction: row;
-    gap: 0;
+  .page {
+    width: ${labelWidth}mm;
+    height: ${labelHeight * 2}mm;
     padding: 0;
     margin: 0;
     overflow: hidden;
-    page-break-after: always;
-    break-after: page;
-  }
-
-  .print-row:last-child {
-    page-break-after: auto;
-    break-after: auto;
+    display: flex;
+    flex-direction: column;
   }
 
   .label {
-    width: ${cfg.labelWidth}mm;
-    height: ${cfg.labelHeight}mm;
-    flex: 0 0 ${cfg.labelWidth}mm;
+    width: ${labelWidth}mm;
+    height: ${labelHeight}mm;
     padding: 0.2mm;
     margin: 0;
     overflow: hidden;
@@ -620,14 +616,10 @@ const totalQty = rows.reduce(
     position: relative;
   }
 
-  .blank-label {
-    border: 0;
-  }
-
   .brand {
     text-align: center;
     font-weight: 800;
-    font-size: min(${cfg.brandSize}px, 11px);
+    font-size: min(${Number(design.brandSize) || 16}px, 11px);
     line-height: 1;
     white-space: nowrap;
     height: 3.5mm;
@@ -652,7 +644,7 @@ const totalQty = rows.reduce(
 
   .details {
     margin-top: 0.5mm;
-    font-size: min(${cfg.bodySize}px, 11px);
+    font-size: min(${Math.max(Number(design.bodySize) || 8, 9)}px, 11px);
     line-height: 1.05;
     padding-right: 0.2mm;
   }
@@ -680,7 +672,7 @@ const totalQty = rows.reduce(
 
   .size-row {
     display: grid;
-    grid-template-columns: repeat(var(--size-count), 1fr);
+    grid-template-columns: repeat(${SAMPLE.sizes.length}, 1fr);
     height: 2.9mm;
   }
 
@@ -726,38 +718,45 @@ const totalQty = rows.reduce(
 
   @media print {
     html, body {
+      width: ${labelWidth}mm !important;
+      height: ${labelHeight}mm !important;
       margin: 0 !important;
       padding: 0 !important;
       overflow: hidden !important;
     }
 
-    .print-row {
-      page-break-after: always;
-      break-after: page;
+    .page {
+      width: ${labelWidth}mm !important;
+      height: ${labelHeight * 2}mm !important;
+      margin: 0 !important;
     }
 
-    .print-row:last-child {
-      page-break-after: auto;
-      break-after: auto;
+    .label {
+      width: ${labelWidth}mm !important;
+      height: ${labelHeight}mm !important;
+      margin: 0 !important;
+    }
+
+    .label {
+      border: 0;
     }
   }
 </style>
 </head>
 <body>
-${printRows.join("\n")}
-<script>
-  window.onload = function () {
-    setTimeout(function () {
-      window.print();
-    }, 300);
-  };
-<\/script>
+  ${sheets.join("\n")}
+  <script>
+    window.onload = function () {
+      setTimeout(function () {
+        window.print();
+      }, 250);
+    };
+  <\/script>
 </body>
 </html>`);
 
     popup.document.close();
   };
-
 
 return (
   <div className="voucher-wrapper">
