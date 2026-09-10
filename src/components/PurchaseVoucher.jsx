@@ -447,7 +447,6 @@ const totalQty = rows.reduce(
     const cfg = {
       labelWidth: Number(saved.labelWidth) || 38,
       labelHeight: Number(saved.labelHeight) || 38,
-      margin: Number(saved.margin) || 0,
       logo: saved.logo || "",
       logoWidth: Number(saved.logoWidth) || 55,
       showBrand: saved.showBrand !== false,
@@ -462,27 +461,34 @@ const totalQty = rows.reduce(
       bodySize: Math.max(Number(saved.bodySize) || 8, 9)
     };
 
+    const escapeHtml = value =>
+      String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
     const makeBarcodeSvg = barcode => {
       const bits = code128BPattern(barcode);
       if (!bits) return "";
 
-      // 9 quiet modules + 2 printer dots per module.
-      // This is the same working barcode construction used by Barcode Design.
       const quietModules = 9;
       const moduleDots = 2;
       const fullBits =
         `${"0".repeat(quietModules)}${bits}${"0".repeat(quietModules)}`;
-      const dots = fullBits.length * moduleDots;
+      const barcodeDots = fullBits.length * moduleDots;
 
       return `
         <svg class="barcode-svg"
-             width="${dots}"
+             width="${barcodeDots}"
              height="80"
-             viewBox="0 0 ${dots} 80"
+             viewBox="0 0 ${barcodeDots} 80"
              preserveAspectRatio="none"
-             shape-rendering="crispEdges"
-             aria-label="Barcode">
-          <rect width="${dots}" height="80" fill="#fff"/>
+             role="img"
+             aria-label="Barcode"
+             shape-rendering="crispEdges">
+          <rect width="${barcodeDots}" height="80" fill="#fff"/>
           ${fullBits.split("").map((bit, i) =>
             bit === "1"
               ? `<rect x="${i * moduleDots}" y="0" width="${moduleDots}" height="80" fill="#000"/>`
@@ -494,12 +500,6 @@ const totalQty = rows.reduce(
 
     const makeLabel = bundle => {
       const sizes = (bundle.sizes || []).filter(s => Number(s.qty || 0) > 0);
-      const barcode = escapePrintHtml(bundle.barcode);
-      const item = escapePrintHtml(bundle.item);
-      const seriesName = escapePrintHtml(bundle.seriesname || bundle.series || "");
-      const categoryName = escapePrintHtml(bundle.categoryname || bundle.category || "");
-      const purchase = escapePrintHtml(incomingId);
-      const loc = escapePrintHtml(location);
 
       const brandHtml = cfg.showBrand
         ? `<div class="brand">${
@@ -510,19 +510,19 @@ const totalQty = rows.reduce(
         : "";
 
       const locationHtml = cfg.showLocation
-        ? `<div class="location">${loc}</div>`
+        ? `<div class="location">${escapeHtml(location)}</div>`
         : "";
 
       const details = [];
-      if (cfg.showItem) details.push(`<div><b>ITEM:</b> ${item}</div>`);
-      if (cfg.showSeries) details.push(`<div><b>SER:</b> ${seriesName}</div>`);
-      if (cfg.showCategory) details.push(`<div class="nowrap"><b>CAT:</b> ${categoryName}</div>`);
-      if (cfg.showPurchase) details.push(`<div><b>PUR:</b> ${purchase}</div>`);
+      if (cfg.showItem) details.push(`<div><b>ITEM:</b> ${escapeHtml(bundle.item)}</div>`);
+      if (cfg.showSeries) details.push(`<div><b>SER:</b> ${escapeHtml(bundle.seriesname || bundle.series || "")}</div>`);
+      if (cfg.showCategory) details.push(`<div class="nowrap"><b>CAT:</b> ${escapeHtml(bundle.categoryname || bundle.category || "")}</div>`);
+      if (cfg.showPurchase) details.push(`<div><b>PUR:</b> ${escapeHtml(incomingId)}</div>`);
 
       const sizeHtml = cfg.showSizes && sizes.length
-        ? `<div class="sizes">
+        ? `<div class="sizes" style="--size-count:${sizes.length}">
              <div class="size-row">
-               ${sizes.map(s => `<div>${escapePrintHtml(s.size_code)}</div>`).join("")}
+               ${sizes.map(s => `<div>${escapeHtml(s.size_code)}</div>`).join("")}
              </div>
              <div class="size-row qty">
                ${sizes.map(s => `<div>${Number(s.qty)}</div>`).join("")}
@@ -533,12 +533,12 @@ const totalQty = rows.reduce(
       const barcodeHtml = cfg.showBarcode
         ? `<div class="barcode">
              ${makeBarcodeSvg(bundle.barcode)}
-             <div class="barcode-text">${barcode}</div>
+             <div class="barcode-text">${escapeHtml(bundle.barcode)}</div>
            </div>`
         : "";
 
       return `
-        <div class="label" style="--size-count:${Math.max(1, sizes.length)}">
+        <div class="label">
           ${brandHtml}
           ${locationHtml}
           <div class="details">${details.join("")}</div>
@@ -548,14 +548,16 @@ const totalQty = rows.reduce(
       `;
     };
 
-    const rows = [];
+    const printRows = [];
     for (let i = 0; i < createdBundles.length; i += 2) {
-      const first = makeLabel(createdBundles[i]);
-      const second = createdBundles[i + 1]
-        ? makeLabel(createdBundles[i + 1])
-        : `<div class="label blank-label"></div>`;
-
-      rows.push(`<div class="print-row">${first}${second}</div>`);
+      printRows.push(`
+        <div class="print-row">
+          ${makeLabel(createdBundles[i])}
+          ${createdBundles[i + 1]
+            ? makeLabel(createdBundles[i + 1])
+            : `<div class="label blank-label"></div>`}
+        </div>
+      `);
     }
 
     const popup = window.open("", "_blank", "width=900,height=700");
@@ -580,12 +582,13 @@ const totalQty = rows.reduce(
   html, body {
     margin: 0;
     padding: 0;
-    background: #fff;
-    color: #000;
+    background: white;
+    overflow: hidden;
   }
 
   body {
     font-family: Arial, sans-serif;
+    color: #000;
   }
 
   .print-row {
@@ -594,11 +597,11 @@ const totalQty = rows.reduce(
     display: flex;
     flex-direction: row;
     gap: 0;
-    margin: 0;
     padding: 0;
+    margin: 0;
+    overflow: hidden;
     page-break-after: always;
     break-after: page;
-    overflow: hidden;
   }
 
   .print-row:last-child {
@@ -677,12 +680,8 @@ const totalQty = rows.reduce(
 
   .size-row {
     display: grid;
-    grid-template-columns: repeat(${Math.max(1, createdBundles[0]?.sizes?.length || 1)}, 1fr);
-    height: 2.9mm;
-  }
-
-  .sizes .size-row {
     grid-template-columns: repeat(var(--size-count), 1fr);
+    height: 2.9mm;
   }
 
   .size-row > div {
@@ -729,6 +728,7 @@ const totalQty = rows.reduce(
     html, body {
       margin: 0 !important;
       padding: 0 !important;
+      overflow: hidden !important;
     }
 
     .print-row {
@@ -744,14 +744,14 @@ const totalQty = rows.reduce(
 </style>
 </head>
 <body>
-  ${rows.join("\n")}
-  <script>
-    window.onload = function () {
-      setTimeout(function () {
-        window.print();
-      }, 300);
-    };
-  <\/script>
+${printRows.join("\n")}
+<script>
+  window.onload = function () {
+    setTimeout(function () {
+      window.print();
+    }, 300);
+  };
+<\/script>
 </body>
 </html>`);
 
