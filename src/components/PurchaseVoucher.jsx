@@ -521,10 +521,10 @@ const totalQty = rows.reduce(
 
       const sizeHtml = design.showSizes
         ? `<div class="sizes">
-            <div class="size-row">
+            <div class="size-row" style="grid-template-columns: repeat(${Math.max(sizes.length, 1)}, 1fr);">
               ${sizes.map(s => `<div>${escapeHtml(s.size_code)}</div>`).join("")}
             </div>
-            <div class="size-row qty">
+            <div class="size-row qty" style="grid-template-columns: repeat(${Math.max(sizes.length, 1)}, 1fr);">
               ${sizes.map(s => `<div>${Number(s.qty)}</div>`).join("")}
             </div>
           </div>`
@@ -672,7 +672,6 @@ const totalQty = rows.reduce(
 
   .size-row {
     display: grid;
-    grid-template-columns: repeat(${Math.max(sizes.length, 1)}, 1fr);
     height: 2.9mm;
   }
 
