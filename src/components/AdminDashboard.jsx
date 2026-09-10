@@ -32,11 +32,11 @@ import VendorMaster from './VendorMaster';
 import JobWorkerMaster from './JobWorkerMaster';
 import ProcessMaster from './ProcessMaster';
 import BarcodeDesign from './BarcodeDesign';
+import CreateBarcode from './CreateBarcode';
 
 export default function AdminDashboard({ user }) {
 
   const [screen, setScreen] = useState('purchase');
-  const [barcodePurchase, setBarcodePurchase] = useState(null);
 
   // Collapsible sections
   const [openSections, setOpenSections] = useState({
@@ -61,17 +61,14 @@ export default function AdminDashboard({ user }) {
   const screens = {
 
     // CORE
-    purchase: <PurchaseVoucher
-      user={user}
-      initialBarcodePurchaseId={barcodePurchase?.id || null}
-      initialBarcodeLocation={barcodePurchase?.location || null}
-    />,
+    purchase: <PurchaseVoucher user={user} />,
     sales: <SalesVoucher user={user} />,
     stock: <StockView user={user} />,
     transfer: <StockTransfer user={user} />,
     communication: <Communication user={user} />,
 
     // BARCODE
+    createBarcode: <CreateBarcode />,
     barcodeDesign: <BarcodeDesign />,
 
     // IMAGES
@@ -89,12 +86,7 @@ export default function AdminDashboard({ user }) {
     process: <ProcessMaster />,
 
     // REPORTS
-    viewIncoming: <ViewIncoming
-      onCreateBarcode={(id, location) => {
-        setBarcodePurchase({ id, location });
-        setScreen("purchase");
-      }}
-    />,
+    viewIncoming: <ViewIncoming />,
     viewSales: <ViewSales />,
     viewTransfers: <ViewTransfers />,
     itemDetails: (
@@ -132,6 +124,7 @@ export default function AdminDashboard({ user }) {
     {
       title: "BARCODE",
       items: [
+        { key: 'createBarcode', label: 'Create Barcode' },
         { key: 'barcodeDesign', label: 'Barcode Design' },
       ]
     },

@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 
-export default function ViewIncoming({ onExit, onCreateBarcode }) {
+export default function ViewIncoming({ onExit }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [barcodeLoading, setBarcodeLoading] = useState(null);
-
   const [openId, setOpenId] = useState(null);
   const [details, setDetails] = useState({});
 
@@ -23,33 +21,6 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
       }
     })();
   }, []);
-
-  const createBarcodeForPurchase = async (id, location) => {
-    try {
-      setBarcodeLoading(id);
-
-      const res = await api.get(`/barcode/incoming/${id}`);
-      const available = (res.data || []).some(
-        r => Number(r.remaining_quantity || 0) > 0
-      );
-
-      if (!available) {
-        alert("No unbarcoded stock remains for this purchase.");
-        return;
-      }
-
-      if (onCreateBarcode) {
-        onCreateBarcode(id, location);
-      } else {
-        alert("Barcode action is not connected.");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Failed to check barcode availability");
-    } finally {
-      setBarcodeLoading(null);
-    }
-  };
 
   const toggleRow = async (id) => {
     if (openId === id) {
@@ -89,7 +60,6 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
         <table border="1" width="100%">
           <thead>
             <tr>
-              <th>Create Barcode</th>
               <th>ID</th>
               <th>Date</th>
               <th>Location</th>
@@ -99,7 +69,7 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan="5" align="center">
+                <td colSpan="4" align="center">
                   No records found
                 </td>
               </tr>
@@ -111,7 +81,11 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
                   style={{ cursor: "pointer", background: "#fafafa" }}
                   onClick={() => toggleRow(r.ID)}
                 >
-                  <td align="center">
+                  <td>{r.ID}</td>
+                  <td>{new Date(r.Date).toLocaleString()}</td>
+                  <td>{r.Location}</td>
+                  <td align="right">{r.TotalQty}</td>
+                  <td>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -123,15 +97,11 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
                       {barcodeLoading === r.ID ? "Checking..." : "Create Barcode"}
                     </button>
                   </td>
-                  <td>{r.ID}</td>
-                  <td>{new Date(r.Date).toLocaleString()}</td>
-                  <td>{r.Location}</td>
-                  <td align="right">{r.TotalQty}</td>
                 </tr>
 
                 {openId === r.ID && (
                   <tr>
-                    <td colSpan="5">
+                    <td colSpan="4">
                       {!details[r.ID] ? (
                         <div>Loading details...</div>
                       ) : (
