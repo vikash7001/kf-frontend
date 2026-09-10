@@ -3,6 +3,139 @@ import { api, postIncoming, createBarcode } from "../services/api";
 
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
 
+  const code128BPattern = value => {
+    // Canonical Code 128-B symbol patterns (107 symbols).
+    const patterns = [
+      "11011001100",
+      "11001101100",
+      "11001100110",
+      "10010011000",
+      "10010001100",
+      "10001001100",
+      "10011001000",
+      "10011000100",
+      "10001100100",
+      "11001001000",
+      "11001000100",
+      "11000100100",
+      "10110011100",
+      "10011011100",
+      "10011001110",
+      "10111001100",
+      "10011101100",
+      "10011100110",
+      "11001110010",
+      "11001011100",
+      "11001001110",
+      "11011100100",
+      "11001110100",
+      "11101101110",
+      "11101001100",
+      "11100101100",
+      "11100100110",
+      "11101100100",
+      "11100110100",
+      "11100110010",
+      "11011011000",
+      "11011000110",
+      "11000110110",
+      "10100011000",
+      "10001011000",
+      "10001000110",
+      "10110001000",
+      "10001101000",
+      "10001100010",
+      "11010001000",
+      "11000101000",
+      "11000100010",
+      "10110111000",
+      "10110001110",
+      "10001101110",
+      "10111011000",
+      "10111000110",
+      "10001110110",
+      "11101110110",
+      "11010001110",
+      "11000101110",
+      "11011101000",
+      "11011100010",
+      "11011101110",
+      "11101011000",
+      "11101000110",
+      "11100010110",
+      "11101101000",
+      "11101100010",
+      "11100011010",
+      "11101111010",
+      "11001000010",
+      "11110001010",
+      "10100110000",
+      "10100001100",
+      "10010110000",
+      "10010000110",
+      "10000101100",
+      "10000100110",
+      "10110010000",
+      "10110000100",
+      "10011010000",
+      "10011000010",
+      "10000110100",
+      "10000110010",
+      "11000010010",
+      "11001010000",
+      "11110111010",
+      "11000010100",
+      "10001111010",
+      "10100111100",
+      "10010111100",
+      "10010011110",
+      "10111100100",
+      "10011110100",
+      "10011110010",
+      "11110100100",
+      "11110010100",
+      "11110010010",
+      "11011011110",
+      "11011110110",
+      "11110110110",
+      "10101111000",
+      "10100011110",
+      "10001011110",
+      "10111101000",
+      "10111100010",
+      "11110101000",
+      "11110100010",
+      "10111011110",
+      "10111101110",
+      "11101011110",
+      "11110101110",
+      "11010000100",
+      "11010010000",
+      "11010011100",
+      "1100011101011"
+    ];
+
+    const start = 104;
+    const stop = 106;
+    const values = [start];
+
+    for (const ch of String(value)) {
+      const code = ch.charCodeAt(0);
+      if (code < 32 || code > 127) return null;
+      values.push(code - 32);
+    }
+
+    let checksum = start;
+    for (let i = 1; i < values.length; i++) {
+      checksum += values[i] * i;
+    }
+    checksum %= 103;
+    values.push(checksum);
+    values.push(stop);
+
+    return values.map(v => patterns[v]).join("");
+  };
+
 export default function PurchaseVoucher() {
 
   const user = JSON.parse(localStorage.getItem("kf_user"));
@@ -284,6 +417,347 @@ const totalQty = rows.reduce(
   };
 
   // ---------------- UI ----------------
+
+
+  // ---------------- PRINT BARCODE LABELS (2-UP) ----------------
+
+  const escapePrintHtml = value =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const printCreatedBundles = () => {
+    if (!createdBundles.length) {
+      alert("No barcode labels to print.");
+      return;
+    }
+
+    const saved = (() => {
+      try {
+        const raw = localStorage.getItem("kf_barcode_design");
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    })();
+
+    const cfg = {
+      labelWidth: Number(saved.labelWidth) || 38,
+      labelHeight: Number(saved.labelHeight) || 38,
+      margin: Number(saved.margin) || 0,
+      logo: saved.logo || "",
+      logoWidth: Number(saved.logoWidth) || 55,
+      showBrand: saved.showBrand !== false,
+      showLocation: saved.showLocation !== false,
+      showItem: saved.showItem !== false,
+      showSeries: saved.showSeries !== false,
+      showCategory: saved.showCategory !== false,
+      showPurchase: saved.showPurchase !== false,
+      showSizes: saved.showSizes !== false,
+      showBarcode: saved.showBarcode !== false,
+      brandSize: Number(saved.brandSize) || 16,
+      bodySize: Math.max(Number(saved.bodySize) || 8, 9)
+    };
+
+    const makeBarcodeSvg = barcode => {
+      const bits = code128BPattern(barcode);
+      if (!bits) return "";
+
+      // 9 quiet modules + 2 printer dots per module.
+      // This is the same working barcode construction used by Barcode Design.
+      const quietModules = 9;
+      const moduleDots = 2;
+      const fullBits =
+        `${"0".repeat(quietModules)}${bits}${"0".repeat(quietModules)}`;
+      const dots = fullBits.length * moduleDots;
+
+      return `
+        <svg class="barcode-svg"
+             width="${dots}"
+             height="80"
+             viewBox="0 0 ${dots} 80"
+             preserveAspectRatio="none"
+             shape-rendering="crispEdges"
+             aria-label="Barcode">
+          <rect width="${dots}" height="80" fill="#fff"/>
+          ${fullBits.split("").map((bit, i) =>
+            bit === "1"
+              ? `<rect x="${i * moduleDots}" y="0" width="${moduleDots}" height="80" fill="#000"/>`
+              : ""
+          ).join("")}
+        </svg>
+      `;
+    };
+
+    const makeLabel = bundle => {
+      const sizes = (bundle.sizes || []).filter(s => Number(s.qty || 0) > 0);
+      const barcode = escapePrintHtml(bundle.barcode);
+      const item = escapePrintHtml(bundle.item);
+      const seriesName = escapePrintHtml(bundle.seriesname || bundle.series || "");
+      const categoryName = escapePrintHtml(bundle.categoryname || bundle.category || "");
+      const purchase = escapePrintHtml(incomingId);
+      const loc = escapePrintHtml(location);
+
+      const brandHtml = cfg.showBrand
+        ? `<div class="brand">${
+            cfg.logo
+              ? `<img src="${cfg.logo}" alt="Logo" style="max-width:${cfg.logoWidth}%;max-height:3.5mm;object-fit:contain;">`
+              : "KARNI FASHIONS"
+          }</div>`
+        : "";
+
+      const locationHtml = cfg.showLocation
+        ? `<div class="location">${loc}</div>`
+        : "";
+
+      const details = [];
+      if (cfg.showItem) details.push(`<div><b>ITEM:</b> ${item}</div>`);
+      if (cfg.showSeries) details.push(`<div><b>SER:</b> ${seriesName}</div>`);
+      if (cfg.showCategory) details.push(`<div class="nowrap"><b>CAT:</b> ${categoryName}</div>`);
+      if (cfg.showPurchase) details.push(`<div><b>PUR:</b> ${purchase}</div>`);
+
+      const sizeHtml = cfg.showSizes && sizes.length
+        ? `<div class="sizes">
+             <div class="size-row">
+               ${sizes.map(s => `<div>${escapePrintHtml(s.size_code)}</div>`).join("")}
+             </div>
+             <div class="size-row qty">
+               ${sizes.map(s => `<div>${Number(s.qty)}</div>`).join("")}
+             </div>
+           </div>`
+        : "";
+
+      const barcodeHtml = cfg.showBarcode
+        ? `<div class="barcode">
+             ${makeBarcodeSvg(bundle.barcode)}
+             <div class="barcode-text">${barcode}</div>
+           </div>`
+        : "";
+
+      return `
+        <div class="label" style="--size-count:${Math.max(1, sizes.length)}">
+          ${brandHtml}
+          ${locationHtml}
+          <div class="details">${details.join("")}</div>
+          ${sizeHtml}
+          ${barcodeHtml}
+        </div>
+      `;
+    };
+
+    const rows = [];
+    for (let i = 0; i < createdBundles.length; i += 2) {
+      const first = makeLabel(createdBundles[i]);
+      const second = createdBundles[i + 1]
+        ? makeLabel(createdBundles[i + 1])
+        : `<div class="label blank-label"></div>`;
+
+      rows.push(`<div class="print-row">${first}${second}</div>`);
+    }
+
+    const popup = window.open("", "_blank", "width=900,height=700");
+    if (!popup) {
+      alert("Please allow pop-ups to print barcode labels.");
+      return;
+    }
+
+    popup.document.write(`<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Karni Fashions - Barcode Labels</title>
+<style>
+  @page {
+    size: ${cfg.labelWidth * 2}mm ${cfg.labelHeight}mm;
+    margin: 0;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #000;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+  }
+
+  .print-row {
+    width: ${cfg.labelWidth * 2}mm;
+    height: ${cfg.labelHeight}mm;
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    page-break-after: always;
+    break-after: page;
+    overflow: hidden;
+  }
+
+  .print-row:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .label {
+    width: ${cfg.labelWidth}mm;
+    height: ${cfg.labelHeight}mm;
+    flex: 0 0 ${cfg.labelWidth}mm;
+    padding: 0.2mm;
+    margin: 0;
+    overflow: hidden;
+    border: 0.2mm solid #000;
+    position: relative;
+  }
+
+  .blank-label {
+    border: 0;
+  }
+
+  .brand {
+    text-align: center;
+    font-weight: 800;
+    font-size: min(${cfg.brandSize}px, 11px);
+    line-height: 1;
+    white-space: nowrap;
+    height: 3.5mm;
+    overflow: hidden;
+  }
+
+  .brand img {
+    display: block;
+    margin: 0 auto;
+    max-height: 3.5mm !important;
+  }
+
+  .location {
+    text-align: center;
+    font-weight: 700;
+    font-size: 6.5px;
+    line-height: 1;
+    margin-top: 0.2mm;
+    padding-bottom: 0.5mm;
+    border-bottom: 0.2mm solid #000;
+  }
+
+  .details {
+    margin-top: 0.5mm;
+    font-size: min(${cfg.bodySize}px, 11px);
+    line-height: 1.05;
+    padding-right: 0.2mm;
+  }
+
+  .details > div {
+    height: 2.9mm;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .nowrap {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sizes {
+    width: 100%;
+    margin-top: 0.3mm;
+    border: 0.2mm solid #000;
+    font-size: 7px;
+    line-height: 1;
+  }
+
+  .size-row {
+    display: grid;
+    grid-template-columns: repeat(${Math.max(1, createdBundles[0]?.sizes?.length || 1)}, 1fr);
+    height: 2.9mm;
+  }
+
+  .sizes .size-row {
+    grid-template-columns: repeat(var(--size-count), 1fr);
+  }
+
+  .size-row > div {
+    text-align: center;
+    padding: 0.3mm 0;
+    border-right: 0.2mm solid #000;
+    overflow: hidden;
+  }
+
+  .size-row > div:last-child {
+    border-right: 0;
+  }
+
+  .qty {
+    border-top: 0.2mm solid #000;
+  }
+
+  .barcode {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 5.5mm;
+    text-align: center;
+    width: auto;
+  }
+
+  .barcode-svg {
+    display: block;
+    width: 100%;
+    height: 10mm;
+    shape-rendering: crispEdges;
+    image-rendering: pixelated;
+  }
+
+  .barcode-text {
+    margin-top: 0.3mm;
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.7px;
+  }
+
+  @media print {
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .print-row {
+      page-break-after: always;
+      break-after: page;
+    }
+
+    .print-row:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+  }
+</style>
+</head>
+<body>
+  ${rows.join("\n")}
+  <script>
+    window.onload = function () {
+      setTimeout(function () {
+        window.print();
+      }, 300);
+    };
+  <\/script>
+</body>
+</html>`);
+
+    popup.document.close();
+  };
+
 
 return (
   <div className="voucher-wrapper">
@@ -791,6 +1265,15 @@ return (
           )}
 
           <div className="confirm-actions" style={{ marginTop: 18 }}>
+            {createdBundles.length > 0 && (
+              <button
+                onClick={printCreatedBundles}
+                disabled={loading}
+              >
+                Print Labels (2-UP)
+              </button>
+            )}
+
             <button
               onClick={() => {
                 setShowBundleComposer(false);
