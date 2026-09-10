@@ -5,6 +5,7 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [barcodeLoading, setBarcodeLoading] = useState(null);
 
   const [openId, setOpenId] = useState(null);
   const [details, setDetails] = useState({});
@@ -22,6 +23,33 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
       }
     })();
   }, []);
+
+  const createBarcodeForPurchase = async (id, location) => {
+    try {
+      setBarcodeLoading(id);
+
+      const res = await api.get(`/barcode/incoming/${id}`);
+      const available = (res.data || []).some(
+        r => Number(r.remaining_quantity || 0) > 0
+      );
+
+      if (!available) {
+        alert("No unbarcoded stock remains for this purchase.");
+        return;
+      }
+
+      if (onCreateBarcode) {
+        onCreateBarcode(id, location);
+      } else {
+        alert("Barcode action is not connected.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to check barcode availability");
+    } finally {
+      setBarcodeLoading(null);
+    }
+  };
 
   const toggleRow = async (id) => {
     if (openId === id) {
@@ -91,10 +119,11 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onCreateBarcode?.(r.ID, r.Location);
+                        createBarcodeForPurchase(r.ID, r.Location);
                       }}
+                      disabled={barcodeLoading === r.ID}
                     >
-                      Create Barcode
+                      {barcodeLoading === r.ID ? "Checking..." : "Create Barcode"}
                     </button>
                   </td>
                 </tr>
