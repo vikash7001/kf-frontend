@@ -76,7 +76,7 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
 
   return (
     <div style={{ padding: 18 }}>
-      <h2>View Purchase (Incoming)</h2>
+      <h2>View Purchase (Incoming) - BARCODE TEST</h2>
 
       <button onClick={onExit} style={{ marginBottom: 12 }}>
         Back
