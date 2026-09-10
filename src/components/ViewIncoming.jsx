@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 
+
 export default function ViewIncoming({ onExit, onCreateBarcode }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
