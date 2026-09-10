@@ -509,15 +509,12 @@ const totalQty = rows.reduce(
             : "KARNI FASHIONS"}</div>`
         : "";
 
-      const locationHtml = design.showLocation
-        ? `<div class="location">${escapeHtml(location)}</div>`
-        : "";
+      const locationHtml = "";
 
       const details = [];
       if (design.showItem) details.push(`<div><b>ITEM:</b> ${escapeHtml(bundle.item)}</div>`);
       if (design.showSeries) details.push(`<div><b>SER:</b> ${escapeHtml(bundle.seriesname || bundle.series || "")}</div>`);
       if (design.showCategory) details.push(`<div class="nowrap"><b>CAT:</b> ${escapeHtml(bundle.categoryname || bundle.category || "")}</div>`);
-      if (design.showPurchase) details.push(`<div><b>PUR:</b> ${escapeHtml(incomingId)}</div>`);
 
       const sizeHtml = design.showSizes
         ? `<div class="sizes">
@@ -576,7 +573,7 @@ const totalQty = rows.reduce(
 <title>Karni Fashions - Barcode Labels</title>
 <style>
   @page {
-    size: ${labelWidth}mm ${labelHeight * 2}mm;
+    size: ${labelWidth}mm ${labelHeight * 2 + 2}mm;
     margin: 0;
   }
 
@@ -586,9 +583,9 @@ const totalQty = rows.reduce(
     margin: 0;
     padding: 0;
     width: ${labelWidth}mm;
-    height: ${labelHeight * 2}mm;
+    height: auto;
     background: white;
-    overflow: hidden;
+    overflow: visible;
   }
 
   body {
@@ -598,10 +595,10 @@ const totalQty = rows.reduce(
 
   .page {
     width: ${labelWidth}mm;
-    height: ${labelHeight * 2}mm;
+    height: ${labelHeight * 2 + 2}mm;
     padding: 0;
     margin: 0;
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     flex-direction: column;
   }
@@ -614,6 +611,10 @@ const totalQty = rows.reduce(
     overflow: hidden;
     border: 0.2mm solid #000;
     position: relative;
+  }
+
+  .label + .label {
+    margin-top: 2mm;
   }
 
   .brand {
@@ -718,15 +719,15 @@ const totalQty = rows.reduce(
   @media print {
     html, body {
       width: ${labelWidth}mm !important;
-      height: ${labelHeight * 2}mm !important;
+      height: auto !important;
       margin: 0 !important;
       padding: 0 !important;
-      overflow: hidden !important;
+      overflow: visible !important;
     }
 
     .page {
       width: ${labelWidth}mm !important;
-      height: ${labelHeight * 2}mm !important;
+      height: ${labelHeight * 2 + 2}mm !important;
       margin: 0 !important;
       page-break-after: always;
       break-after: page;
@@ -735,7 +736,6 @@ const totalQty = rows.reduce(
     .label {
       width: ${labelWidth}mm !important;
       height: ${labelHeight}mm !important;
-      margin: 0 !important;
     }
 
     .label {
@@ -1320,6 +1320,8 @@ return (
                         {
                           barcode: res.data.barcode.barcode,
                           item: selected.Item,
+                          seriesname: selected.SeriesName,
+                          categoryname: selected.CategoryName,
                           sizes
                         }
                       ]);
