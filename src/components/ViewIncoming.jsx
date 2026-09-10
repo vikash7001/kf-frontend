@@ -89,11 +89,11 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
         <table border="1" width="100%">
           <thead>
             <tr>
+              <th>Create Barcode</th>
               <th>ID</th>
               <th>Date</th>
               <th>Location</th>
               <th>Total Qty</th>
-              <th>Barcode</th>
             </tr>
           </thead>
           <tbody>
@@ -111,11 +111,7 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
                   style={{ cursor: "pointer", background: "#fafafa" }}
                   onClick={() => toggleRow(r.ID)}
                 >
-                  <td>{r.ID}</td>
-                  <td>{new Date(r.Date).toLocaleString()}</td>
-                  <td>{r.Location}</td>
-                  <td align="right">{r.TotalQty}</td>
-                  <td>
+                  <td align="center">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -127,6 +123,10 @@ export default function ViewIncoming({ onExit, onCreateBarcode }) {
                       {barcodeLoading === r.ID ? "Checking..." : "Create Barcode"}
                     </button>
                   </td>
+                  <td>{r.ID}</td>
+                  <td>{new Date(r.Date).toLocaleString()}</td>
+                  <td>{r.Location}</td>
+                  <td align="right">{r.TotalQty}</td>
                 </tr>
 
                 {openId === r.ID && (
