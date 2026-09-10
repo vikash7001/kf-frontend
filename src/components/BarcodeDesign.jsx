@@ -342,7 +342,7 @@ export default function BarcodeDesign() {
   .label {
     width: ${labelWidth}mm;
     height: ${labelHeight}mm;
-    padding: 0.7mm;
+    padding: 0.2mm;
     margin: 0;
     overflow: hidden;
     border: 0.2mm solid #000;
@@ -377,13 +377,13 @@ export default function BarcodeDesign() {
 
   .details {
     margin-top: 0.5mm;
-    font-size: min(${Number(design.bodySize) || 8}px, 11px);
+    font-size: min(${Math.max(Number(design.bodySize) || 8, 9)}px, 11px);
     line-height: 1.05;
     padding-right: 0.2mm;
   }
 
   .details > div {
-    height: 2.6mm;
+    height: 2.9mm;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -397,21 +397,21 @@ export default function BarcodeDesign() {
 
   .sizes {
     width: 100%;
-    margin-top: 0.5mm;
+    margin-top: 0.3mm;
     border: 0.2mm solid #000;
-    font-size: 6px;
+    font-size: 7px;
     line-height: 1;
   }
 
   .size-row {
     display: grid;
     grid-template-columns: repeat(${SAMPLE.sizes.length}, 1fr);
-    height: 2.7mm;
+    height: 2.9mm;
   }
 
   .size-row > div {
     text-align: center;
-    padding: 0.5mm 0;
+    padding: 0.3mm 0;
     border-right: 0.2mm solid #000;
     overflow: hidden;
   }
@@ -428,7 +428,7 @@ export default function BarcodeDesign() {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 1.5mm;
+    bottom: 3.5mm;
     text-align: center;
     width: auto;
   }
