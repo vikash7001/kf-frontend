@@ -23,15 +23,8 @@ import OnlineStockView from './OnlineStockView';
 import OnlineSkuPendingAmazon from './OnlineSkuPendingAmazon';
 import OnlineSkuManager from './OnlineSkuManager';
 
-import FabricIncoming from './FabricIncoming';
-import FabricIssue from './FabricIssue';
-import ProductionDashboard from './ProductionDashboard';
-import ViewFabricIncoming from './ViewFabricIncoming';
-import ViewFabricIssue from './ViewFabricIssue';
 
-import VendorMaster from './VendorMaster';
-import JobWorkerMaster from './JobWorkerMaster';
-import ProcessMaster from './ProcessMaster';
+
 import BarcodeDesign from './BarcodeDesign';
 import CreateBarcode from './CreateBarcode';
 
@@ -96,12 +89,6 @@ export default function AdminDashboard({ user }) {
       />
     ),
 
-    // PRODUCTION
-    fabricIncoming: <FabricIncoming />,
-    fabricIssue: <FabricIssue />,
-    productionDashboard: <ProductionDashboard />,
-    viewFabricIncoming: <ViewFabricIncoming />,
-    viewFabricIssue: <ViewFabricIssue />,
 
     // ONLINE
     onlineEnablement: <OnlineEnablement />,
@@ -159,16 +146,7 @@ export default function AdminDashboard({ user }) {
         { key: 'itemDetails', label: 'Item Details' },
       ]
     },
-    {
-      title: "PRODUCTION",
-      items: [
-        { key: 'fabricIncoming', label: 'Fabric Incoming' },
-        { key: 'fabricIssue', label: 'Fabric Issue' },
-        { key: 'viewFabricIncoming', label: 'View Fabric Incoming' },
-        { key: 'viewFabricIssue', label: 'View Fabric Issue' },
-        { key: 'productionDashboard', label: 'Production Dashboard' },
-      ]
-    },
+
     {
       title: "ONLINE",
       items: [
