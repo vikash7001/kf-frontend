@@ -59,6 +59,7 @@ function FilterSection({ title, open, onToggle, activeCount, children }) {
 export default function StockView({ user }) {
   const [stock, setStock] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [imageByItem, setImageByItem] = useState({});
 
   const saved = loadSavedFilters();
 
@@ -83,6 +84,7 @@ export default function StockView({ user }) {
 
   useEffect(() => {
     loadStock();
+    loadImages();
     // eslint-disable-next-line
   }, []);
 
@@ -169,6 +171,38 @@ export default function StockView({ user }) {
   function sortArrow(column) {
     if (sortBy !== column) return "";
     return sortDir === "asc" ? " ▲" : " ▼";
+  }
+
+  async function loadImages() {
+    try {
+      const res = await api.get("/images/list");
+
+      const imageMap = {};
+      (res.data || []).forEach(row => {
+        const item = String(row.Item ?? "").trim();
+        const imageURL = String(row.ImageURL ?? "").trim();
+
+        if (item && imageURL && imageURL.toLowerCase() !== "n/a") {
+          imageMap[item] = imageURL;
+        }
+      });
+
+      setImageByItem(imageMap);
+    } catch (err) {
+      console.error("IMAGE LOAD ERROR:", err);
+      setImageByItem({});
+    }
+  }
+
+  function openProductImage(item) {
+    const imageURL = imageByItem[String(item ?? "").trim()];
+
+    if (!imageURL) {
+      alert("No image available for this design.");
+      return;
+    }
+
+    window.open(imageURL, "_blank", "noopener,noreferrer");
   }
 
   async function loadStock() {
@@ -436,6 +470,7 @@ lastmovementdate: r.LastMovementDate
     <th onClick={() => handleSort("lastmovementdate")}>
       Last Movement{sortArrow("lastmovementdate")}
     </th>
+    <th>View Image</th>
   </tr>
 </thead>
             <tbody>
@@ -464,6 +499,18 @@ lastmovementdate: r.LastMovementDate
   {s.lastmovementdate
     ? new Date(s.lastmovementdate).toLocaleDateString()
     : "-"}
+</td>
+<td align="center">
+  {imageByItem[String(s.item ?? "").trim()] ? (
+    <button
+      type="button"
+      onClick={() => openProductImage(s.item)}
+    >
+      View Image
+    </button>
+  ) : (
+    "-"
+  )}
 </td>
                 </tr>
               ))}
