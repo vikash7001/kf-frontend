@@ -35,11 +35,9 @@ export default function AdminDashboard({ user }) {
   // Collapsible sections
   const [openSections, setOpenSections] = useState({
     CORE: true,
-    COMMUNICATION: false,
     IMAGES: false,
     MASTERS: false,
     REPORTS: false,
-    PRODUCTION: true,
     ONLINE: false
   });
 
@@ -75,9 +73,6 @@ export default function AdminDashboard({ user }) {
     product: <ProductMaster />,
     customer: <CustomerMaster />,
     rateList: <RateList />,
-    vendor: <VendorMaster />,
-    jobworker: <JobWorkerMaster />,
-    process: <ProcessMaster />,
 
     // REPORTS
     viewIncoming: <ViewIncoming />,
@@ -131,9 +126,6 @@ export default function AdminDashboard({ user }) {
         { key: 'series', label: 'Series' },
         { key: 'product', label: 'Product' },
         { key: 'customer', label: 'Customer' },
-        { key: 'vendor', label: 'Vendor' },
-        { key: 'jobworker', label: 'Job Worker' },
-        { key: 'process', label: 'Process' },
         { key: 'rateList', label: 'Rate List' },
       ]
     },
