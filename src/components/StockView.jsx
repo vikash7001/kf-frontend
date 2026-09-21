@@ -72,6 +72,12 @@ export default function StockView({ user }) {
   const [showCategory, setShowCategory] = useState(false);
   const [showOrigin, setShowOrigin] = useState(false);
 
+  // Stock view / order selection
+  const [removeZeroStock, setRemoveZeroStock] = useState(false);
+  const [orderMode, setOrderMode] = useState(false);
+  const [orderApplied, setOrderApplied] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
+
   const [sortBy, setSortBy] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
 
@@ -95,6 +101,60 @@ export default function StockView({ user }) {
         ? prev.filter(v => v !== value)
         : [...prev, value]
     );
+  }
+
+  function getRowKey(s) {
+    return [
+      s.productid,
+      s.item,
+      s.seriesname,
+      s.categoryname,
+      s.origin || ""
+    ].join("|");
+  }
+
+  function toggleOrderItem(s) {
+    const key = getRowKey(s);
+
+    setSelectedItems(prev =>
+      prev.includes(key)
+        ? prev.filter(v => v !== key)
+        : [...prev, key]
+    );
+
+    // Changing a selection after applying the order means it needs
+    // to be applied again.
+    setOrderApplied(false);
+  }
+
+  function applyOrderSelection() {
+    if (selectedItems.length === 0) {
+      setOrderApplied(false);
+      return;
+    }
+
+    setOrderApplied(true);
+  }
+
+  function handleOrderModeChange(checked) {
+    setOrderMode(checked);
+    setOrderApplied(false);
+
+    if (!checked) {
+      setSelectedItems([]);
+    }
+  }
+
+  function resetAll() {
+    setProductFilter([]);
+    setSeriesFilter([]);
+    setCategoryFilter([]);
+    setOriginFilter([]);
+    setRemoveZeroStock(false);
+    setOrderMode(false);
+    setOrderApplied(false);
+    setSelectedItems([]);
+    localStorage.removeItem(LS_KEY);
   }
 
   function handleSort(column) {
@@ -149,7 +209,9 @@ lastmovementdate: r.LastMovementDate
       (productFilter.length === 0 || productFilter.includes(s.item)) &&
       (seriesFilter.length === 0 || seriesFilter.includes(s.seriesname)) &&
       (categoryFilter.length === 0 || categoryFilter.includes(s.categoryname)) &&
-      (originFilter.length === 0 || originFilter.includes(s.origin))
+      (originFilter.length === 0 || originFilter.includes(s.origin)) &&
+      (!removeZeroStock || s.totalqty !== 0) &&
+      (!orderApplied || selectedItems.includes(getRowKey(s)))
     )
     .sort((a, b) => {
       if (!sortBy) return 0;
@@ -247,17 +309,53 @@ lastmovementdate: r.LastMovementDate
             </FilterSection>
           </div>
 
-          <button
-            onClick={() => {
-              setProductFilter([]);
-              setSeriesFilter([]);
-              setCategoryFilter([]);
-              setOriginFilter([]);
-              localStorage.removeItem(LS_KEY);
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 18,
+              marginTop: 10,
+              flexWrap: "wrap"
             }}
           >
-            Reset Filters
-          </button>
+            <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={removeZeroStock}
+                onChange={e => setRemoveZeroStock(e.target.checked)}
+              />
+              Remove Zero Quantity Stock
+            </label>
+
+            <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={orderMode}
+                onChange={e => handleOrderModeChange(e.target.checked)}
+              />
+              Order View
+            </label>
+
+            {orderMode && (
+              <>
+                <strong>
+                  Selected Items: {selectedItems.length}
+                </strong>
+
+                <button
+                  type="button"
+                  onClick={applyOrderSelection}
+                  disabled={selectedItems.length === 0}
+                >
+                  Show Selected
+                </button>
+              </>
+            )}
+
+            <button type="button" onClick={resetAll}>
+              Reset
+            </button>
+          </div>
 
           <table
             border="1"
@@ -271,6 +369,34 @@ lastmovementdate: r.LastMovementDate
             
               <thead>
   <tr>
+    {orderMode && (
+      <th align="center">
+        <input
+          type="checkbox"
+          checked={
+            filteredAndSortedStock.length > 0 &&
+            filteredAndSortedStock.every(s =>
+              selectedItems.includes(getRowKey(s))
+            )
+          }
+          onChange={e => {
+            const visibleKeys = filteredAndSortedStock.map(getRowKey);
+
+            if (e.target.checked) {
+              setSelectedItems(prev =>
+                [...new Set([...prev, ...visibleKeys])]
+              );
+            } else {
+              setSelectedItems(prev =>
+                prev.filter(key => !visibleKeys.includes(key))
+              );
+            }
+
+            setOrderApplied(false);
+          }}
+        />
+      </th>
+    )}
     <th onClick={() => handleSort("item")}>
       Product{sortArrow("item")}
     </th>
@@ -314,7 +440,16 @@ lastmovementdate: r.LastMovementDate
 </thead>
             <tbody>
               {filteredAndSortedStock.map(s => (
-                <tr key={s.productid}>
+                <tr key={getRowKey(s)}>
+                  {orderMode && (
+                    <td align="center">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.includes(getRowKey(s))}
+                        onChange={() => toggleOrderItem(s)}
+                      />
+                    </td>
+                  )}
                   <td>{s.item}</td>
                   <td>{s.seriesname}</td>
                   <td>{s.categoryname}</td>
