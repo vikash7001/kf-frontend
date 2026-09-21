@@ -205,6 +205,139 @@ export default function StockView({ user }) {
     window.open(imageURL, "_blank", "noopener,noreferrer");
   }
 
+  function createSelectedImagesPDF() {
+    if (!orderMode || selectedItems.length === 0) {
+      alert("Please select at least one item in Order View.");
+      return;
+    }
+
+    const selectedRows = stock.filter(s =>
+      selectedItems.includes(getRowKey(s))
+    );
+
+    const imageURLs = selectedRows
+      .map(s => imageByItem[String(s.item ?? "").trim()])
+      .filter(Boolean);
+
+    if (imageURLs.length === 0) {
+      alert("None of the selected items have an uploaded image.");
+      return;
+    }
+
+    const missingCount = selectedRows.length - imageURLs.length;
+
+    const printWindow = window.open("", "_blank");
+
+    if (!printWindow) {
+      alert("Please allow pop-ups to create the PDF.");
+      return;
+    }
+
+    const imageMarkup = imageURLs
+      .map(url => `
+        <div class="image-card">
+          <img src="${url.replace(/"/g, "&quot;")}" alt="" />
+        </div>
+      `)
+      .join("");
+
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Selected Items</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 10mm;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: white;
+            }
+
+            body {
+              font-family: Arial, sans-serif;
+            }
+
+            .grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 8mm;
+              width: 100%;
+            }
+
+            .image-card {
+              width: 100%;
+              height: 130mm;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              break-inside: avoid;
+              page-break-inside: avoid;
+            }
+
+            .image-card img {
+              display: block;
+              max-width: 100%;
+              max-height: 100%;
+              width: auto;
+              height: auto;
+              object-fit: contain;
+            }
+
+            @media print {
+              .grid {
+                gap: 8mm;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="grid">
+            ${imageMarkup}
+          </div>
+
+          <script>
+            const images = Array.from(document.images);
+
+            Promise.all(
+              images.map(img =>
+                img.complete
+                  ? Promise.resolve()
+                  : new Promise(resolve => {
+                      img.onload = resolve;
+                      img.onerror = resolve;
+                    })
+              )
+            ).then(() => {
+              setTimeout(() => {
+                window.focus();
+                window.print();
+              }, 300);
+            });
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+
+    if (missingCount > 0) {
+      setTimeout(() => {
+        alert(
+          `${missingCount} selected item(s) have no uploaded image and were not included in the PDF.`
+        );
+      }, 500);
+    }
+  }
+
   async function loadStock() {
     try {
       setLoading(true);
@@ -383,6 +516,14 @@ lastmovementdate: r.LastMovementDate
                 >
                   Show Selected
                 </button>
+
+                <button
+                  type="button"
+                  onClick={createSelectedImagesPDF}
+                  disabled={selectedItems.length === 0}
+                >
+                  Create PDF
+                </button>
               </>
             )}
 
@@ -509,7 +650,7 @@ lastmovementdate: r.LastMovementDate
       View Image
     </button>
   ) : (
-    "-"
+    <span>Not Image Uploaded</span>
   )}
 </td>
                 </tr>
