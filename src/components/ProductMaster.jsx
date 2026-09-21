@@ -10,7 +10,7 @@ const [totalPcs, setTotalPcs] = useState("");
   const [seriesList, setSeriesList] = useState([]);
   const [list, setList] = useState([]);
   const [lastCreated, setLastCreated] = useState("");
-const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     load();
@@ -21,15 +21,7 @@ const [editingId, setEditingId] = useState(null);
     const p = await api.get("/products");
     setSeriesList(s.data || []);
 
-    const products = p.data || [];
-    setList(products);
-
-    // Keep the existing list order. The last API item is the last created item.
-    setLastCreated(
-      products.length > 0
-        ? products[products.length - 1].Item || ""
-        : ""
-    );
+    setList(p.data || []);
   };
 
   const onSeriesChange = (val) => {
@@ -59,6 +51,7 @@ const save = async () => {
     });
   } else {
     await api.post("/products", payload);
+    setLastCreated(item);
   }
 
   setItem("");
