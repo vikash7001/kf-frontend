@@ -9,6 +9,7 @@ export default function ProductMaster({ onExit }) {
 const [totalPcs, setTotalPcs] = useState("");
   const [seriesList, setSeriesList] = useState([]);
   const [list, setList] = useState([]);
+  const [lastCreated, setLastCreated] = useState("");
 const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
@@ -19,7 +20,16 @@ const [editingId, setEditingId] = useState(null);
     const s = await api.get("/series");
     const p = await api.get("/products");
     setSeriesList(s.data || []);
-    setList(p.data || []);
+
+    const products = p.data || [];
+    setList(products);
+
+    // Keep the existing list order. The last API item is the last created item.
+    setLastCreated(
+      products.length > 0
+        ? products[products.length - 1].Item || ""
+        : ""
+    );
   };
 
   const onSeriesChange = (val) => {
@@ -112,6 +122,12 @@ const save = async () => {
   {editingId ? "Update" : "Save"}
 </button>
       <button onClick={onExit} style={{ marginLeft: 8 }}>Back</button>
+
+      {lastCreated && (
+        <span style={{ marginLeft: 16, fontWeight: "bold" }}>
+          Last Created: {lastCreated}
+        </span>
+      )}
 
       <hr />
 
