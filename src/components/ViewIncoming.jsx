@@ -85,19 +85,7 @@ export default function ViewIncoming({ onExit }) {
                   <td>{new Date(r.Date).toLocaleString()}</td>
                   <td>{r.Location}</td>
                   <td align="right">{r.TotalQty}</td>
-                  <td>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        createBarcodeForPurchase(r.ID, r.Location);
-                      }}
-                      disabled={barcodeLoading === r.ID}
-                    >
-                      {barcodeLoading === r.ID ? "Checking..." : "Create Barcode"}
-                    </button>
-                  </td>
-                </tr>
+                 </tr>
 
                 {openId === r.ID && (
                   <tr>
