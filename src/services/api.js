@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE =
+export const BASE =
   process.env.REACT_APP_API_URL ||
   "https://site--kf-backend-api--844vk4b7xzxp.code.run";
 
@@ -15,12 +15,42 @@ const apiInstance = axios.create({
    CORE API WRAPPER
 ===================================================== */
 
+/* =====================================================
+   LOGIN SESSION HANDLING
+   - The token is attached to EVERY request (this helper and
+     any screen that uses plain axios).
+   - If the server says the login is no longer valid (401),
+     the user is logged out and sees the login page again.
+===================================================== */
+
+function handleExpiredLogin(error) {
+  const status = error?.response?.status;
+  const url = error?.config?.url || "";
+
+  if (
+    status === 401 &&
+    !url.endsWith("/login") &&
+    localStorage.getItem("kf_token")
+  ) {
+    localStorage.removeItem("kf_token");
+    localStorage.removeItem("kf_user");
+    window.location.reload();
+  }
+
+  return Promise.reject(error);
+}
+
+apiInstance.interceptors.response.use(r => r, handleExpiredLogin);
+axios.interceptors.response.use(r => r, handleExpiredLogin);
+
 const api = {
   setToken(token) {
     if (token) {
       apiInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     } else {
       delete apiInstance.defaults.headers.common["Authorization"];
+      delete axios.defaults.headers.common["Authorization"];
     }
   },
 

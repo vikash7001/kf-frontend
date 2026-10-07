@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const API = process.env.REACT_APP_API_URL;
+import { api } from '../services/api';
 
 export default function RateList({ onExit }) {
   const [rows, setRows] = useState([]);
@@ -11,9 +11,8 @@ export default function RateList({ onExit }) {
   }, []);
 
   async function loadSeries() {
-    const res = await fetch(`${API}/series`);
-    const data = await res.json();
-    setRows(data);
+    const res = await api.get('/series');
+    setRows(res.data);
   }
 
   async function saveRate(seriesName, rate) {
@@ -23,13 +22,9 @@ export default function RateList({ onExit }) {
       rate === '' || rate === null ? null : Number(rate);
 
     try {
-      await fetch(`${API}/series/rate`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          SeriesName: seriesName,
-          Rate: finalRate
-        })
+      await api.put('/series/rate', {
+        SeriesName: seriesName,
+        Rate: finalRate
       });
 
       // ✅ lock saved value into state

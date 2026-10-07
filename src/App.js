@@ -9,6 +9,15 @@ import StockTransfer from './components/StockTransfer';
 
 import { api } from './services/api';
 
+// Works with both "role" and "Role", any capitalisation
+function roleOf(u) {
+  return String(u?.role || u?.Role || "").toUpperCase();
+}
+
+function isCustomer(u) {
+  return roleOf(u) === "CUSTOMER" || roleOf(u) === "CUSTOMER_PREMIUM";
+}
+
 export default function App() {
 
   const [user, setUser] = useState(null);
@@ -22,7 +31,7 @@ export default function App() {
       const u = JSON.parse(userJson);
       api.setToken(token);
       setUser(u);
-      setMode(u.Role === 'Customer' ? 'customer' : 'admin');
+      setMode(isCustomer(u) ? 'customer' : 'admin');
     }
 
     // Keyboard shortcuts (still active)
@@ -62,11 +71,15 @@ export default function App() {
           localStorage.setItem('kf_user', JSON.stringify(userObj));
           api.setToken(token);
           setUser(userObj);
-          setMode(userObj.Role === 'Customer' ? 'customer' : 'admin');
+          setMode(isCustomer(userObj) ? 'customer' : 'admin');
         }}
       />
     );
   }
+
+  // Customers only ever see the customer view, even if a
+  // keyboard shortcut tries to open an entry screen
+  const screen = isCustomer(user) ? "customer" : mode;
 
   return (
     <div>
@@ -82,7 +95,7 @@ export default function App() {
         <div className="company">KARNI FASHIONS</div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 15 }}>
-          <div>{user.FullName} — {user.Role}</div>
+          <div>{user.fullname || user.FullName} — {roleOf(user)}</div>
 
           <button
             onClick={() => {
@@ -101,37 +114,37 @@ export default function App() {
       <div className="container">
         <div className="panel">
 
-          {mode === "admin" && (
+          {screen === "admin" && (
             <AdminDashboard user={user} />
           )}
 
-          {mode === "customer" && (
+          {screen === "customer" && (
             <CustomerView user={user} />
           )}
 
-          {mode === "purchase" && (
+          {screen === "purchase" && (
             <PurchaseVoucher
               user={user}
               onExit={() =>
-                setMode(user.Role === "Customer" ? "customer" : "admin")
+                setMode(isCustomer(user) ? "customer" : "admin")
               }
             />
           )}
 
-          {mode === "sales" && (
+          {screen === "sales" && (
             <SalesVoucher
               user={user}
               onExit={() =>
-                setMode(user.Role === "Customer" ? "customer" : "admin")
+                setMode(isCustomer(user) ? "customer" : "admin")
               }
             />
           )}
 
-          {mode === "transfer" && (
+          {screen === "transfer" && (
             <StockTransfer
               user={user}
               onExit={() =>
-                setMode(user.Role === "Customer" ? "customer" : "admin")
+                setMode(isCustomer(user) ? "customer" : "admin")
               }
             />
           )}
