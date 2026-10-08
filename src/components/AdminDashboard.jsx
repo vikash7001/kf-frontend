@@ -16,6 +16,7 @@ import CategoryMaster from './CategoryMaster';
 import SeriesMaster from './SeriesMaster';
 import ProductMaster from './ProductMaster';
 import CustomerMaster from './CustomerMaster';
+import FollowUps from './FollowUps';
 
 import ItemDetails from './ItemDetails';
 import OnlineEnablement from './OnlineEnablement';
@@ -74,6 +75,9 @@ export default function AdminDashboard({ user }) {
     customer: <CustomerMaster />,
     rateList: <RateList />,
 
+    // CUSTOMERS
+    followUps: <FollowUps />,
+
     // REPORTS
     viewIncoming: <ViewIncoming />,
     viewSales: <ViewSales />,
@@ -102,6 +106,12 @@ export default function AdminDashboard({ user }) {
         { key: 'sales', label: 'Sales' },
         { key: 'stock', label: 'Stock' },
         { key: 'transfer', label: 'Stock Transfer' },
+      ]
+    },
+    {
+      title: "CUSTOMERS",
+      items: [
+        { key: 'followUps', label: 'Follow-ups' },
       ]
     },
     {

@@ -264,19 +264,54 @@ console.log(p.data[0]);
 
   // ---------------- SUBMIT ----------------
 
-  const onSubmit = () => {
+  // Customer must come from the customer list, so the sale is
+  // linked to the right customer (timeline, follow-ups, suggestions)
+  const normName = s => String(s || "").trim().replace(/\s+/g, " ").toLowerCase();
+
+  const findCustomer = name =>
+    customers.find(c => normName(c.CustomerName) === normName(name));
+
+  const onSubmit = async () => {
     if (!rows.length) {
       alert("No items added");
       return;
     }
+
+    if (!customer.trim()) {
+      alert("Please choose a customer");
+      return;
+    }
+
+    if (!findCustomer(customer)) {
+      const ok = window.confirm(
+        `"${customer.trim()}" is not in the customer list.\n\n` +
+        "Press OK to add it as a NEW customer,\n" +
+        "or Cancel to go back and pick from the list."
+      );
+      if (!ok) return;
+
+      try {
+        const r = await api.post("/customers", { CustomerName: customer.trim() });
+        const added = { CustomerID: r.data.CustomerID, CustomerName: r.data.CustomerName };
+        setCustomers(prev => [...prev, added]);
+        setCustomer(added.CustomerName);
+      } catch (err) {
+        alert(err.response?.data?.error || "Could not add customer");
+        return;
+      }
+    }
+
     setShowConfirm(true);
   };
 
   const confirmSubmit = async () => {
+    const picked = findCustomer(customer);
+
     const payload = {
       UserName: user.username,
       Location: location,
-      Customer: customer,
+      Customer: picked ? picked.CustomerName : customer,
+      CustomerID: picked ? picked.CustomerID : null,
       VoucherNo: voucherNo || null,
       Rows: rows
     };
