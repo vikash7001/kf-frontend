@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
+import ShareOnWhatsApp from "./ShareOnWhatsApp";
 
 /* ------------------------------
    localStorage helpers
@@ -78,6 +79,7 @@ export default function StockView({ user }) {
   const [orderMode, setOrderMode] = useState(false);
   const [orderApplied, setOrderApplied] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [showShare, setShowShare] = useState(false);
 
   const [sortBy, setSortBy] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -524,6 +526,15 @@ lastmovementdate: r.LastMovementDate
                 >
                   Create PDF
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowShare(true)}
+                  disabled={selectedItems.length === 0}
+                  style={{ background: "#25a244", color: "#fff", border: "1px solid #1e8a39", borderRadius: 3, padding: "2px 10px", cursor: "pointer" }}
+                >
+                  Send on WhatsApp
+                </button>
               </>
             )}
 
@@ -658,6 +669,23 @@ lastmovementdate: r.LastMovementDate
             </tbody>
           </table>
         </>
+      )}
+
+      {showShare && (
+        <ShareOnWhatsApp
+          designs={(() => {
+            const seen = new Set();
+            return stock
+              .filter(s => selectedItems.includes(getRowKey(s)))
+              .filter(s => !seen.has(s.productid) && seen.add(s.productid))
+              .map(s => ({
+                productid: s.productid,
+                item: s.item,
+                imageURL: imageByItem[String(s.item ?? "").trim()] || ""
+              }));
+          })()}
+          onClose={() => setShowShare(false)}
+        />
       )}
     </div>
   );

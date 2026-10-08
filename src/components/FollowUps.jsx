@@ -720,6 +720,21 @@ function TimelineEntry({ e }) {
         </div>
       );
     }
+    case "DESIGNS_SENT": {
+      const m = e.Meta || {};
+      const n = (m.items || []).length;
+      return (
+        <div>
+          <div style={{ fontWeight: 600 }}>
+            📸 {n} design photo{n === 1 ? "" : "s"} sent on WhatsApp{m.by ? ` (${m.by})` : ""}
+          </div>
+          <div style={{ fontSize: 13 }}>{(m.items || []).join(", ")}</div>
+          {m.mode !== "SENT" && (
+            <div style={{ fontSize: 12, color: "#666" }}>Delivered when the customer taps View</div>
+          )}
+        </div>
+      );
+    }
     default:
       return <div>{e.Kind}{by} {e.Note || ""}</div>;
   }
