@@ -51,7 +51,7 @@ export default function StockPlanner() {
     setLoading(true);
     setError("");
     try {
-      const r = await api.get("/planner/transfers", { keep: k });
+      const r = await api.get("/planner/transfers", { params: { keep: k } });
       setData(r.data);
     } catch (e) {
       setError(e?.response?.data?.error || "Could not load suggestions");
