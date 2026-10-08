@@ -17,6 +17,7 @@ import SeriesMaster from './SeriesMaster';
 import ProductMaster from './ProductMaster';
 import CustomerMaster from './CustomerMaster';
 import FollowUps from './FollowUps';
+import StockPlanner from './StockPlanner';
 
 import ItemDetails from './ItemDetails';
 import OnlineEnablement from './OnlineEnablement';
@@ -58,6 +59,7 @@ export default function AdminDashboard({ user }) {
     sales: <SalesVoucher user={user} />,
     stock: <StockView user={user} />,
     transfer: <StockTransfer user={user} />,
+    planner: <StockPlanner />,
 
 
     // BARCODE
@@ -106,6 +108,7 @@ export default function AdminDashboard({ user }) {
         { key: 'sales', label: 'Sales' },
         { key: 'stock', label: 'Stock' },
         { key: 'transfer', label: 'Stock Transfer' },
+        { key: 'planner', label: 'Stock Planner' },
       ]
     },
     {
