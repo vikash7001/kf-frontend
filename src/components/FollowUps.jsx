@@ -296,10 +296,16 @@ function CustomersTab({ onOpen }) {
 /* =====================================================
    STAFF TAB
 ===================================================== */
+const STAFF_TYPES = ["Admin", "Manager", "Employee"];
+const EMPTY_STAFF = { FirstName: "", LastName: "", Mobile: "", Type: "Employee", Location: "", Language: "hinglish", DailyBatch: 20 };
+
 function StaffTab() {
   const [rows, setRows] = useState([]);
   const [edits, setEdits] = useState({});
   const [savingId, setSavingId] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState(EMPTY_STAFF);
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     try {
@@ -314,6 +320,10 @@ function StaffTab() {
 
   const valueOf = (s, f) => edits[s.PersonID] && f in edits[s.PersonID] ? edits[s.PersonID][f] : s[f];
   const change = (id, f, v) => setEdits(p => ({ ...p, [id]: { ...(p[id] || {}), [f]: v } }));
+  const setF = (f, v) => setForm(p => ({ ...p, [f]: v }));
+
+  const errorText = err =>
+    err.response?.status === 403 ? "Only an Admin can add or change staff." : (err.response?.data?.error || "Failed");
 
   async function save(s) {
     const body = { ...(edits[s.PersonID] || {}) };
@@ -323,34 +333,107 @@ function StaffTab() {
       await api.put(`/followup/staff/${s.PersonID}`, body);
       await load();
     } catch (err) {
-      alert(err.response?.data?.error || "Save failed");
+      alert(errorText(err));
     } finally {
       setSavingId(null);
     }
   }
 
+  async function addStaff(promote = false) {
+    const mobile = String(form.Mobile).replace(/\D/g, "");
+    if (!form.FirstName.trim()) return alert("Please enter the first name");
+    if (mobile.length !== 10 && !(mobile.length === 12 && mobile.startsWith("91"))) {
+      return alert("Please enter a 10-digit mobile number");
+    }
+    setBusy(true);
+    try {
+      await api.post("/followup/staff", { ...form, Mobile: mobile, DailyBatch: Number(form.DailyBatch), Promote: promote });
+      setForm(EMPTY_STAFF);
+      setAdding(false);
+      await load();
+    } catch (err) {
+      const d = err.response?.data;
+      if (d?.needsPromote) {
+        const ok = window.confirm(
+          `${form.Mobile} is already in the WhatsApp bot as ${d.existingType}` +
+          (d.existingName ? ` (${d.existingName})` : "") +
+          `.\n\nChange this person to ${form.Type} (staff)?`
+        );
+        if (ok) { setBusy(false); return addStaff(true); }
+      } else {
+        alert(errorText(err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div>
-      <p style={{ fontSize: 13, color: "#555", marginTop: 0 }}>
-        Staff come from the WhatsApp bot's people list (Admin, Manager, Employee).
-        Each one gets their daily follow-up batch on WhatsApp in their chosen language.
-      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <p style={{ fontSize: 13, color: "#555", margin: 0 }}>
+          Staff (Admin, Manager, Employee) get their daily follow-up batch on WhatsApp in their chosen language.
+          They are the same people the WhatsApp bot knows.
+        </p>
+        {!adding && (
+          <button style={smallBtn} onClick={() => setAdding(true)}>+ Add staff</button>
+        )}
+      </div>
+
+      {adding && (
+        <div style={{ border: "1px solid #d9dee8", borderRadius: 4, padding: 12, marginBottom: 12, background: "#f8faff" }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Add staff member</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+            <input placeholder="First name *" value={form.FirstName} onChange={e => setF("FirstName", e.target.value)} style={{ width: 120 }} />
+            <input placeholder="Last name" value={form.LastName} onChange={e => setF("LastName", e.target.value)} style={{ width: 120 }} />
+            <input placeholder="Mobile (10 digits) *" value={form.Mobile} onChange={e => setF("Mobile", e.target.value)} style={{ width: 140 }} />
+            <select value={form.Type} onChange={e => setF("Type", e.target.value)}>
+              {STAFF_TYPES.map(t => <option key={t}>{t}</option>)}
+            </select>
+            <input placeholder="Location" value={form.Location} onChange={e => setF("Location", e.target.value)} style={{ width: 110 }} />
+            <select value={form.Language} onChange={e => setF("Language", e.target.value)}>
+              {Object.entries(LANG_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+            <label style={{ fontSize: 12 }}>
+              Daily batch{" "}
+              <input type="number" min={1} max={100} value={form.DailyBatch}
+                     onChange={e => setF("DailyBatch", e.target.value)} style={{ width: 60 }} />
+            </label>
+            <button style={smallBtn} disabled={busy} onClick={() => addStaff(false)}>{busy ? "Saving…" : "Add"}</button>
+            <button style={{ ...smallBtn, background: "#9aa3b2" }} disabled={busy}
+                    onClick={() => { setAdding(false); setForm(EMPTY_STAFF); }}>Cancel</button>
+          </div>
+          <div style={{ fontSize: 12, color: "#666", marginTop: 8 }}>
+            Ask them to send any message (e.g. "hi") to the Karni Fashions WhatsApp number once, so their first batch arrives directly.
+          </div>
+        </div>
+      )}
+
       <div className="table-box">
-        <table className="modern-table">
+        <table className="modern-table" style={{ fontSize: 12 }}>
           <thead>
             <tr>
-              <th>Name</th><th>Mobile</th><th>Type</th><th>Customers</th>
-              <th>Bot language</th><th>Daily batch</th><th>Follow-ups on</th><th></th>
+              <th>Name</th><th>Mobile</th><th>Type</th><th>Location</th><th>Customers</th>
+              <th>Bot language</th><th>Daily batch</th><th>Follow-ups on</th><th>Active</th><th></th>
             </tr>
           </thead>
           <tbody>
             {rows.map(s => {
               const dirty = !!edits[s.PersonID];
+              const active = valueOf(s, "IsActive") !== false;
               return (
-                <tr key={s.PersonID} style={{ opacity: s.IsActive === false ? 0.5 : 1 }}>
+                <tr key={s.PersonID} style={{ opacity: active ? 1 : 0.5 }}>
                   <td style={{ fontWeight: 600 }}>{s.Name || "—"}</td>
                   <td>{phoneDisplay(s.Mobile)}</td>
-                  <td>{s.Type}</td>
+                  <td>
+                    <select value={valueOf(s, "Type")} onChange={e => change(s.PersonID, "Type", e.target.value)}>
+                      {STAFF_TYPES.map(t => <option key={t}>{t}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <input style={{ width: 90 }} value={valueOf(s, "Location") || ""}
+                           onChange={e => change(s.PersonID, "Location", e.target.value)} />
+                  </td>
                   <td>{s.Customers}</td>
                   <td>
                     <select value={valueOf(s, "Language") || "hinglish"}
@@ -359,13 +442,17 @@ function StaffTab() {
                     </select>
                   </td>
                   <td>
-                    <input type="number" min={1} max={100} style={{ width: 70 }}
+                    <input type="number" min={1} max={100} style={{ width: 60 }}
                            value={valueOf(s, "DailyBatch") ?? 20}
                            onChange={e => change(s.PersonID, "DailyBatch", e.target.value)} />
                   </td>
                   <td>
                     <input type="checkbox" checked={!!valueOf(s, "FollowupEnabled")}
                            onChange={e => change(s.PersonID, "FollowupEnabled", e.target.checked)} />
+                  </td>
+                  <td>
+                    <input type="checkbox" checked={active}
+                           onChange={e => change(s.PersonID, "IsActive", e.target.checked)} />
                   </td>
                   <td>
                     <button style={{ ...smallBtn, opacity: dirty ? 1 : 0.35 }}
@@ -378,8 +465,8 @@ function StaffTab() {
               );
             })}
             {rows.length === 0 && (
-              <tr><td colSpan={8} style={{ textAlign: "center", color: "#888" }}>
-                No staff found. Add staff through the WhatsApp bot ("Add Person").
+              <tr><td colSpan={10} style={{ textAlign: "center", color: "#888" }}>
+                No staff yet. Click "+ Add staff".
               </td></tr>
             )}
           </tbody>
