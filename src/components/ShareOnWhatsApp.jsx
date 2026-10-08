@@ -103,10 +103,22 @@ export default function ShareOnWhatsApp({ designs, onClose }) {
                 </div>
               </div>
             )}
+            {result.mode === "WAITING_ALREADY_INVITED" && (
+              <div style={okBox}>
+                ✅ {result.photos} photo{result.photos === 1 ? "" : "s"} added for <b>{result.customer}</b>.
+                <div style={{ fontSize: 13, marginTop: 6, color: "#444" }}>
+                  They were already sent a <b>View</b> message in the last few hours and haven't opened it yet.
+                  These photos will arrive together with the earlier ones when they tap it.
+                </div>
+              </div>
+            )}
             {result.mode === "WAITING_NO_INVITE" && (
               <div style={warnBox}>
-                The photos are saved for <b>{result.customer}</b>, but the WhatsApp invite could not be sent.
-                They will get the photos the next time they message us.
+                The photos are saved for <b>{result.customer}</b>, but WhatsApp refused the <b>View</b> message,
+                so they won't know yet. They will get the photos the next time they message us.
+                {result.inviteError && (
+                  <div style={{ fontSize: 12, color: "#8a4b00", marginTop: 6 }}>WhatsApp said: {result.inviteError}</div>
+                )}
               </div>
             )}
             {result.skippedNoPhoto > 0 && (
