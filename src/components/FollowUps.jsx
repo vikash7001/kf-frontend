@@ -720,6 +720,17 @@ function TimelineEntry({ e }) {
         </div>
       );
     }
+    case "CUSTOMER_REPLY": {
+      const m = e.Meta || {};
+      return (
+        <div>
+          <div style={{ fontWeight: 600, color: "#1a5fd0" }}>
+            ↩️ Customer replied on WhatsApp{m.item ? ` about design ${m.item}` : ""}
+          </div>
+          <div style={{ whiteSpace: "pre-wrap" }}>{e.Note}</div>
+        </div>
+      );
+    }
     case "DESIGNS_SENT": {
       const m = e.Meta || {};
       const n = (m.items || []).length;
