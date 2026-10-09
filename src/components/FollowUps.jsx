@@ -729,8 +729,13 @@ function TimelineEntry({ e }) {
             📸 {n} design photo{n === 1 ? "" : "s"} sent on WhatsApp{m.by ? ` (${m.by})` : ""}
           </div>
           <div style={{ fontSize: 13 }}>{(m.items || []).join(", ")}</div>
-          {m.mode !== "SENT" && (
+          {m.mode !== "SENT" && !m.invite_failed && (
             <div style={{ fontSize: 12, color: "#666" }}>Delivered when the customer taps View</div>
+          )}
+          {m.invite_failed && (
+            <div style={{ fontSize: 12, color: "#b00020" }}>
+              WhatsApp blocked the View message ({m.invite_failed}) — photos arrive when the customer messages us
+            </div>
           )}
         </div>
       );

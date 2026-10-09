@@ -24,9 +24,17 @@ export default function ShareOnWhatsApp({ designs, onClose }) {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [bizNumber, setBizNumber] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   const withPhoto = designs.filter(d => d.imageURL);
   const noPhoto = designs.length - withPhoto.length;
+
+  useEffect(() => {
+    api.get("/share/business-number")
+      .then(r => setBizNumber(r.data?.number || null))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     api.get("/share/customers")
@@ -57,6 +65,30 @@ export default function ShareOnWhatsApp({ designs, onClose }) {
 
   const toSend = withPhoto.filter(d => !(skipRecent && recent[d.productid]));
   const recentCount = withPhoto.filter(d => recent[d.productid]).length;
+
+  // Message the staff member sends from their OWN WhatsApp, asking the
+  // customer to say Hi to our business number. Once they do, the waiting
+  // photos are delivered automatically (and for free).
+  const sayHiText = bizNumber
+    ? `Namaste! Karni Fashions ke naye designs ke photos aapke liye ready hain. ` +
+      `Photos dekhne ke liye is link par tap karke "Hi" bhejiye:\nhttps://wa.me/${bizNumber}?text=Hi`
+    : "";
+
+  function openSayHi() {
+    const to = String(customer?.Phone || "").replace(/\D/g, "");
+    const num = to.length === 10 ? "91" + to : to;
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(sayHiText)}`, "_blank", "noopener,noreferrer");
+  }
+
+  async function copySayHi() {
+    try {
+      await navigator.clipboard.writeText(sayHiText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Copy this message:", sayHiText);
+    }
+  }
 
   async function send() {
     if (!customer || !toSend.length) return;
@@ -107,8 +139,8 @@ export default function ShareOnWhatsApp({ designs, onClose }) {
               <div style={okBox}>
                 ✅ {result.photos} photo{result.photos === 1 ? "" : "s"} added for <b>{result.customer}</b>.
                 <div style={{ fontSize: 13, marginTop: 6, color: "#444" }}>
-                  They were already sent a <b>View</b> message in the last few hours and haven't opened it yet.
-                  These photos will arrive together with the earlier ones when they tap it.
+                  A <b>View</b> message was already sent to them in the last few hours.
+                  These photos will arrive together with the earlier ones when they tap it or message us.
                 </div>
               </div>
             )}
@@ -119,6 +151,20 @@ export default function ShareOnWhatsApp({ designs, onClose }) {
                 {result.inviteError && (
                   <div style={{ fontSize: 12, color: "#8a4b00", marginTop: 6 }}>WhatsApp said: {result.inviteError}</div>
                 )}
+              </div>
+            )}
+            {result.mode !== "SENT" && bizNumber && (
+              <div style={hiBox}>
+                <div style={{ fontWeight: 600 }}>Make sure they get it</div>
+                <div style={{ fontSize: 13, color: "#444", marginTop: 4 }}>
+                  WhatsApp sometimes blocks the <b>View</b> message, especially for customers who have
+                  never messaged us. Send them a quick note from your own WhatsApp asking them to say
+                  "Hi" — the photos arrive the moment they do.
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                  <button onClick={openSayHi} style={primaryBtn}>Ask them to say Hi</button>
+                  <button onClick={copySayHi}>{copied ? "Copied ✓" : "Copy message"}</button>
+                </div>
               </div>
             )}
             {result.skippedNoPhoto > 0 && (
@@ -252,4 +298,5 @@ const primaryBtn = {
   padding: "8px 16px", cursor: "pointer", fontWeight: 600
 };
 const okBox = { background: "#eef9f0", border: "1px solid #bfe5c8", borderRadius: 8, padding: 12 };
+const hiBox = { background: "#f4f8ff", border: "1px solid #cfdcf5", borderRadius: 8, padding: 12, marginTop: 12 };
 const warnBox = { background: "#fff4e5", border: "1px solid #f0d9b5", borderRadius: 8, padding: 12 };
