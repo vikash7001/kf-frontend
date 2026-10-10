@@ -27,6 +27,8 @@ export default function SalesVoucher() {
   const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
   const [enabledSizes, setEnabledSizes] = useState([]);
   const [sizeQty, setSizeQty] = useState({});
+  // true once the user types a size by hand (then auto-fill stops)
+  const [sizesTouched, setSizesTouched] = useState(false);
 const [availableSizeStock, setAvailableSizeStock] =
   useState({});
   const [loading, setLoading] = useState(false);
@@ -87,6 +89,8 @@ console.log(p.data[0]);
     setIsOnlineEnabled(false);
     setEnabledSizes([]);
     setSizeQty({});
+    setSizesTouched(false);
+    setAvailableSizeStock({});
 
     if (!val) {
       setShowItemSug(false);
@@ -119,6 +123,7 @@ console.log(p.data[0]);
         );
 
         setSizeQty({});
+        setSizesTouched(false);
 
         // ------------------------------
         // LOAD LIVE SIZE STOCK
@@ -157,6 +162,36 @@ console.log(p.data[0]);
       }
     } catch {}
   };
+
+  // ---------------- AUTO-FILL SIZES ----------------
+  // Spreads the quantity over the sizes (N/A left out): 5 pcs over
+  // 5 sizes = 1 each, 7 pcs = 2,2,1,1,1. Sizes without stock at this
+  // location are skipped. Stops as soon as a size is typed by hand.
+  useEffect(() => {
+    if (!isOnlineEnabled || sizesTouched) return;
+    const total = Number(qty) || 0;
+    const sizes = enabledSizes.filter(sz => !/^n\s*\/?\s*a$/i.test(String(sz).trim()));
+    if (!total || !sizes.length) { setSizeQty({}); return; }
+
+    const hasStockInfo = Object.keys(availableSizeStock).length > 0;
+    const room = sz => hasStockInfo ? Number(availableSizeStock[sz] || 0) : Infinity;
+
+    const filled = {};
+    let left = total;
+    while (left > 0) {
+      let placed = false;
+      for (const sz of sizes) {
+        if (left <= 0) break;
+        if ((filled[sz] || 0) < room(sz)) {
+          filled[sz] = (filled[sz] || 0) + 1;
+          left--;
+          placed = true;
+        }
+      }
+      if (!placed) break;   // not enough stock in these sizes
+    }
+    setSizeQty(filled);
+  }, [qty, isOnlineEnabled, enabledSizes, availableSizeStock, sizesTouched]);
 
   const totalSizeQty = Object.values(sizeQty)
     .map(Number)
@@ -252,6 +287,7 @@ console.log(p.data[0]);
     setIsOnlineEnabled(false);
     setEnabledSizes([]);
     setSizeQty({});
+    setSizesTouched(false);
     setHighlightIndex(-1);
 
     setTimeout(() => {
@@ -430,6 +466,11 @@ const seriesTotals = rows.reduce((acc, r) => {
                 >
                   <>
   {p.item}
+  {p.seriesname && (
+    <span style={{ marginLeft: 8, color: "#555" }}>
+      · {p.seriesname}
+    </span>
+  )}
 
   {p.isonline && (
     <span
@@ -448,6 +489,28 @@ const seriesTotals = rows.reduce((acc, r) => {
             </div>
           )}
         </div>
+
+        {selectedProduct && (
+          <div
+            title="Series · Category of the selected design"
+            style={{
+              alignSelf: "center",
+              padding: "4px 10px",
+              borderRadius: 12,
+              background: "#e8f0fe",
+              color: "#1a3d8f",
+              fontWeight: 600,
+              whiteSpace: "nowrap"
+            }}
+          >
+            {selectedProduct.seriesname || "No series"}
+            {selectedProduct.categoryname && (
+              <span style={{ fontWeight: 400, color: "#555" }}>
+                {" "}· {selectedProduct.categoryname}
+              </span>
+            )}
+          </div>
+        )}
 
         <input
           type="number"
@@ -478,6 +541,9 @@ const seriesTotals = rows.reduce((acc, r) => {
   >
 
     <b>Size Qty</b>
+    <span style={{ marginLeft: 8, color: "#666", fontSize: 12 }}>
+      {sizesTouched ? "(edited by hand)" : "(auto-filled from quantity – change any size if needed)"}
+    </span>
 
     <div
       style={{
@@ -514,12 +580,13 @@ const seriesTotals = rows.reduce((acc, r) => {
           <input
             type="number"
             value={sizeQty[sz] || ""}
-            onChange={e =>
+            onChange={e => {
+              setSizesTouched(true);
               setSizeQty({
                 ...sizeQty,
                 [sz]: Number(e.target.value)
-              })
-            }
+              });
+            }}
             style={{
               width: 70
             }}

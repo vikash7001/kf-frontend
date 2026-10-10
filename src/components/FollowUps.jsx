@@ -328,6 +328,13 @@ function StaffTab() {
   async function save(s) {
     const body = { ...(edits[s.PersonID] || {}) };
     if ("DailyBatch" in body) body.DailyBatch = Number(body.DailyBatch);
+    if ("FirstName" in body && !String(body.FirstName).trim()) return alert("First name can't be empty");
+    if ("Mobile" in body) {
+      const d = String(body.Mobile).replace(/\D/g, "");
+      if (d.length !== 10 && !(d.length === 12 && d.startsWith("91"))) return alert("Mobile must be a 10-digit number");
+      if (!window.confirm(`Change ${s.Name || "this person"}'s mobile to ${d.slice(-10)}?\n\nThe WhatsApp bot will recognise them only on the new number.`)) return;
+      body.Mobile = d;
+    }
     setSavingId(s.PersonID);
     try {
       await api.put(`/followup/staff/${s.PersonID}`, body);
@@ -423,8 +430,21 @@ function StaffTab() {
               const active = valueOf(s, "IsActive") !== false;
               return (
                 <tr key={s.PersonID} style={{ opacity: active ? 1 : 0.5 }}>
-                  <td style={{ fontWeight: 600 }}>{s.Name || "—"}</td>
-                  <td>{phoneDisplay(s.Mobile)}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    <input style={{ width: 78, fontWeight: 600 }} placeholder="First name"
+                           value={valueOf(s, "FirstName") || ""}
+                           onChange={e => change(s.PersonID, "FirstName", e.target.value)} />{" "}
+                    <input style={{ width: 78 }} placeholder="Last name"
+                           value={valueOf(s, "LastName") || ""}
+                           onChange={e => change(s.PersonID, "LastName", e.target.value)} />
+                  </td>
+                  <td>
+                    <input style={{ width: 92 }}
+                           value={edits[s.PersonID] && "Mobile" in edits[s.PersonID]
+                             ? edits[s.PersonID].Mobile
+                             : phoneDisplay(s.Mobile)}
+                           onChange={e => change(s.PersonID, "Mobile", e.target.value)} />
+                  </td>
                   <td>
                     <select value={valueOf(s, "Type")} onChange={e => change(s.PersonID, "Type", e.target.value)}>
                       {STAFF_TYPES.map(t => <option key={t}>{t}</option>)}
