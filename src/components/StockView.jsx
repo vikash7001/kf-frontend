@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import ShareOnWhatsApp from "./ShareOnWhatsApp";
+import ReelMaker, { loadReelJob } from "./ReelMaker";
 
 /* ------------------------------
    localStorage helpers
@@ -80,6 +81,7 @@ export default function StockView({ user }) {
   const [orderApplied, setOrderApplied] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [showShare, setShowShare] = useState(false);
+  const [showReel, setShowReel] = useState(false);
 
   const [sortBy, setSortBy] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -535,6 +537,15 @@ lastmovementdate: r.LastMovementDate
                 >
                   Send on WhatsApp
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowReel(true)}
+                  disabled={selectedItems.length === 0 && !loadReelJob()}
+                  style={{ background: "#7a2fd0", color: "#fff", border: "1px solid #5f22a6", borderRadius: 3, padding: "2px 10px", cursor: "pointer" }}
+                >
+                  🎬 Make Reel
+                </button>
               </>
             )}
 
@@ -669,6 +680,23 @@ lastmovementdate: r.LastMovementDate
             </tbody>
           </table>
         </>
+      )}
+
+      {showReel && (
+        <ReelMaker
+          designs={(() => {
+            const seen = new Set();
+            return stock
+              .filter(s => selectedItems.includes(getRowKey(s)))
+              .filter(s => !seen.has(s.productid) && seen.add(s.productid))
+              .map(s => ({
+                productid: s.productid,
+                item: s.item,
+                imageURL: imageByItem[String(s.item ?? "").trim()] || ""
+              }));
+          })()}
+          onClose={() => setShowReel(false)}
+        />
       )}
 
       {showShare && (
