@@ -22,6 +22,8 @@ const [selectedProduct, setSelectedProduct] = useState(null);
 const [isOnlineEnabled, setIsOnlineEnabled] = useState(false);
 const [enabledSizes, setEnabledSizes] = useState([]);
 const [sizeQty, setSizeQty] = useState({});
+// true once a size is typed by hand (then auto-fill stops)
+const [sizesTouched, setSizesTouched] = useState(false);
 
   const [rows, setRows] = useState([]);
   const [incomingId, setIncomingId] = useState(null);
@@ -31,6 +33,52 @@ const [sizeQty, setSizeQty] = useState({});
   const [barcodeRowIndex, setBarcodeRowIndex] = useState(0);
   const [bundleSizeQty, setBundleSizeQty] = useState({});
   const [createdBundles, setCreatedBundles] = useState([]);
+  const [bundlePcs, setBundlePcs] = useState("");
+  const [makingAll, setMakingAll] = useState(false);
+
+  // ---------------- BUNDLE AUTO-FILL ----------------
+  // A new bundle starts as one "set": 1 piece of every size still left.
+  // (Designs without recorded sizes start empty – sizes are typed.)
+  const oneSet = row => {
+    const q = {};
+    if (row?.SizesTracked) (row.SizeRows || []).forEach(s => { if (Number(s.qty) > 0) q[s.size_code] = 1; });
+    return q;
+  };
+  const allLeft = row => {
+    const q = {};
+    if (row?.SizesTracked) (row.SizeRows || []).forEach(s => { if (Number(s.qty) > 0) q[s.size_code] = Number(s.qty); });
+    return q;
+  };
+  // "pieces in this bundle" → spread over the sizes still left
+  const spread = (row, total) => {
+    const sizes = (row?.SizeRows || []).map(s => ({ ...s, room: s.qty === null ? Infinity : Number(s.qty) }))
+      .filter(s => s.room > 0);
+    const q = {};
+    let left = Math.min(Number(total) || 0, Number(row?.Quantity) || 0);
+    while (left > 0) {
+      let placed = false;
+      for (const s of sizes) {
+        if (left <= 0) break;
+        if ((q[s.size_code] || 0) < s.room) { q[s.size_code] = (q[s.size_code] || 0) + 1; left--; placed = true; }
+      }
+      if (!placed) break;
+    }
+    return q;
+  };
+  // plan for "make all bundles": full sets (1 of every size) while every size
+  // still has a piece, then whatever is left goes into one last bundle
+  const planBundles = row => {
+    const rem = {};
+    (row?.SizeRows || []).forEach(s => { if (Number(s.qty) > 0) rem[s.size_code] = Number(s.qty); });
+    const sizes = Object.keys(rem);
+    if (!sizes.length) return [];
+    const full = Math.min(...sizes.map(z => rem[z]));
+    const plan = [];
+    for (let i = 0; i < full; i++) plan.push(Object.fromEntries(sizes.map(z => [z, 1])));
+    const last = Object.fromEntries(sizes.map(z => [z, rem[z] - full]).filter(([, n]) => n > 0));
+    if (Object.keys(last).length) plan.push(last);
+    return plan;
+  };
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -113,6 +161,7 @@ const selectProduct = async (p) => {
       setIsOnlineEnabled(true);
       setEnabledSizes(res.data.sizes || []);
       setSizeQty({});
+      setSizesTouched(false);
     } else {
       setIsOnlineEnabled(false);
       setEnabledSizes([]);
@@ -126,6 +175,23 @@ const selectProduct = async (p) => {
     setSizeQty({});
   }
 };
+// ---------------- AUTO-FILL SIZES ----------------
+// Spreads the quantity over the design's sizes (N/A left out), like the
+// Sales Voucher: 12 pcs over 6 sizes = 2 each, 14 = 3,3,2,2,2,2.
+// Stops as soon as a size is typed by hand.
+useEffect(() => {
+  if (!isOnlineEnabled || sizesTouched) return;
+  const total = Number(qty) || 0;
+  const sizes = enabledSizes.filter(sz => !/^n\s*\/?\s*a$/i.test(String(sz).trim()));
+  if (!total || !sizes.length) { setSizeQty({}); return; }
+  const filled = {};
+  sizes.forEach((sz, i) => {
+    const n = Math.floor(total / sizes.length) + (i < total % sizes.length ? 1 : 0);
+    if (n > 0) filled[sz] = n;
+  });
+  setSizeQty(filled);
+}, [qty, isOnlineEnabled, enabledSizes, sizesTouched]);
+
 const totalSizeQty = Object.values(sizeQty)
   .map(Number)
   .reduce((a, b) => a + b, 0);
@@ -191,6 +257,7 @@ const onAddRow = () => {
   setIsOnlineEnabled(false);
   setEnabledSizes([]);
   setSizeQty({});
+  setSizesTouched(false);
 
   setItemSuggestions([]);
   setShowItemSug(false);
@@ -241,11 +308,9 @@ const totalQty = rows.reduce(
     setBarcodeSourceRows(availableRows);
     setBarcodeRowIndex(0);
 
-    const initialQty = {};
-    (availableRows[0]?.SizeRows || []).forEach(s => {
-      initialQty[s.size_code] = 0;
-    });
+    const initialQty = oneSet(availableRows[0]);
     setBundleSizeQty(initialQty);
+                setBundlePcs("");
 
     return availableRows;
   };
@@ -276,13 +341,11 @@ const totalQty = rows.reduce(
         }
 
         const firstRow = availableRows[0];
-        const initialQty = {};
-        (firstRow?.SizeRows || []).forEach(s => {
-          initialQty[s.size_code] = 0;
-        });
+        const initialQty = oneSet(firstRow);
 
         setBarcodeRowIndex(0);
         setBundleSizeQty(initialQty);
+                setBundlePcs("");
         setCreatedBundles([]);
         setShowBarcodePrompt(false);
         setShowBundleComposer(true);
@@ -339,6 +402,47 @@ const totalQty = rows.reduce(
 
 
   // ---------------- PRINT BARCODE LABELS (2-UP) ----------------
+
+  const makeAllBundles = async () => {
+    const row = barcodeSourceRows[barcodeRowIndex];
+    if (!row?.SizesTracked) {
+      alert("Sizes were not recorded for this design – please enter each bundle by hand.");
+      return;
+    }
+    const plan = planBundles(row);
+    if (!plan.length) return;
+    const describe = b => Object.entries(b).map(([z, n]) => (n > 1 ? `${z}×${n}` : z)).join(" ");
+    const sum = b => Object.values(b).reduce((a, n) => a + n, 0);
+    const full = plan.filter(b => sum(b) === sum(plan[0]) && describe(b) === describe(plan[0])).length;
+    const extra = plan.length - full;
+    if (!window.confirm(
+      `Make ${plan.length} bundle${plan.length > 1 ? "s" : ""} for ${row.Item}?\n\n` +
+      `${full} × (${describe(plan[0])}) = ${sum(plan[0])} pcs each` +
+      (extra ? `\n1 × (${describe(plan[plan.length - 1])}) = ${sum(plan[plan.length - 1])} pcs (what is left)` : "")
+    )) return;
+
+    setMakingAll(true);
+    const made = [];
+    try {
+      for (const b of plan) {
+        const sizes = Object.entries(b).map(([size_code, qty]) => ({ size_code, qty }));
+        const res = await createBarcode({ productid: row.ProductID, Location: location, incomingheaderid: incomingId, sizes });
+        made.push({
+          barcode: res.data.barcode.barcode, item: row.Item, seriesname: row.SeriesName,
+          categoryname: row.CategoryName, location, incomingheaderid: incomingId, sizes
+        });
+      }
+    } catch (err) {
+      alert(err?.response?.data?.error || "Could not create all bundles");
+    } finally {
+      setCreatedBundles(prev => [...prev, ...made]);
+      const availableRows = await loadBarcodeAvailability(incomingId);
+      setBarcodeRowIndex(0);
+      setBundleSizeQty(oneSet(availableRows[0]));
+      setBundlePcs("");
+      setMakingAll(false);
+    }
+  };
 
   const printCreatedBundles = () => {
     if (!createdBundles.length) {
@@ -495,6 +599,9 @@ return (
       >
 
         <b>Size Qty</b>
+        <span style={{ marginLeft: 8, color: "#666", fontSize: 12 }}>
+          {sizesTouched ? "(edited by hand)" : "(auto-filled from quantity – change any size if needed)"}
+        </span>
 
         <div
           style={{
@@ -513,12 +620,13 @@ return (
               <input
                 type="number"
                 value={sizeQty[sz] || ""}
-                onChange={e =>
+                onChange={e => {
+                  setSizesTouched(true);
                   setSizeQty({
                     ...sizeQty,
                     [sz]: Number(e.target.value)
-                  })
-                }
+                  });
+                }}
                 style={{
                   width: 70
                 }}
@@ -654,14 +762,11 @@ return (
             <button
               onClick={() => {
                 const firstRow = barcodeSourceRows[0];
-                const initialQty = {};
-
-                (firstRow?.SizeRows || []).forEach(s => {
-                  initialQty[s.size_code] = 0;
-                });
+                const initialQty = oneSet(firstRow);
 
                 setBarcodeRowIndex(0);
                 setBundleSizeQty(initialQty);
+                setBundlePcs("");
                 setCreatedBundles([]);
                 setShowBarcodePrompt(false);
                 setShowBundleComposer(true);
@@ -779,12 +884,10 @@ return (
                             const index = barcodeSourceRows.findIndex(
                               x => x.ProductID === r.ProductID
                             );
-                            const initialQty = {};
-                            (r.SizeRows || []).forEach(s => {
-                              initialQty[s.size_code] = 0;
-                            });
+                            const initialQty = oneSet(r);
                             setBarcodeRowIndex(index >= 0 ? index : i);
                             setBundleSizeQty(initialQty);
+                setBundlePcs("");
                           }}
                         >
                           Select Design
@@ -808,6 +911,26 @@ return (
 
                   <div style={{ marginBottom: 12 }}>
                     {barcodeSourceRows[barcodeRowIndex].Item} — {barcodeSourceRows[barcodeRowIndex].SeriesName} — {barcodeSourceRows[barcodeRowIndex].CategoryName}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+                    <button type="button" onClick={() => setBundleSizeQty(oneSet(barcodeSourceRows[barcodeRowIndex]))}>1 of each size</button>
+                    <button type="button" onClick={() => setBundleSizeQty(allLeft(barcodeSourceRows[barcodeRowIndex]))}>All remaining</button>
+                    <button type="button" onClick={() => setBundleSizeQty({})}>Clear</button>
+                    <span style={{ marginLeft: 6 }}>
+                      Pieces in bundle{" "}
+                      <input type="number" min="0" value={bundlePcs} style={{ width: 60 }}
+                        onChange={e => {
+                          setBundlePcs(e.target.value);
+                          setBundleSizeQty(spread(barcodeSourceRows[barcodeRowIndex], e.target.value));
+                        }} />
+                    </span>
+                    {barcodeSourceRows[barcodeRowIndex].SizesTracked && (
+                      <button type="button" disabled={makingAll || loading} onClick={makeAllBundles}
+                        style={{ marginLeft: "auto", fontWeight: 700 }}>
+                        {makingAll ? "Making bundles…" : "⚡ Make all bundles for this design"}
+                      </button>
+                    )}
                   </div>
 
                   {(barcodeSourceRows[barcodeRowIndex].SizeRows || []).map(s => (
@@ -930,12 +1053,10 @@ return (
                         );
                         const nextIndex =
                           sameDesignIndex >= 0 ? sameDesignIndex : 0;
-                        const initialQty = {};
-                        (availableRows[nextIndex]?.SizeRows || []).forEach(s => {
-                          initialQty[s.size_code] = 0;
-                        });
+                        const initialQty = oneSet(availableRows[nextIndex]);
                         setBarcodeRowIndex(nextIndex);
                         setBundleSizeQty(initialQty);
+                setBundlePcs("");
                       }
 
 

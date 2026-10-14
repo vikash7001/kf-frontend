@@ -46,11 +46,64 @@ export default function CreateBarcode() {
     ? Number((selected.unbarcoded_sizes || []).find(x => x.size_code === sz)?.qty || 0)
     : null;
 
-  const open = row => {
+  // a new bundle starts as one "set": 1 piece of every size still without a barcode
+  const oneSet = row => {
     const init = {};
     (row.size_choices || []).forEach(s => { init[s] = ""; });
+    if (row.sizes_tracked) (row.unbarcoded_sizes || []).forEach(s => { if (s.qty > 0) init[s.size_code] = 1; });
+    return init;
+  };
+  const allLeft = row => {
+    const init = {};
+    (row.size_choices || []).forEach(s => { init[s] = ""; });
+    (row.unbarcoded_sizes || []).forEach(s => { init[s.size_code] = s.qty; });
+    return init;
+  };
+  const open = row => {
     setSelected(row);
-    setSizeQty(init);
+    setSizeQty(oneSet(row));
+  };
+
+  // full sets (1 of every size) while every size has a piece, then the rest in one bundle
+  const planBundles = row => {
+    const rem = Object.fromEntries((row.unbarcoded_sizes || []).filter(s => s.qty > 0).map(s => [s.size_code, s.qty]));
+    const sizes = Object.keys(rem);
+    if (!sizes.length) return [];
+    const full = Math.min(...sizes.map(z => rem[z]));
+    const plan = [];
+    for (let i = 0; i < full; i++) plan.push(Object.fromEntries(sizes.map(z => [z, 1])));
+    const last = Object.fromEntries(sizes.map(z => [z, rem[z] - full]).filter(([, n]) => n > 0));
+    if (Object.keys(last).length) plan.push(last);
+    return plan;
+  };
+
+  const makeAll = async () => {
+    const plan = planBundles(selected);
+    if (!plan.length) return;
+    const describe = b => Object.entries(b).map(([z, n]) => (n > 1 ? `${z}×${n}` : z)).join(" ");
+    const sum = b => Object.values(b).reduce((a, n) => a + n, 0);
+    const extra = plan.length > 1 && describe(plan[plan.length - 1]) !== describe(plan[0]) ? 1 : 0;
+    if (!window.confirm(
+      `Make ${plan.length} bundle${plan.length > 1 ? "s" : ""} of ${selected.item}?\n\n` +
+      `${plan.length - extra} × (${describe(plan[0])}) = ${sum(plan[0])} pcs each` +
+      (extra ? `\n1 × (${describe(plan[plan.length - 1])}) = ${sum(plan[plan.length - 1])} pcs (what is left)` : "")
+    )) return;
+    setCreating(true);
+    const made = [];
+    try {
+      for (const b of plan) {
+        const sizes = Object.entries(b).map(([size_code, qty]) => ({ size_code, qty }));
+        const res = await createBarcode({ productid: selected.productid, Location: location, incomingheaderid: null, sizes });
+        made.push(res.data.barcode);
+      }
+    } catch (e) {
+      alert(e?.response?.data?.error || "Could not create all bundles");
+    } finally {
+      setCreated(list => [...made.slice().reverse(), ...list]);
+      setSelected(null);
+      setCreating(false);
+      loadStock(location);
+    }
   };
 
   const total = Object.values(sizeQty).map(Number).filter(n => n > 0).reduce((a, b) => a + b, 0);
@@ -131,6 +184,16 @@ export default function CreateBarcode() {
           <div style={{ marginBottom: 10, color: "#333" }}>
             Pieces at {location} without a barcode: <b>{selected.unbarcoded_qty}</b>
             {!selected.sizes_tracked && <span style={{ color: "#777" }}> (sizes not recorded for this design – enter what is in the bundle)</span>}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+            <button type="button" onClick={() => setSizeQty(oneSet(selected))}>1 of each size</button>
+            {selected.sizes_tracked && <button type="button" onClick={() => setSizeQty(allLeft(selected))}>All remaining</button>}
+            <button type="button" onClick={() => setSizeQty(oneSet({ ...selected, sizes_tracked: false }))}>Clear</button>
+            {selected.sizes_tracked && (
+              <button type="button" disabled={creating} onClick={makeAll} style={{ marginLeft: "auto", fontWeight: 700 }}>
+                {creating ? "Working…" : "⚡ Make all bundles for this design"}
+              </button>
+            )}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
             {(selected.size_choices || []).map(sz => {
