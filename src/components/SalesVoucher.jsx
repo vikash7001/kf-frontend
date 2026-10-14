@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { api, postSales } from "../services/api";
+import BarcodeSuggest from "./BarcodeSuggest";
 
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
 
@@ -219,8 +220,8 @@ console.log(p.data[0]);
     return m ? m[1] : s.slice(-6);
   };
 
-  const onScan = async () => {
-    const v = scanCode.trim();
+  const onScan = async picked => {
+    const v = String(picked ?? scanCode).trim();
     setScanCode("");
     if (!v) return;
 
@@ -520,12 +521,14 @@ const seriesTotals = rows.reduce((acc, r) => {
         border: "1px solid #c9d8f5", borderRadius: 8
       }}>
         <b>📦 Scan barcode</b>
-        <input
-          ref={scanRef}
+        <BarcodeSuggest
+          inputRef={scanRef}
           value={scanCode}
-          onChange={e => setScanCode(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); onScan(); } }}
-          placeholder="Scan the bundle (or type 3401)"
+          onChange={setScanCode}
+          onSubmit={onScan}
+          location={location}
+          exclude={rows.flatMap(r => (r.Barcodes || []).map(b => b.barcode))}
+          placeholder="Scan the bundle (or type 340…)"
           disabled={loading || scanning}
           style={{ width: 260, fontSize: 16, padding: "6px 8px" }}
         />

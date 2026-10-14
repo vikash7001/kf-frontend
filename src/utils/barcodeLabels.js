@@ -5,15 +5,21 @@
 // Label roll: 38 x 38 mm, 2 across ("2-up"), ~82 mm wide.
 // Each printed PAGE = one row of labels across the roll.
 //
-// Two settings, both saved on THIS computer (each office tunes its own printer):
-//   kf_barcode_design   what is on the label (logo, fields, text sizes)
-//   kf_label_printer    where the labels are on the roll (gaps, nudges)
+// Two settings, saved PER OFFICE in the ERP (Barcode Design & Printer screen):
+//   design    what is on the label (logo, fields, text sizes)
+//   printer   where the labels are on the roll (gaps, nudges)
+// Every computer keeps a copy, so printing works instantly; a label always
+// prints with the settings of ITS office (Jaipur label → Jaipur settings).
 //
 // Barcode numbers look like ADM-3401 (series letters + running number).
 // The bars hold only the number (3401) so they are short and sharp; the text
 // under them shows ADM-3401. (Older test codes KF-A7K92M still print/scan.) Bars are drawn in whole
 // printer dots (0.25 mm = 2 dots on a 203 dpi thermal printer).
 // ==========================================================
+
+import { api } from "../services/api";
+
+export const OFFICES = ["Jaipur", "Kolkata", "Ahmedabad"];
 
 export const DEFAULT_DESIGN = {
   logo: "",
@@ -25,6 +31,7 @@ export const DEFAULT_DESIGN = {
   showCategory: false,
   showPurchase: false,
   showSizes: true,
+  showTotal: true,    // total pieces in the bundle ("6 PCS")
   showBarcode: true,
   brandSize: 11,      // px
   itemSize: 17,       // px – the design number, big and bold
@@ -57,10 +64,54 @@ function readJson(key, defaults) {
     return { ...defaults };
   }
 }
-export const readDesign = () => readJson("kf_barcode_design_v2", DEFAULT_DESIGN);
-export const readPrinter = () => readJson("kf_label_printer_v2", DEFAULT_PRINTER);
-export const saveDesign = d => { try { localStorage.setItem("kf_barcode_design_v2", JSON.stringify(d)); } catch { /* ignore */ } };
-export const savePrinter = p => { try { localStorage.setItem("kf_label_printer_v2", JSON.stringify(p)); } catch { /* ignore */ } };
+// this computer's earlier (before per-office) settings – used until an office is saved
+const oldDesign = () => readJson("kf_barcode_design_v2", DEFAULT_DESIGN);
+const oldPrinter = () => readJson("kf_label_printer_v2", DEFAULT_PRINTER);
+
+const officeKey = office => `kf_label_office_${office}`;
+function readOffice(office) {
+  if (!office) return null;
+  try {
+    const raw = localStorage.getItem(officeKey(office));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function keepOffice(office, design, printer) {
+  try { localStorage.setItem(officeKey(office), JSON.stringify({ design, printer })); } catch { /* ignore */ }
+}
+
+/** design / printer for an office (falls back to this computer's old settings, then defaults) */
+export const readDesign = office => {
+  const o = readOffice(office);
+  return o?.design ? { ...DEFAULT_DESIGN, ...o.design } : oldDesign();
+};
+export const readPrinter = office => {
+  const o = readOffice(office);
+  return o?.printer ? { ...DEFAULT_PRINTER, ...o.printer } : oldPrinter();
+};
+export const hasOfficeSettings = office => !!readOffice(office);
+
+/** which office this computer is in (remembered on the setup screen) */
+export const myOffice = () => {
+  try { const v = localStorage.getItem("kf_label_my_office"); return OFFICES.includes(v) ? v : "Jaipur"; } catch { return "Jaipur"; }
+};
+export const setMyOffice = o => { try { localStorage.setItem("kf_label_my_office", o); } catch { /* ignore */ } };
+
+/** bring every office's saved settings from the ERP onto this computer */
+export async function syncLabelSettings() {
+  try {
+    const r = await api.get("/barcode/label-settings");
+    const all = r.data?.settings || {};
+    Object.entries(all).forEach(([office, x]) => keepOffice(office, x.design || {}, x.printer || {}));
+    return all;
+  } catch { return null; }   // offline / not deployed yet → keep using this computer's copy
+}
+
+/** save one office's settings in the ERP (and on this computer) */
+export async function saveLabelSettings(office, design, printer) {
+  keepOffice(office, design, printer);
+  await api.put(`/barcode/label-settings/${encodeURIComponent(office)}`, { design, printer });
+}
 
 export const pageWidthMm = p =>
   Number(p.leftMargin) + Number(p.columns) * Number(p.labelWidth) +
@@ -133,9 +184,10 @@ function barcodeSvg(barcode, p) {
 /**
  * label = { barcode, item, seriesname, categoryname, location, purchase, sizes:[{size_code, qty}] }
  */
-export function labelHtml(label, design = readDesign(), printer = readPrinter()) {
+export function labelHtml(label, design = readDesign(label.location), printer = readPrinter(label.location)) {
   const d = { ...DEFAULT_DESIGN, ...design };
   const sizes = (label.sizes || []).filter(s => Number(s.qty) > 0);
+  const pcs = sizes.reduce((a, s) => a + Number(s.qty), 0);
   const parts = [];
   if (d.showBrand) {
     parts.push(`<div class="brand" style="font-size:${Number(d.brandSize)}px">${
@@ -151,9 +203,15 @@ export function labelHtml(label, design = readDesign(), printer = readPrinter())
   if (d.showPurchase && label.purchase) lines.push(`<div><b>PUR:</b> ${esc(label.purchase)}</div>`);
   if (lines.length) parts.push(`<div class="lines" style="font-size:${Number(d.bodySize)}px">${lines.join("")}</div>`);
   if (d.showSizes && sizes.length) {
-    const cols = `grid-template-columns:repeat(${sizes.length},1fr)`;
-    parts.push(`<div class="sizes"><div class="sr" style="${cols}">${sizes.map(s => `<div>${esc(s.size_code)}</div>`).join("")}</div>` +
-      `<div class="sr q" style="${cols}">${sizes.map(s => `<div>${Number(s.qty)}</div>`).join("")}</div></div>`);
+    // the last column is the total: PCS / 6
+    const tot = d.showTotal;
+    const cols = `grid-template-columns:repeat(${sizes.length},1fr)${tot ? " 1.25fr" : ""}`;
+    parts.push(`<div class="sizes"><div class="sr" style="${cols}">${sizes.map(s => `<div>${esc(s.size_code)}</div>`).join("")}` +
+      `${tot ? `<div class="tot">PCS</div>` : ""}</div>` +
+      `<div class="sr q" style="${cols}">${sizes.map(s => `<div>${Number(s.qty)}</div>`).join("")}` +
+      `${tot ? `<div class="tot">${pcs}</div>` : ""}</div></div>`);
+  } else if (d.showTotal && pcs > 0) {
+    parts.push(`<div class="pcsline">${pcs} PCS</div>`);
   }
   if (d.showBarcode && label.barcode) {
     parts.push(`<div class="bcbox">${barcodeSvg(label.barcode, printer)}<div class="bct" style="font-size:${Number(d.codeTextSize) || 10}px">${esc(label.barcode)}</div></div>`);
@@ -178,13 +236,17 @@ export function labelCss(p = readPrinter()) {
   .sizes { border:0.25mm solid #000; margin-top:0.7mm; font-size:7px; line-height:1; }
   .sr { display:grid; } .sr > div { text-align:center; padding:0.35mm 0; border-right:0.25mm solid #000; overflow:hidden; }
   .sr > div:last-child { border-right:0; } .sr.q { border-top:0.25mm solid #000; font-weight:700; }
+  .sr > .tot { background:#000; color:#fff; font-weight:900; } .sr.q > .tot { font-size:8.5px; }
+  .pcsline { text-align:center; font-weight:900; font-size:9px; margin-top:0.6mm; }
   .bcbox { margin-top:auto; text-align:center; }
   .bc { display:block; margin:0 auto; }
   .bct { font-weight:800; letter-spacing:1px; line-height:1; margin-top:0.4mm; }`;
 }
 
 /** Full printable HTML: one page per row of labels across the roll. */
-export function sheetHtml(labels, { design = readDesign(), printer = readPrinter(), test = false } = {}) {
+export function sheetHtml(labels, opts = {}) {
+  const office = labels[0]?.location;
+  const { design = readDesign(office), printer = readPrinter(office), test = false } = opts;
   const p = { ...DEFAULT_PRINTER, ...printer };
   const pw = pageWidthMm(p), ph = Number(p.labelHeight);
   const cols = Math.max(1, Number(p.columns));

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { api, postIncoming, createBarcode } from "../services/api";
-import { printLabels, toLabel } from "../utils/barcodeLabels";
+import { printLabels, toLabel, syncLabelSettings } from "../utils/barcodeLabels";
 
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
 
@@ -86,6 +86,8 @@ const [sizesTouched, setSizesTouched] = useState(false);
   const itemInputRef = useRef(null);
 
   // ---------------- LOAD PRODUCTS ----------------
+
+  useEffect(() => { syncLabelSettings(); }, []);   // latest label settings of each office
 
   useEffect(() => {
     (async () => {

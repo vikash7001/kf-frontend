@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api, createBarcode } from "../services/api";
-import { printLabels, toLabel } from "../utils/barcodeLabels";
+import { printLabels, toLabel, syncLabelSettings } from "../utils/barcodeLabels";
 
 // ==========================================================
 // CREATE BARCODE – bundle stock that is already in a location
@@ -36,6 +36,7 @@ export default function CreateBarcode() {
   };
 
   useEffect(() => { loadStock(location); setCreated([]); }, [location]);
+  useEffect(() => { syncLabelSettings(); }, []);   // latest label settings of each office
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();

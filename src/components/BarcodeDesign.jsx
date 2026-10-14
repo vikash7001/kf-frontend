@@ -1,12 +1,13 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  DEFAULT_DESIGN, DEFAULT_PRINTER, readDesign, readPrinter, saveDesign, savePrinter,
-  sheetHtml, printLabels, pageWidthMm, SAMPLE_LABEL
+  DEFAULT_DESIGN, DEFAULT_PRINTER, OFFICES, readDesign, readPrinter, myOffice, setMyOffice,
+  syncLabelSettings, saveLabelSettings, sheetHtml, printLabels, pageWidthMm, SAMPLE_LABEL
 } from "../utils/barcodeLabels";
 
 // ==========================================================
 // BARCODE DESIGN + PRINTER SETUP
-// Both are saved on THIS computer, so each office sets up its own printer once.
+// Saved in the ERP once PER OFFICE. Every computer in that office then prints
+// with the same settings – nobody has to adjust again.
 // ==========================================================
 
 const box = { border: "1px solid #ddd", borderRadius: 8, padding: 14, background: "#fff", marginBottom: 14 };
@@ -14,17 +15,52 @@ const row = { display: "flex", alignItems: "center", gap: 8, margin: "6px 0" };
 const num = { width: 70 };
 
 export default function BarcodeDesign() {
-  const [design, setDesign] = useState(readDesign);
-  const [printer, setPrinter] = useState(readPrinter);
+  const [office, setOffice] = useState(myOffice);
+  const [design, setDesign] = useState(() => readDesign(myOffice()));
+  const [printer, setPrinter] = useState(() => readPrinter(myOffice()));
   const [logoName, setLogoName] = useState("");
+  const [status, setStatus] = useState("");          // "", "saving", "saved", "error"
+  const dirty = useRef(false);
 
-  const setD = (k, v) => setDesign(d => { const n = { ...d, [k]: v }; saveDesign(n); return n; });
-  const setP = (k, v) => setPrinter(p => { const n = { ...p, [k]: v === "" ? "" : Number(v) }; savePrinter(n); return n; });
+  // bring the latest saved settings of every office from the ERP
+  useEffect(() => {
+    syncLabelSettings().then(() => {
+      if (dirty.current) return;
+      setDesign(readDesign(office));
+      setPrinter(readPrinter(office));
+    });
+  }, []);
+
+  const pickOffice = o => {
+    setOffice(o); setMyOffice(o);
+    dirty.current = false;
+    setDesign(readDesign(o)); setPrinter(readPrinter(o)); setStatus("");
+  };
+
+  // save to the ERP a moment after the last change
+  useEffect(() => {
+    if (!dirty.current) return;
+    setStatus("saving");
+    const t = setTimeout(() => {
+      saveLabelSettings(office, design, printer)
+        .then(() => setStatus("saved"))
+        .catch(e => setStatus(e?.response?.data?.error || "error"));
+    }, 700);
+    return () => clearTimeout(t);
+  }, [design, printer, office]);
+
+  const setD = (k, v) => { dirty.current = true; setDesign(d => ({ ...d, [k]: v })); };
+  const setP = (k, v) => { dirty.current = true; setPrinter(p => ({ ...p, [k]: v === "" ? "" : Number(v) })); };
+
+  const sample2 = [
+    { ...SAMPLE_LABEL, location: office },
+    { ...SAMPLE_LABEL, location: office, barcode: "WON-3402", item: "10099", seriesname: "Wonder",
+      sizes: [{ size_code: "M", qty: 2 }, { size_code: "L", qty: 2 }, { size_code: "XL", qty: 2 }] }
+  ];
 
   const preview = useMemo(() =>
-    sheetHtml([SAMPLE_LABEL, { ...SAMPLE_LABEL, barcode: "WON-3402", item: "10099", seriesname: "Wonder" }],
-      { design, printer, test: true }).replace(/<script>[\s\S]*?<\/script>/, ""),
-  [design, printer]);
+    sheetHtml(sample2, { design, printer, test: true }).replace(/<script>[\s\S]*?<\/script>/, ""),
+  [design, printer, office]);
 
   const onLogo = e => {
     const file = e.target.files?.[0];
@@ -51,14 +87,23 @@ export default function BarcodeDesign() {
     </div>
   );
 
-  const sample2 = [SAMPLE_LABEL, { ...SAMPLE_LABEL, barcode: "WON-3402", item: "10099", seriesname: "Wonder" }];
-
   return (
     <div style={{ padding: 18, maxWidth: 1100 }}>
       <h2>Barcode Design & Printer Setup</h2>
-      <p style={{ color: "#555", marginTop: -6 }}>
-        Saved on <b>this computer</b> – set it up once in each office for that office's printer.
-      </p>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", margin: "-4px 0 14px",
+                    padding: "10px 12px", background: "#eef3ff", border: "1px solid #c5d5f5", borderRadius: 8 }}>
+        <b>Office</b>
+        <select value={office} onChange={e => pickOffice(e.target.value)} style={{ fontSize: 15 }}>
+          {OFFICES.map(o => <option key={o}>{o}</option>)}
+        </select>
+        <span style={{ color: "#444" }}>
+          Set up once – every computer in <b>{office}</b> prints {office} labels with these settings.
+        </span>
+        <span style={{ marginLeft: "auto", fontWeight: 600,
+                       color: status === "saved" ? "#2e7d32" : status === "saving" ? "#777" : "#b00020" }}>
+          {status === "saved" ? `✓ Saved for ${office}` : status === "saving" ? "Saving…" : status ? `⚠ Not saved: ${status}` : ""}
+        </span>
+      </div>
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div style={{ flex: "1 1 330px" }}>
@@ -81,13 +126,14 @@ export default function BarcodeDesign() {
             {check("showCategory", "Category")}
             {check("showPurchase", "Purchase number")}
             {check("showSizes", "Sizes and pieces")}
+            {check("showTotal", "Total pieces in the bundle (PCS)")}
             {check("showBarcode", "Barcode")}
             <div style={row}>Brand text <input type="number" style={num} value={design.brandSize} onChange={e => setD("brandSize", Number(e.target.value))} /> px</div>
             <div style={row}>Design number <input type="number" style={num} value={design.itemSize} onChange={e => setD("itemSize", Number(e.target.value))} /> px</div>
             <div style={row}>Series <input type="number" style={num} value={design.seriesSize} onChange={e => setD("seriesSize", Number(e.target.value))} /> px</div>
             <div style={row}>Text under barcode <input type="number" style={num} value={design.codeTextSize} onChange={e => setD("codeTextSize", Number(e.target.value))} /> px</div>
             <div style={row}>Category / purchase <input type="number" style={num} value={design.bodySize} onChange={e => setD("bodySize", Number(e.target.value))} /> px</div>
-            <button type="button" onClick={() => { setDesign(DEFAULT_DESIGN); saveDesign(DEFAULT_DESIGN); setLogoName(""); }}>
+            <button type="button" onClick={() => { dirty.current = true; setDesign(DEFAULT_DESIGN); setLogoName(""); }}>
               Reset design
             </button>
           </div>
@@ -108,7 +154,7 @@ export default function BarcodeDesign() {
             {pnum("offsetY", "Move down (− = up)", 0.25, undefined)}
             {pnum("module", "Barcode bar width", 0.001, "0.25 for 203 dpi (TVS) · 0.254 for 300 dpi")}
             {pnum("barHeight", "Barcode height", 0.5, undefined)}
-            <button type="button" onClick={() => { setPrinter(DEFAULT_PRINTER); savePrinter(DEFAULT_PRINTER); }}>
+            <button type="button" onClick={() => { dirty.current = true; setPrinter(DEFAULT_PRINTER); }}>
               Reset printer setup
             </button>
           </div>
@@ -147,7 +193,7 @@ export default function BarcodeDesign() {
             <b>C. Check</b>
             <ol style={{ marginTop: 4 }}>
               <li>Print <i>test (with outlines)</i>: the dashed boxes should sit just inside both labels.</li>
-              <li>Shifted? Use <i>Move right / Move down</i> above, print again. Done once per computer.</li>
+              <li>Shifted? Use <i>Move right / Move down</i> above, print again. Saved for the whole office.</li>
             </ol>
           </div>
         </div>

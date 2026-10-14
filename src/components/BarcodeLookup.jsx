@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "../services/api";
-import { printLabels, toLabel } from "../utils/barcodeLabels";
+import { printLabels, toLabel, syncLabelSettings } from "../utils/barcodeLabels";
+import BarcodeSuggest from "./BarcodeSuggest";
 
 // ==========================================================
 // BARCODE LOOKUP – scan any bundle: what's inside, where, sold or not,
@@ -51,6 +52,7 @@ export default function BarcodeLookup() {
     } catch { setRecent([]); }
   };
   useEffect(() => { loadRecent(location); }, [location]);
+  useEffect(() => { syncLabelSettings(); inputRef.current?.focus(); }, []);   // latest label settings of each office
 
   const reprint = b => printLabels([toLabel({ ...b, sizes: b.sizes.filter(s => Number(s.qty) > 0) })]);
 
@@ -80,13 +82,13 @@ export default function BarcodeLookup() {
       <h2>Barcode Lookup</h2>
 
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14 }}>
-        <input
-          ref={inputRef}
-          autoFocus
+        <BarcodeSuggest
+          inputRef={inputRef}
           value={code}
-          onChange={e => setCode(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") lookup(); }}
-          placeholder="Scan a barcode (or type 3401)"
+          onChange={setCode}
+          onSubmit={v => lookup(v)}
+          all
+          placeholder="Scan a barcode (or type 340…)"
           style={{ fontSize: 18, padding: "8px 10px", width: 320 }}
         />
         <button type="button" onClick={() => lookup()} disabled={busy}>Look up</button>
