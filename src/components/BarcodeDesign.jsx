@@ -22,7 +22,7 @@ export default function BarcodeDesign() {
   const setP = (k, v) => setPrinter(p => { const n = { ...p, [k]: v === "" ? "" : Number(v) }; savePrinter(n); return n; });
 
   const preview = useMemo(() =>
-    sheetHtml([SAMPLE_LABEL, { ...SAMPLE_LABEL, barcode: "KF-XWK2WV", item: "10099", seriesname: "Wonder" }],
+    sheetHtml([SAMPLE_LABEL, { ...SAMPLE_LABEL, barcode: "WON-3402", item: "10099", seriesname: "Wonder" }],
       { design, printer, test: true }).replace(/<script>[\s\S]*?<\/script>/, ""),
   [design, printer]);
 
@@ -51,7 +51,7 @@ export default function BarcodeDesign() {
     </div>
   );
 
-  const sample2 = [SAMPLE_LABEL, { ...SAMPLE_LABEL, barcode: "KF-XWK2WV", item: "10099", seriesname: "Wonder" }];
+  const sample2 = [SAMPLE_LABEL, { ...SAMPLE_LABEL, barcode: "WON-3402", item: "10099", seriesname: "Wonder" }];
 
   return (
     <div style={{ padding: 18, maxWidth: 1100 }}>
@@ -84,7 +84,9 @@ export default function BarcodeDesign() {
             {check("showBarcode", "Barcode")}
             <div style={row}>Brand text <input type="number" style={num} value={design.brandSize} onChange={e => setD("brandSize", Number(e.target.value))} /> px</div>
             <div style={row}>Design number <input type="number" style={num} value={design.itemSize} onChange={e => setD("itemSize", Number(e.target.value))} /> px</div>
-            <div style={row}>Other text <input type="number" style={num} value={design.bodySize} onChange={e => setD("bodySize", Number(e.target.value))} /> px</div>
+            <div style={row}>Series <input type="number" style={num} value={design.seriesSize} onChange={e => setD("seriesSize", Number(e.target.value))} /> px</div>
+            <div style={row}>Text under barcode <input type="number" style={num} value={design.codeTextSize} onChange={e => setD("codeTextSize", Number(e.target.value))} /> px</div>
+            <div style={row}>Category / purchase <input type="number" style={num} value={design.bodySize} onChange={e => setD("bodySize", Number(e.target.value))} /> px</div>
             <button type="button" onClick={() => { setDesign(DEFAULT_DESIGN); saveDesign(DEFAULT_DESIGN); setLogoName(""); }}>
               Reset design
             </button>

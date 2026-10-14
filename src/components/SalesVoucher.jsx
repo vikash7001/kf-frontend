@@ -212,14 +212,19 @@ console.log(p.data[0]);
   // ---------------- SCAN A BUNDLE ----------------
   // The USB scanner types the code and presses Enter. The bundle's design
   // and sizes are filled in by themselves – no typing, no wrong design.
-  const code6 = v => String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(-6);
+  // ADM-3401 / adm3401 / 3401 → "3401"; older KF-A7K92M → "A7K92M"
+  const codeKey = v => {
+    const s = String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const m = s.match(/^[A-Z]{0,3}(\d+)$/);
+    return m ? m[1] : s.slice(-6);
+  };
 
   const onScan = async () => {
     const v = scanCode.trim();
     setScanCode("");
     if (!v) return;
 
-    if (rows.some(r => (r.Barcodes || []).some(b => code6(b.barcode) === code6(v)))) {
+    if (rows.some(r => (r.Barcodes || []).some(b => codeKey(b.barcode) === codeKey(v)))) {
       setScanMsg({ ok: false, text: `${v.toUpperCase()} is already in this voucher` });
       return;
     }
@@ -520,7 +525,7 @@ const seriesTotals = rows.reduce((acc, r) => {
           value={scanCode}
           onChange={e => setScanCode(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); onScan(); } }}
-          placeholder="Click here and scan the bundle"
+          placeholder="Scan the bundle (or type 3401)"
           disabled={loading || scanning}
           style={{ width: 260, fontSize: 16, padding: "6px 8px" }}
         />

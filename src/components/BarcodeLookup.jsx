@@ -86,7 +86,7 @@ export default function BarcodeLookup() {
           value={code}
           onChange={e => setCode(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") lookup(); }}
-          placeholder="Scan a barcode (or type KF-…)"
+          placeholder="Scan a barcode (or type 3401)"
           style={{ fontSize: 18, padding: "8px 10px", width: 320 }}
         />
         <button type="button" onClick={() => lookup()} disabled={busy}>Look up</button>

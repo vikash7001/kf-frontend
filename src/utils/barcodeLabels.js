@@ -2,15 +2,16 @@
 // BARCODE LABELS – one place that draws and prints all labels
 // (Purchase Voucher, Create Barcode, Barcode Lookup, Barcode Design).
 //
-// Label roll: 38 x 38 mm, 2 across ("2-up"); printed as a 76 x 38 mm page.
+// Label roll: 38 x 38 mm, 2 across ("2-up"), ~82 mm wide.
 // Each printed PAGE = one row of labels across the roll.
 //
 // Two settings, both saved on THIS computer (each office tunes its own printer):
 //   kf_barcode_design   what is on the label (logo, fields, text sizes)
 //   kf_label_printer    where the labels are on the roll (gaps, nudges)
 //
-// The barcode holds only the 6 code characters (e.g. A7K92M) so it is short
-// and sharp; the text under it shows KF-A7K92M. Bars are drawn in whole
+// Barcode numbers look like ADM-3401 (series letters + running number).
+// The bars hold only the number (3401) so they are short and sharp; the text
+// under them shows ADM-3401. (Older test codes KF-A7K92M still print/scan.) Bars are drawn in whole
 // printer dots (0.25 mm = 2 dots on a 203 dpi thermal printer).
 // ==========================================================
 
@@ -18,31 +19,34 @@ export const DEFAULT_DESIGN = {
   logo: "",
   logoWidth: 60,
   showBrand: true,
-  showLocation: true,
+  showLocation: false,
   showItem: true,
   showSeries: true,
-  showCategory: true,
-  showPurchase: true,
+  showCategory: false,
+  showPurchase: false,
   showSizes: true,
   showBarcode: true,
   brandSize: 11,      // px
-  itemSize: 13,       // px – the design number, big and bold
-  bodySize: 8         // px
+  itemSize: 17,       // px – the design number, big and bold
+  seriesSize: 12,     // px – series, bold
+  bodySize: 8,        // px – category / purchase (if shown)
+  codeTextSize: 10    // px – KF-XXXXXX under the barcode
 };
 
-// Same layout as the TechnoRiver template that already prints correctly in
-// every office: page 76 x 38 mm, two 37.5 mm labels side by side.
+// Page 76 x 38 mm (same page as the TechnoRiver template used in every office).
+// The labels on the roll are ~40 mm apart (38 mm label + ~2 mm gap), so the
+// second label starts 39 mm in; each printed label area is 36.5 mm wide.
 export const DEFAULT_PRINTER = {
-  labelWidth: 37.5,   // mm
+  labelWidth: 36.5,   // mm
   labelHeight: 38,    // mm (= page height)
   columns: 2,         // labels across
-  leftMargin: 0.05,   // mm, page edge → first label
-  gapX: 0.05,         // mm between labels across
-  rightMargin: 0.9,   // mm  → page width 76 mm
+  leftMargin: 0,      // mm, page edge → first label
+  gapX: 2.5,          // mm between labels across
+  rightMargin: 0.5,   // mm  → page width 76 mm
   offsetX: 0,         // mm nudge (+ right)
   offsetY: 0,         // mm nudge (+ down)
   module: 0.25,       // mm per barcode bar unit (0.25 = 2 dots @203dpi, 0.254 = 3 dots @300dpi)
-  barHeight: 8        // mm
+  barHeight: 10       // mm
 };
 
 function readJson(key, defaults) {
@@ -53,10 +57,10 @@ function readJson(key, defaults) {
     return { ...defaults };
   }
 }
-export const readDesign = () => readJson("kf_barcode_design", DEFAULT_DESIGN);
-export const readPrinter = () => readJson("kf_label_printer", DEFAULT_PRINTER);
-export const saveDesign = d => { try { localStorage.setItem("kf_barcode_design", JSON.stringify(d)); } catch { /* ignore */ } };
-export const savePrinter = p => { try { localStorage.setItem("kf_label_printer", JSON.stringify(p)); } catch { /* ignore */ } };
+export const readDesign = () => readJson("kf_barcode_design_v2", DEFAULT_DESIGN);
+export const readPrinter = () => readJson("kf_label_printer_v2", DEFAULT_PRINTER);
+export const saveDesign = d => { try { localStorage.setItem("kf_barcode_design_v2", JSON.stringify(d)); } catch { /* ignore */ } };
+export const savePrinter = p => { try { localStorage.setItem("kf_label_printer_v2", JSON.stringify(p)); } catch { /* ignore */ } };
 
 export const pageWidthMm = p =>
   Number(p.leftMargin) + Number(p.columns) * Number(p.labelWidth) +
@@ -96,8 +100,12 @@ export function code128B(value) {
   return vals.map(v => PATTERNS[v]).join("");
 }
 
-/** what the scanner reads: the 6 code characters (KF-A7K92M → A7K92M) */
-export const scanValue = barcode => String(barcode || "").toUpperCase().replace(/^KF-?/, "");
+/** what the bars hold: ADM-3401 → "3401"; older KF-A7K92M → "A7K92M" */
+export const scanValue = barcode => {
+  const s = String(barcode || "").toUpperCase();
+  const m = s.match(/^[A-Z]{1,3}-?(\d+)$/);
+  return m ? m[1] : s.replace(/^KF-?/, "");
+};
 
 const esc = v => String(v ?? "")
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -135,8 +143,10 @@ export function labelHtml(label, design = readDesign(), printer = readPrinter())
   }
   if (d.showLocation && label.location) parts.push(`<div class="loc">${esc(String(label.location).toUpperCase())}</div>`);
   if (d.showItem) parts.push(`<div class="item" style="font-size:${Number(d.itemSize)}px">${esc(label.item)}</div>`);
+  if (d.showSeries && label.seriesname) {
+    parts.push(`<div class="series" style="font-size:${Number(d.seriesSize) || 11}px">${esc(String(label.seriesname).toUpperCase())}</div>`);
+  }
   const lines = [];
-  if (d.showSeries && label.seriesname) lines.push(`<div><b>SER:</b> ${esc(label.seriesname)}</div>`);
   if (d.showCategory && label.categoryname) lines.push(`<div><b>CAT:</b> ${esc(label.categoryname)}</div>`);
   if (d.showPurchase && label.purchase) lines.push(`<div><b>PUR:</b> ${esc(label.purchase)}</div>`);
   if (lines.length) parts.push(`<div class="lines" style="font-size:${Number(d.bodySize)}px">${lines.join("")}</div>`);
@@ -146,7 +156,7 @@ export function labelHtml(label, design = readDesign(), printer = readPrinter())
       `<div class="sr q" style="${cols}">${sizes.map(s => `<div>${Number(s.qty)}</div>`).join("")}</div></div>`);
   }
   if (d.showBarcode && label.barcode) {
-    parts.push(`<div class="bcbox">${barcodeSvg(label.barcode, printer)}<div class="bct">${esc(label.barcode)}</div></div>`);
+    parts.push(`<div class="bcbox">${barcodeSvg(label.barcode, printer)}<div class="bct" style="font-size:${Number(d.codeTextSize) || 10}px">${esc(label.barcode)}</div></div>`);
   }
   return `<div class="label">${parts.join("")}</div>`;
 }
@@ -155,11 +165,14 @@ export function labelCss(p = readPrinter()) {
   return `
   .label { width:${p.labelWidth}mm; height:${p.labelHeight}mm; padding:1mm 1.2mm 0.8mm; box-sizing:border-box;
            overflow:hidden; font-family: Arial, Helvetica, sans-serif; color:#000; display:flex; flex-direction:column; }
-  .brand { text-align:center; font-weight:800; line-height:1; white-space:nowrap; overflow:hidden; height:3.6mm; }
+  .brand { text-align:center; font-weight:800; line-height:1; white-space:nowrap; overflow:hidden; height:3.6mm;
+           border-bottom:0.25mm solid #000; padding-bottom:0.5mm; box-sizing:content-box; }
   .brand img { max-height:3.6mm; display:block; margin:0 auto; object-fit:contain; }
   .loc { text-align:center; font-size:6.5px; font-weight:700; letter-spacing:.6px; line-height:1;
          border-bottom:0.25mm solid #000; padding:0.4mm 0 0.6mm; }
-  .item { text-align:center; font-weight:900; line-height:1; margin-top:0.7mm; letter-spacing:.3px; }
+  .item { text-align:center; font-weight:900; line-height:1; margin-top:0.9mm; letter-spacing:.3px; }
+  .series { text-align:center; font-weight:700; line-height:1.1; margin-top:0.6mm; letter-spacing:.4px;
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .lines { line-height:1.15; margin-top:0.5mm; }
   .lines > div { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .sizes { border:0.25mm solid #000; margin-top:0.7mm; font-size:7px; line-height:1; }
@@ -167,7 +180,7 @@ export function labelCss(p = readPrinter()) {
   .sr > div:last-child { border-right:0; } .sr.q { border-top:0.25mm solid #000; font-weight:700; }
   .bcbox { margin-top:auto; text-align:center; }
   .bc { display:block; margin:0 auto; }
-  .bct { font-size:7.5px; font-weight:700; letter-spacing:.8px; line-height:1; margin-top:0.3mm; }`;
+  .bct { font-weight:800; letter-spacing:1px; line-height:1; margin-top:0.4mm; }`;
 }
 
 /** Full printable HTML: one page per row of labels across the roll. */
@@ -226,7 +239,7 @@ export function toLabel(b, extra = {}) {
 }
 
 export const SAMPLE_LABEL = {
-  barcode: "KF-A7K92M", item: "11050", seriesname: "Admire", categoryname: "Women Fancy Kurti",
+  barcode: "ADM-3401", item: "11050", seriesname: "Admire", categoryname: "Women Fancy Kurti",
   location: "Jaipur", purchase: "727",
   sizes: [{ size_code: "M", qty: 1 }, { size_code: "L", qty: 1 }, { size_code: "XL", qty: 1 }, { size_code: "XXL", qty: 1 }]
 };
