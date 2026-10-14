@@ -1,5 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { api, createBarcode } from "../services/api";
+import { printLabels, toLabel } from "../utils/barcodeLabels";
+
+// ==========================================================
+// CREATE BARCODE – bundle stock that is already in a location
+// (old stock, or anything not bundled after its purchase).
+// One barcode = one physical bundle of one design.
+// ==========================================================
 
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
 
@@ -7,265 +14,171 @@ export default function CreateBarcode() {
   const [location, setLocation] = useState("Jaipur");
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
 
   const [selected, setSelected] = useState(null);
   const [sizeQty, setSizeQty] = useState({});
   const [creating, setCreating] = useState(false);
-  const [lastBarcode, setLastBarcode] = useState("");
+  const [created, setCreated] = useState([]);   // bundles made in this session (for printing)
 
-  const loadStock = async (loc) => {
+  const loadStock = async loc => {
     try {
       setLoading(true);
       setSelected(null);
-      setLastBarcode("");
-
       const res = await api.get(`/barcode/stock/${encodeURIComponent(loc)}`);
       setRows(res.data?.rows || []);
     } catch (e) {
-      console.error(e);
       setRows([]);
-      alert(e?.response?.data?.error || "Failed to load barcode stock");
+      alert(e?.response?.data?.error || "Failed to load stock");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadStock(location);
-  }, [location]);
+  useEffect(() => { loadStock(location); setCreated([]); }, [location]);
 
-  const openComposer = (row) => {
-    const initial = {};
-    (row.unbarcoded_sizes || []).forEach(s => {
-      initial[s.size_code] = 0;
-    });
+  const shown = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter(r => !q || `${r.item} ${r.seriesname}`.toLowerCase().includes(q));
+  }, [rows, search]);
 
+  const limitFor = sz => selected?.sizes_tracked
+    ? Number((selected.unbarcoded_sizes || []).find(x => x.size_code === sz)?.qty || 0)
+    : null;
+
+  const open = row => {
+    const init = {};
+    (row.size_choices || []).forEach(s => { init[s] = ""; });
     setSelected(row);
-    setSizeQty(initial);
-    setLastBarcode("");
+    setSizeQty(init);
   };
 
-  const totalSelected = Object.values(sizeQty)
-    .map(Number)
-    .reduce((a, b) => a + b, 0);
+  const total = Object.values(sizeQty).map(Number).filter(n => n > 0).reduce((a, b) => a + b, 0);
 
   const create = async () => {
-    if (!selected) return;
-
     const sizes = Object.entries(sizeQty)
-      .filter(([, qty]) => Number(qty) > 0)
-      .map(([size_code, qty]) => ({
-        size_code,
-        qty: Number(qty)
-      }));
-
-    if (!sizes.length) {
-      alert("Select at least one size quantity.");
-      return;
-    }
-
+      .filter(([, q]) => Number(q) > 0)
+      .map(([size_code, q]) => ({ size_code, qty: Number(q) }));
+    if (!sizes.length) return alert("Enter how many pieces of each size are in this bundle.");
+    if (total > selected.unbarcoded_qty) return alert(`Only ${selected.unbarcoded_qty} pcs are left without a barcode.`);
     for (const s of sizes) {
-      const available =
-        Number(
-          (selected.unbarcoded_sizes || []).find(
-            x => x.size_code === s.size_code
-          )?.qty || 0
-        );
-
-      if (s.qty > available) {
-        alert(`Only ${available} pieces are unbarcoded for size ${s.size_code}.`);
-        return;
-      }
+      const lim = limitFor(s.size_code);
+      if (lim !== null && s.qty > lim) return alert(`Only ${lim} pcs of size ${s.size_code} are left without a barcode.`);
     }
-
     try {
       setCreating(true);
-
-      const res = await createBarcode({
-        productid: selected.productid,
-        Location: location,
-        incomingheaderid: null,
-        sizes
-      });
-
-      const barcode = res.data?.barcode?.barcode || "";
-      setLastBarcode(barcode);
-
-      alert(`Barcode created: ${barcode}`);
-
-      await loadStock(location);
-      setSelected(null);
-      setSizeQty({});
+      const res = await createBarcode({ productid: selected.productid, Location: location, incomingheaderid: null, sizes });
+      const b = res.data.barcode;
+      setCreated(list => [b, ...list]);
+      // keep the same design open for the next bundle if pieces are left
+      const left = selected.unbarcoded_qty - total;
+      const updated = {
+        ...selected,
+        barcoded_qty: selected.barcoded_qty + total,
+        unbarcoded_qty: left,
+        unbarcoded_sizes: (selected.unbarcoded_sizes || []).map(s => ({
+          ...s, qty: s.qty - (sizes.find(x => x.size_code === s.size_code)?.qty || 0)
+        })).filter(s => s.qty > 0)
+      };
+      setRows(rs => rs.map(r => r.productid === selected.productid ? updated : r));
+      if (left > 0) open(updated); else setSelected(null);
     } catch (e) {
-      console.error(e);
-      alert(
-        e?.response?.data?.error ||
-        e?.response?.data?.message ||
-        "Failed to create barcode"
-      );
+      alert(e?.response?.data?.error || "Failed to create barcode");
     } finally {
       setCreating(false);
     }
   };
 
+  const printOne = b => printLabels([toLabel(b, { location })]);
+  const printAll = () => printLabels(created.slice().reverse().map(b => toLabel(b, { location })));
+
   return (
     <div style={{ padding: 18 }}>
       <h2>Create Barcode</h2>
+      <p style={{ color: "#555", marginTop: -6 }}>
+        For stock already in the shop. New purchases are bundled right after posting the purchase.
+      </p>
 
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ fontWeight: "bold", marginRight: 8 }}>
-          Select Location
+      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
+        <label><b>Location</b>{" "}
+          <select value={location} onChange={e => setLocation(e.target.value)}>
+            {LOCATIONS.map(l => <option key={l}>{l}</option>)}
+          </select>
         </label>
-        <select
-          value={location}
-          onChange={e => setLocation(e.target.value)}
-        >
-          {LOCATIONS.map(loc => (
-            <option key={loc} value={loc}>
-              {loc}
-            </option>
-          ))}
-        </select>
+        <input placeholder="Search design / series" value={search} onChange={e => setSearch(e.target.value)} style={{ width: 220 }} />
       </div>
 
-      {loading && <div>Loading...</div>}
-
-      {!loading && (
-        <table
-          border="1"
-          cellPadding="6"
-          style={{
-            borderCollapse: "collapse",
-            width: "100%"
-          }}
-        >
-          <thead>
-            <tr>
-              <th>Design</th>
-              <th>Total</th>
-              <th>Barcoded Stock</th>
-              <th>Unbarcoded Stock</th>
-              <th>Create Barcode</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan="5" align="center">
-                  No stock available
-                </td>
-              </tr>
-            ) : (
-              rows.map(row => (
-                <tr key={row.productid}>
-                  <td>{row.item}</td>
-                  <td align="right">{row.total_qty}</td>
-                  <td align="right">{row.barcoded_qty}</td>
-                  <td align="right">{row.unbarcoded_qty}</td>
-                  <td align="center">
-                    <button
-                      type="button"
-                      disabled={Number(row.unbarcoded_qty) <= 0}
-                      onClick={() => openComposer(row)}
-                    >
-                      CREATE BARCODE
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {created.length > 0 && (
+        <div style={{ border: "1px solid #b7dfb9", background: "#f2fbf2", borderRadius: 8, padding: 12, marginBottom: 14 }}>
+          <b>Made just now ({created.length})</b>{" "}
+          <button type="button" onClick={printAll} style={{ marginLeft: 8 }}>🖨 Print all labels</button>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {created.map(b => (
+              <span key={b.barcode} style={{ background: "#fff", border: "1px solid #ccc", borderRadius: 14, padding: "3px 10px" }}>
+                <b>{b.barcode}</b> · {b.item} · {b.sizes.map(s => `${s.size_code}${s.qty > 1 ? "×" + s.qty : ""}`).join(" ")}
+                <button type="button" onClick={() => printOne(b)} style={{ marginLeft: 6 }} title="Print this label">🖨</button>
+              </span>
+            ))}
+          </div>
+        </div>
       )}
 
       {selected && (
-        <div
-          style={{
-            marginTop: 18,
-            border: "1px solid #ccc",
-            padding: 16,
-            background: "#fff"
-          }}
-        >
+        <div style={{ border: "2px solid #4a7bd0", padding: 16, background: "#fff", borderRadius: 8, marginBottom: 16 }}>
           <h3 style={{ marginTop: 0 }}>
-            {selected.item} — {selected.seriesname}
+            {selected.item} <span style={{ fontWeight: 400, color: "#555" }}>· {selected.seriesname} · {selected.categoryname}</span>
           </h3>
-
-          <div style={{ marginBottom: 12 }}>
-            {selected.categoryname}
+          <div style={{ marginBottom: 10, color: "#333" }}>
+            Pieces at {location} without a barcode: <b>{selected.unbarcoded_qty}</b>
+            {!selected.sizes_tracked && <span style={{ color: "#777" }}> (sizes not recorded for this design – enter what is in the bundle)</span>}
           </div>
-
-          <table
-            border="1"
-            cellPadding="6"
-            style={{
-              borderCollapse: "collapse",
-              minWidth: 420
-            }}
-          >
-            <thead>
-              <tr>
-                <th>Size</th>
-                <th>Unbarcoded</th>
-                <th>Select Qty</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(selected.unbarcoded_sizes || []).map(s => (
-                <tr key={s.size_code}>
-                  <td>{s.size_code}</td>
-                  <td align="right">{s.qty}</td>
-                  <td>
-                    <input
-                      type="number"
-                      min="0"
-                      max={s.qty}
-                      value={sizeQty[s.size_code] ?? 0}
-                      onChange={e =>
-                        setSizeQty(prev => ({
-                          ...prev,
-                          [s.size_code]: e.target.value
-                        }))
-                      }
-                      style={{ width: 90 }}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div style={{ marginTop: 12, fontWeight: "bold" }}>
-            Bundle Quantity: {totalSelected}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {(selected.size_choices || []).map(sz => {
+              const lim = limitFor(sz);
+              return (
+                <div key={sz} style={{ textAlign: "center" }}>
+                  <div style={{ fontWeight: 700 }}>{sz}</div>
+                  {lim !== null && <div style={{ fontSize: 11, color: "#777" }}>free: {lim}</div>}
+                  <input type="number" min="0" max={lim ?? undefined} value={sizeQty[sz] ?? ""}
+                    onChange={e => setSizeQty(p => ({ ...p, [sz]: e.target.value }))} style={{ width: 60 }} />
+                </div>
+              );
+            })}
           </div>
-
-          <div style={{ marginTop: 14 }}>
-            <button
-              type="button"
-              onClick={create}
-              disabled={creating || totalSelected <= 0}
-              style={{ marginRight: 8 }}
-            >
-              {creating ? "Creating..." : "Create Barcode"}
+          <div style={{ marginTop: 12, fontWeight: "bold" }}>Pieces in this bundle: {total}</div>
+          <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+            <button type="button" onClick={create} disabled={creating || total <= 0}>
+              {creating ? "Creating…" : "Create barcode"}
             </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setSelected(null);
-                setSizeQty({});
-              }}
-            >
-              Cancel
-            </button>
+            <button type="button" onClick={() => setSelected(null)}>Close</button>
           </div>
-
-          {lastBarcode && (
-            <div style={{ marginTop: 12, fontWeight: "bold" }}>
-              Created: {lastBarcode}
-            </div>
-          )}
         </div>
+      )}
+
+      {loading ? <div>Loading…</div> : (
+        <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%", background: "#fff" }}>
+          <thead>
+            <tr>
+              <th>Design</th><th>Series</th><th>Stock</th><th>With barcode</th><th>Without barcode</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.length === 0 ? (
+              <tr><td colSpan="6" align="center">No stock</td></tr>
+            ) : shown.map(r => (
+              <tr key={r.productid} style={selected?.productid === r.productid ? { background: "#eef3ff" } : null}>
+                <td><b>{r.item}</b></td>
+                <td>{r.seriesname}</td>
+                <td align="right">{r.total_qty}</td>
+                <td align="right">{r.barcoded_qty}</td>
+                <td align="right">{r.unbarcoded_qty}</td>
+                <td align="center">
+                  <button type="button" disabled={r.unbarcoded_qty <= 0} onClick={() => open(r)}>Make bundle</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

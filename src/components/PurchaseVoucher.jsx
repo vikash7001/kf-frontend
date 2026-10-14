@@ -1,140 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { api, postIncoming, createBarcode } from "../services/api";
+import { printLabels, toLabel } from "../utils/barcodeLabels";
 
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
-
-  const code128BPattern = value => {
-    // Canonical Code 128-B symbol patterns (107 symbols).
-    const patterns = [
-      "11011001100",
-      "11001101100",
-      "11001100110",
-      "10010011000",
-      "10010001100",
-      "10001001100",
-      "10011001000",
-      "10011000100",
-      "10001100100",
-      "11001001000",
-      "11001000100",
-      "11000100100",
-      "10110011100",
-      "10011011100",
-      "10011001110",
-      "10111001100",
-      "10011101100",
-      "10011100110",
-      "11001110010",
-      "11001011100",
-      "11001001110",
-      "11011100100",
-      "11001110100",
-      "11101101110",
-      "11101001100",
-      "11100101100",
-      "11100100110",
-      "11101100100",
-      "11100110100",
-      "11100110010",
-      "11011011000",
-      "11011000110",
-      "11000110110",
-      "10100011000",
-      "10001011000",
-      "10001000110",
-      "10110001000",
-      "10001101000",
-      "10001100010",
-      "11010001000",
-      "11000101000",
-      "11000100010",
-      "10110111000",
-      "10110001110",
-      "10001101110",
-      "10111011000",
-      "10111000110",
-      "10001110110",
-      "11101110110",
-      "11010001110",
-      "11000101110",
-      "11011101000",
-      "11011100010",
-      "11011101110",
-      "11101011000",
-      "11101000110",
-      "11100010110",
-      "11101101000",
-      "11101100010",
-      "11100011010",
-      "11101111010",
-      "11001000010",
-      "11110001010",
-      "10100110000",
-      "10100001100",
-      "10010110000",
-      "10010000110",
-      "10000101100",
-      "10000100110",
-      "10110010000",
-      "10110000100",
-      "10011010000",
-      "10011000010",
-      "10000110100",
-      "10000110010",
-      "11000010010",
-      "11001010000",
-      "11110111010",
-      "11000010100",
-      "10001111010",
-      "10100111100",
-      "10010111100",
-      "10010011110",
-      "10111100100",
-      "10011110100",
-      "10011110010",
-      "11110100100",
-      "11110010100",
-      "11110010010",
-      "11011011110",
-      "11011110110",
-      "11110110110",
-      "10101111000",
-      "10100011110",
-      "10001011110",
-      "10111101000",
-      "10111100010",
-      "11110101000",
-      "11110100010",
-      "10111011110",
-      "10111101110",
-      "11101011110",
-      "11110101110",
-      "11010000100",
-      "11010010000",
-      "11010011100",
-      "1100011101011"
-    ];
-
-    const start = 104;
-    const stop = 106;
-    const values = [start];
-
-    for (const ch of String(value)) {
-      const code = ch.charCodeAt(0);
-      if (code < 32 || code > 127) return null;
-      values.push(code - 32);
-    }
-
-    let checksum = start;
-    for (let i = 1; i < values.length; i++) {
-      checksum += values[i] * i;
-    }
-    checksum %= 103;
-    values.push(checksum);
-    values.push(stop);
-
-    return values.map(v => patterns[v]).join("");
-  };
 
 export default function PurchaseVoucher({ initialBarcodePurchaseId = null, initialBarcodeLocation = null }) {
 
@@ -359,14 +227,16 @@ const totalQty = rows.reduce(
         SeriesName: r.seriesname,
         CategoryName: r.categoryname,
         Quantity: Number(r.remaining_quantity || 0),
-        SizeRows: Object.entries(r.remaining_sizes || {})
-          .filter(([, q]) => Number(q || 0) > 0)
-          .map(([size_code, q]) => ({
-            size_code,
-            qty: Number(q)
-          }))
+        // sizes recorded at purchase → limit per size;
+        // not recorded → any size, limited by the total only
+        SizesTracked: r.sizes_tracked !== false,
+        SizeRows: r.sizes_tracked !== false
+          ? Object.entries(r.remaining_sizes || {})
+              .filter(([, q]) => Number(q || 0) > 0)
+              .map(([size_code, q]) => ({ size_code, qty: Number(q) }))
+          : (r.size_choices || []).map(size_code => ({ size_code, qty: null }))
       }))
-      .filter(r => r.SizeRows.length > 0);
+      .filter(r => r.Quantity > 0 && r.SizeRows.length > 0);
 
     setBarcodeSourceRows(availableRows);
     setBarcodeRowIndex(0);
@@ -470,342 +340,12 @@ const totalQty = rows.reduce(
 
   // ---------------- PRINT BARCODE LABELS (2-UP) ----------------
 
-  const escapePrintHtml = value =>
-    String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-
   const printCreatedBundles = () => {
     if (!createdBundles.length) {
       alert("No barcode labels to print.");
       return;
     }
-
-    const saved = (() => {
-      try {
-        const raw = localStorage.getItem("kf_barcode_design");
-        return raw ? JSON.parse(raw) : {};
-      } catch {
-        return {};
-      }
-    })();
-
-    const labelWidth = Number(saved.labelWidth) || 38;
-    const labelHeight = Number(saved.labelHeight) || 38;
-
-    const design = {
-      logo: saved.logo || "",
-      logoWidth: Number(saved.logoWidth) || 55,
-      showBrand: saved.showBrand !== false,
-      showLocation: saved.showLocation !== false,
-      showItem: saved.showItem !== false,
-      showSeries: saved.showSeries !== false,
-      showCategory: saved.showCategory !== false,
-      showPurchase: saved.showPurchase !== false,
-      showSizes: saved.showSizes !== false,
-      showBarcode: saved.showBarcode !== false,
-      brandSize: Number(saved.brandSize) || 16,
-      bodySize: Math.max(Number(saved.bodySize) || 8, 9)
-    };
-
-    const escapeHtml = value =>
-      String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-
-    const makeBarcode = barcode => {
-      const barcodeBits = code128BPattern(barcode);
-      const quietModules = 9;
-      const moduleDots = 2;
-
-      const barcodeWithQuietZone = barcodeBits
-        ? `${"0".repeat(quietModules)}${barcodeBits}${"0".repeat(quietModules)}`
-        : "";
-
-      const barcodeDots = barcodeWithQuietZone.length * moduleDots;
-
-      return barcodeWithQuietZone ? `
-        <svg class="barcode-svg"
-             width="${barcodeDots}"
-             height="80"
-             viewBox="0 0 ${barcodeDots} 80"
-             preserveAspectRatio="none"
-             role="img"
-             aria-label="Barcode"
-             shape-rendering="crispEdges">
-          <rect width="${barcodeDots}" height="80" fill="#fff"/>
-          ${barcodeWithQuietZone.split("").map((bit, i) =>
-            bit === "1"
-              ? `<rect x="${i * moduleDots}" y="0" width="${moduleDots}" height="80" fill="#000"/>`
-              : ""
-          ).join("")}
-        </svg>
-      ` : "";
-    };
-
-    const makeLabel = bundle => {
-      const sizes = (bundle.sizes || []).filter(s => Number(s.qty || 0) > 0);
-
-      const brandHtml = design.showBrand
-        ? `<div class="brand">${design.logo
-            ? `<img src="${design.logo}" alt="Logo" style="max-width:${design.logoWidth}%;max-height:3.5mm;object-fit:contain;">`
-            : "KARNI FASHIONS"}</div>`
-        : "";
-
-      const locationHtml = design.showLocation
-        ? `<div class="location">${escapeHtml(location)}</div>`
-        : "";
-
-      const details = [];
-      if (design.showItem) details.push(`<div><b>ITEM:</b> ${escapeHtml(bundle.item)}</div>`);
-      if (design.showSeries) details.push(`<div><b>SER:</b> ${escapeHtml(bundle.seriesname || bundle.series || "")}</div>`);
-      if (design.showCategory) details.push(`<div class="nowrap"><b>CAT:</b> ${escapeHtml(bundle.categoryname || bundle.category || "")}</div>`);
-      if (design.showPurchase) details.push(`<div><b>PUR:</b> ${escapeHtml(incomingId)}</div>`);
-
-      const sizeHtml = design.showSizes
-        ? `<div class="sizes">
-            <div class="size-row" style="grid-template-columns: repeat(${Math.max(sizes.length, 1)}, 1fr);">
-              ${sizes.map(s => `<div>${escapeHtml(s.size_code)}</div>`).join("")}
-            </div>
-            <div class="size-row qty" style="grid-template-columns: repeat(${Math.max(sizes.length, 1)}, 1fr);">
-              ${sizes.map(s => `<div>${Number(s.qty)}</div>`).join("")}
-            </div>
-          </div>`
-        : "";
-
-      const barcodeHtml = design.showBarcode
-        ? `<div class="barcode">
-            ${makeBarcode(bundle.barcode)}
-            <div class="barcode-text">${escapeHtml(bundle.barcode)}</div>
-          </div>`
-        : "";
-
-      return `
-        <div class="label">
-          ${brandHtml}
-          ${locationHtml}
-          <div class="details">${details.join("")}</div>
-          ${sizeHtml}
-          ${barcodeHtml}
-        </div>
-      `;
-    };
-
-    // Two labels are physically one above the other on the 2-UP stock.
-    const sheets = [];
-
-    for (let i = 0; i < createdBundles.length; i += 2) {
-      sheets.push(`
-        <div class="page">
-          ${makeLabel(createdBundles[i])}
-          ${createdBundles[i + 1]
-            ? makeLabel(createdBundles[i + 1])
-            : `<div class="label blank-label"></div>`}
-        </div>
-      `);
-    }
-
-    const popup = window.open("", "_blank", "width=700,height=900");
-
-    if (!popup) {
-      alert("Please allow pop-ups to print barcode labels.");
-      return;
-    }
-
-    popup.document.write(`<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Karni Fashions - Barcode Labels</title>
-<style>
-  @page {
-    size: ${labelWidth}mm ${labelHeight * 2}mm;
-    margin: 0;
-  }
-
-  * { box-sizing: border-box; }
-
-  html, body {
-    margin: 0;
-    padding: 0;
-    width: ${labelWidth}mm;
-    height: ${labelHeight * 2}mm;
-    background: white;
-    overflow: hidden;
-  }
-
-  body {
-    font-family: Arial, sans-serif;
-    color: #000;
-  }
-
-  .page {
-    width: ${labelWidth}mm;
-    height: ${labelHeight * 2}mm;
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .label {
-    width: ${labelWidth}mm;
-    height: ${labelHeight}mm;
-    padding: 0.2mm;
-    margin: 0;
-    overflow: hidden;
-    border: 0.2mm solid #000;
-    position: relative;
-  }
-
-  .brand {
-    text-align: center;
-    font-weight: 800;
-    font-size: min(${Number(design.brandSize) || 16}px, 11px);
-    line-height: 1;
-    white-space: nowrap;
-    height: 3.5mm;
-    overflow: hidden;
-  }
-
-  .brand img {
-    display: block;
-    margin: 0 auto;
-    max-height: 3.5mm !important;
-  }
-
-  .location {
-    text-align: center;
-    font-weight: 700;
-    font-size: 6.5px;
-    line-height: 1;
-    margin-top: 0.2mm;
-    padding-bottom: 0.5mm;
-    border-bottom: 0.2mm solid #000;
-  }
-
-  .details {
-    margin-top: 0.5mm;
-    font-size: min(${Math.max(Number(design.bodySize) || 8, 9)}px, 11px);
-    line-height: 1.05;
-    padding-right: 0.2mm;
-  }
-
-  .details > div {
-    height: 2.9mm;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-
-  .nowrap {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .sizes {
-    width: 100%;
-    margin-top: 0.3mm;
-    border: 0.2mm solid #000;
-    font-size: 7px;
-    line-height: 1;
-  }
-
-  .size-row {
-    display: grid;
-    height: 2.9mm;
-  }
-
-  .size-row > div {
-    text-align: center;
-    padding: 0.3mm 0;
-    border-right: 0.2mm solid #000;
-    overflow: hidden;
-  }
-
-  .size-row > div:last-child {
-    border-right: 0;
-  }
-
-  .qty {
-    border-top: 0.2mm solid #000;
-  }
-
-  .barcode {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 5.5mm;
-    text-align: center;
-    width: auto;
-  }
-
-  .barcode-svg {
-    display: block;
-    width: 100%;
-    height: 10mm;
-    shape-rendering: crispEdges;
-    image-rendering: pixelated;
-  }
-
-  .barcode-text {
-    margin-top: 0.3mm;
-    font-size: 8px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: 0.7px;
-  }
-
-  @media print {
-    html, body {
-      width: ${labelWidth}mm !important;
-      height: ${labelHeight * 2}mm !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      overflow: hidden !important;
-    }
-
-    .page {
-      width: ${labelWidth}mm !important;
-      height: ${labelHeight * 2}mm !important;
-      margin: 0 !important;
-      page-break-after: always;
-      break-after: page;
-    }
-
-    .label {
-      width: ${labelWidth}mm !important;
-      height: ${labelHeight}mm !important;
-      margin: 0 !important;
-    }
-
-    .label {
-      border: 0;
-    }
-  }
-</style>
-</head>
-<body>
-  ${sheets.join("\n")}
-  <script>
-    window.onload = function () {
-      setTimeout(function () {
-        window.print();
-      }, 250);
-    };
-  <\/script>
-</body>
-</html>`);
-
-    popup.document.close();
+    printLabels(createdBundles.map(b => toLabel(b, { location, purchase: incomingId })));
   };
 
 return (
@@ -1226,7 +766,9 @@ return (
                         {r.Item} — {r.SeriesName} — {r.CategoryName}
                       </td>
                       <td style={{ padding: 7 }}>
-                        {r.SizeRows.map(s => `${s.size_code}: ${s.qty}`).join("  |  ")}
+                        {r.SizesTracked
+                          ? r.SizeRows.map(s => `${s.size_code}: ${s.qty}`).join("  |  ")
+                          : "sizes not recorded – any size"}
                       </td>
                       <td style={{ padding: 7, textAlign: "right" }}>
                         {r.Quantity}
@@ -1279,19 +821,19 @@ return (
                       }}
                     >
                       <span>
-                        {s.size_code} (remaining: {s.qty})
+                        {s.size_code}{s.qty !== null ? ` (remaining: ${s.qty})` : ""}
                       </span>
 
                       <input
                         type="number"
                         min="0"
-                        max={s.qty}
+                        max={s.qty ?? barcodeSourceRows[barcodeRowIndex].Quantity}
                         value={bundleSizeQty[s.size_code] || ""}
                         onChange={e =>
                           setBundleSizeQty({
                             ...bundleSizeQty,
                             [s.size_code]: Math.min(
-                              Number(s.qty),
+                              Number(s.qty ?? barcodeSourceRows[barcodeRowIndex].Quantity),
                               Math.max(0, Number(e.target.value || 0))
                             )
                           })
@@ -1319,7 +861,7 @@ return (
                 onClick={printCreatedBundles}
                 disabled={loading}
               >
-                Print Labels (2-UP)
+                🖨 Print {createdBundles.length} label{createdBundles.length > 1 ? "s" : ""}
               </button>
             )}
 
@@ -1369,6 +911,10 @@ return (
                         {
                           barcode: res.data.barcode.barcode,
                           item: selected.Item,
+                          seriesname: selected.SeriesName,
+                          categoryname: selected.CategoryName,
+                          location,
+                          incomingheaderid: incomingId,
                           sizes
                         }
                       ]);
@@ -1392,7 +938,7 @@ return (
                         setBundleSizeQty(initialQty);
                       }
 
-                      alert(`Barcode created: ${res.data.barcode.barcode}`);
+
                     } else {
                       alert("Barcode creation failed.");
                     }

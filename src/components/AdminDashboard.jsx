@@ -29,6 +29,7 @@ import OnlineSkuManager from './OnlineSkuManager';
 
 import BarcodeDesign from './BarcodeDesign';
 import CreateBarcode from './CreateBarcode';
+import BarcodeLookup from './BarcodeLookup';
 
 export default function AdminDashboard({ user }) {
 
@@ -65,6 +66,7 @@ export default function AdminDashboard({ user }) {
     // BARCODE
     createBarcode: <CreateBarcode />,
     barcodeDesign: <BarcodeDesign />,
+    barcodeLookup: <BarcodeLookup />,
 
     // IMAGES
     images: <ImageViewer user={user} />,
@@ -121,7 +123,8 @@ export default function AdminDashboard({ user }) {
       title: "BARCODE",
       items: [
         { key: 'createBarcode', label: 'Create Barcode' },
-        { key: 'barcodeDesign', label: 'Barcode Design' },
+        { key: 'barcodeLookup', label: 'Barcode Lookup / Reprint' },
+        { key: 'barcodeDesign', label: 'Barcode Design & Printer' },
       ]
     },
 

@@ -37,6 +37,13 @@ const [availableSizeStock, setAvailableSizeStock] =
   const itemRef = useRef(null);
   const itemInputRef = useRef(null);
 
+  // ---------------- BARCODE SCAN ----------------
+  const [scanCode, setScanCode] = useState("");
+  const [scanMsg, setScanMsg] = useState(null);     // { ok, text }
+  const [scanning, setScanning] = useState(false);
+  const scanRef = useRef(null);
+  const hasBarcodes = rows.some(r => (r.Barcodes || []).length > 0);
+
   // ---------------- LOAD DATA ----------------
 
   useEffect(() => {
@@ -202,6 +209,83 @@ console.log(p.data[0]);
     0
   );
 
+  // ---------------- SCAN A BUNDLE ----------------
+  // The USB scanner types the code and presses Enter. The bundle's design
+  // and sizes are filled in by themselves – no typing, no wrong design.
+  const code6 = v => String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(-6);
+
+  const onScan = async () => {
+    const v = scanCode.trim();
+    setScanCode("");
+    if (!v) return;
+
+    if (rows.some(r => (r.Barcodes || []).some(b => code6(b.barcode) === code6(v)))) {
+      setScanMsg({ ok: false, text: `${v.toUpperCase()} is already in this voucher` });
+      return;
+    }
+
+    try {
+      setScanning(true);
+      const res = await api.get(`/barcode/scan/${encodeURIComponent(v)}`, { location });
+      const b = res.data;
+      const bundle = { barcode: b.barcode, sizes: b.sizes };
+
+      setRows(prev => {
+        const i = prev.findIndex(r =>
+          (r.Barcodes || []).length > 0 &&
+          r.Item === b.item && r.SeriesName === b.seriesname && r.CategoryName === b.categoryname);
+
+        if (i < 0) {
+          return [...prev, {
+            Item: b.item,
+            SeriesName: b.seriesname,
+            CategoryName: b.categoryname,
+            Quantity: b.total,
+            SizeRows: b.sizes.map(s => ({ size_code: s.size_code, qty: Number(s.qty) })),
+            Barcodes: [bundle]
+          }];
+        }
+
+        // same design scanned again: add this bundle's pieces to that line
+        const r = prev[i];
+        const sizes = r.SizeRows.map(s => ({ ...s }));
+        for (const s of b.sizes) {
+          const ex = sizes.find(x => x.size_code === s.size_code);
+          if (ex) ex.qty += Number(s.qty); else sizes.push({ size_code: s.size_code, qty: Number(s.qty) });
+        }
+        const next = [...prev];
+        next[i] = {
+          ...r,
+          SizeRows: sizes,
+          Quantity: sizes.reduce((a, s) => a + Number(s.qty || 0), 0),
+          Barcodes: [...r.Barcodes, bundle]
+        };
+        return next;
+      });
+
+      setScanMsg({
+        ok: true,
+        text: `✓ ${b.barcode} – ${b.item} (${b.seriesname}): ` +
+          b.sizes.map(s => `${s.size_code}${s.qty > 1 ? "×" + s.qty : ""}`).join(" ") + ` = ${b.total} pcs`
+      });
+    } catch (e) {
+      setScanMsg({ ok: false, text: e?.response?.data?.error || "Could not check this barcode" });
+    } finally {
+      setScanning(false);
+      setTimeout(() => scanRef.current?.focus(), 0);
+    }
+  };
+
+  // change a size on a scanned line (e.g. customer doesn't want M):
+  // the pieces not sold simply stay in their bundle
+  const setRowSize = (rowIndex, size, value) => {
+    setRows(prev => prev.map((r, i) => {
+      if (i !== rowIndex) return r;
+      const sizes = r.SizeRows.map(s => s.size_code === size ? { ...s, qty: Math.max(0, Number(value) || 0) } : s);
+      return { ...r, SizeRows: sizes, Quantity: sizes.reduce((a, s) => a + Number(s.qty || 0), 0) };
+    }));
+  };
+
   // ---------------- ADD ROW ----------------
 
   const onAddRow = () => {
@@ -350,6 +434,10 @@ console.log(p.data[0]);
       CustomerID: picked ? picked.CustomerID : null,
       VoucherNo: voucherNo || null,
       Rows: rows
+        .filter(r => Number(r.Quantity || 0) > 0)
+        .map(r => (r.Barcodes || []).length
+          ? { ...r, SizeRows: r.SizeRows.filter(s => Number(s.qty) > 0) }
+          : r)
     };
 
     try {
@@ -361,11 +449,12 @@ console.log(p.data[0]);
       if (res.data?.success) {
         alert("Sales saved");
         setRows([]);
+        setScanMsg(null);
         setCustomer("");
         setVoucherNo("");
       }
-    } catch {
-      alert("Sales failed");
+    } catch (err) {
+      alert("Sales failed: " + (err?.response?.data?.error || "please try again"));
     } finally {
       setLoading(false);
     }
@@ -390,7 +479,8 @@ const seriesTotals = rows.reduce((acc, r) => {
           <select
             value={location}
             onChange={e => setLocation(e.target.value)}
-            disabled={loading}
+            disabled={loading || hasBarcodes}
+            title={hasBarcodes ? "Scanned bundles belong to this location – remove them to change it" : undefined}
           >
             {LOCATIONS.map(l => <option key={l}>{l}</option>)}
           </select>
@@ -416,6 +506,29 @@ const seriesTotals = rows.reduce((acc, r) => {
             disabled={loading}
           />
         </div>
+      </div>
+
+      {/* SCAN BARCODE */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+        margin: "10px 0", padding: "10px 12px", background: "#f3f7ff",
+        border: "1px solid #c9d8f5", borderRadius: 8
+      }}>
+        <b>📦 Scan barcode</b>
+        <input
+          ref={scanRef}
+          value={scanCode}
+          onChange={e => setScanCode(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); onScan(); } }}
+          placeholder="Click here and scan the bundle"
+          disabled={loading || scanning}
+          style={{ width: 260, fontSize: 16, padding: "6px 8px" }}
+        />
+        {scanMsg && (
+          <span style={{ fontWeight: 600, color: scanMsg.ok ? "#2e7d32" : "#c62828" }}>
+            {scanMsg.ok ? "" : "⚠ "}{scanMsg.text}
+          </span>
+        )}
       </div>
 
       {/* ENTRY ROW */}
@@ -619,7 +732,28 @@ const seriesTotals = rows.reduce((acc, r) => {
           <tbody>
             {rows.map((r, i) => (
               <tr key={i}>
-                <td>{r.Item}</td>
+                <td>
+                  {r.Item}
+                  {(r.Barcodes || []).length > 0 && (
+                    <div style={{ fontSize: 12, color: "#1a3d8f", marginTop: 2 }}>
+                      📦 {r.Barcodes.map(b => b.barcode).join(", ")}
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                        {r.SizeRows.map(s => (
+                          <label key={s.size_code} style={{ color: "#333" }}>
+                            {s.size_code}{" "}
+                            <input
+                              type="number"
+                              min="0"
+                              value={s.qty}
+                              onChange={e => setRowSize(i, s.size_code, e.target.value)}
+                              style={{ width: 46 }}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </td>
                 <td>{r.SeriesName}</td>
                 <td>{r.CategoryName}</td>
                 <td className="qty-col">{r.Quantity}</td>
@@ -682,4 +816,4 @@ const seriesTotals = rows.reduce((acc, r) => {
       )}
     </div>
   );
-}
+}
