@@ -2,7 +2,7 @@
 // BARCODE LABELS – one place that draws and prints all labels
 // (Purchase Voucher, Create Barcode, Barcode Lookup, Barcode Design).
 //
-// Label roll: 38 x 38 mm, 2 across ("2-up"), ~82 mm wide.
+// Label roll: 38 x 38 mm, 2 across ("2-up"); printed as a 76 x 38 mm page.
 // Each printed PAGE = one row of labels across the roll.
 //
 // Two settings, both saved on THIS computer (each office tunes its own printer):
@@ -30,13 +30,15 @@ export const DEFAULT_DESIGN = {
   bodySize: 8         // px
 };
 
+// Same layout as the TechnoRiver template that already prints correctly in
+// every office: page 76 x 38 mm, two 37.5 mm labels side by side.
 export const DEFAULT_PRINTER = {
-  labelWidth: 38,     // mm
-  labelHeight: 38,    // mm
+  labelWidth: 37.5,   // mm
+  labelHeight: 38,    // mm (= page height)
   columns: 2,         // labels across
-  leftMargin: 2,      // mm, roll edge → first label
-  gapX: 2,            // mm between labels across
-  rightMargin: 2,     // mm
+  leftMargin: 0.05,   // mm, page edge → first label
+  gapX: 0.05,         // mm between labels across
+  rightMargin: 0.9,   // mm  → page width 76 mm
   offsetX: 0,         // mm nudge (+ right)
   offsetY: 0,         // mm nudge (+ down)
   module: 0.25,       // mm per barcode bar unit (0.25 = 2 dots @203dpi, 0.254 = 3 dots @300dpi)
