@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { api } from "../services/api";
+import BarcodeSuggest from "./BarcodeSuggest";
 
 const LOCATIONS = ["Jaipur", "Ahmedabad", "Kolkata"];
 const LOCATION_MAP = {
@@ -35,6 +36,13 @@ const [loading, setLoading] = useState(false);
 const [sizeStock, setSizeStock] = useState({});
   const itemRef = useRef();
   const qtyRef = useRef();
+
+  // barcode scanning
+  const [scanCode, setScanCode] = useState("");
+  const [scanMsg, setScanMsg] = useState(null);      // { ok, text }
+  const [scanning, setScanning] = useState(false);
+  const scanRef = useRef(null);
+  const hasBarcodes = rows.some(r => (r.Barcodes || []).length > 0);
 
   // ---------------- LOAD PRODUCTS ----------------
   useEffect(() => {
@@ -161,6 +169,83 @@ const [sizeStock, setSizeStock] = useState({});
     .map(Number)
     .reduce((a, b) => a + b, 0);
 
+  // ---------------- SCAN A BUNDLE ----------------
+  // The whole bundle goes by default. Change a size on the line if only
+  // some pieces are sent – those pieces leave the bundle, the rest stays.
+  const codeKey = v => {
+    const s = String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const m = s.match(/^[A-Z]{0,3}(\d+)$/);
+    return m ? m[1] : s.slice(-6);
+  };
+
+  const onScan = async picked => {
+    const v = String(picked ?? scanCode).trim();
+    setScanCode("");
+    if (!v) return;
+
+    if (rows.some(r => (r.Barcodes || []).some(b => codeKey(b) === codeKey(v)))) {
+      setScanMsg({ ok: false, text: `${v.toUpperCase()} is already in this transfer` });
+      return;
+    }
+
+    try {
+      setScanning(true);
+      const res = await api.get(`/barcode/scan/${encodeURIComponent(v)}`, { location: fromLocation });
+      const b = res.data;
+      const bundleSizes = (b.sizes || []).filter(s => Number(s.qty) > 0)
+        .map(s => ({ size_code: s.size_code, qty: Number(s.qty) }));
+      const pcs = bundleSizes.reduce((a, s) => a + s.qty, 0);
+
+      setRows(prev => {
+        const i = prev.findIndex(r => (r.Barcodes || []).length && Number(r.ProductID) === Number(b.productid));
+        if (i >= 0) {
+          // same design scanned again: add this bundle to that line
+          const r = prev[i];
+          const sizes = [...(r.SizeRows || [])];
+          bundleSizes.forEach(s => {
+            const x = sizes.find(z => z.size_code === s.size_code);
+            if (x) x.qty = Number(x.qty) + s.qty; else sizes.push({ ...s });
+          });
+          const next = [...prev];
+          next[i] = {
+            ...r,
+            Barcodes: [...r.Barcodes, b.barcode],
+            SizeRows: sizes,
+            Quantity: sizes.reduce((a, s) => a + Number(s.qty || 0), 0)
+          };
+          return next;
+        }
+        return [...prev, {
+          ProductID: b.productid,
+          Item: b.item,
+          SeriesName: b.seriesname,
+          CategoryName: b.categoryname,
+          Quantity: pcs,
+          SizeRows: bundleSizes,
+          Barcodes: [b.barcode]
+        }];
+      });
+      setScanMsg({ ok: true, text: `✓ ${b.barcode} · ${b.item} · ${pcs} pcs added` });
+    } catch (e) {
+      setScanMsg({ ok: false, text: e?.response?.data?.error || "Could not check this barcode" });
+    } finally {
+      setScanning(false);
+      setTimeout(() => scanRef.current?.focus(), 0);
+    }
+  };
+
+  // change a size on a scanned line (send fewer pieces than the bundle has)
+  const setRowSize = (i, size_code, val) => {
+    setRows(prev => {
+      const next = [...prev];
+      const r = next[i];
+      const sizes = (r.SizeRows || []).map(s => s.size_code === size_code
+        ? { ...s, qty: val === "" ? "" : Math.max(0, Number(val)) } : s);
+      next[i] = { ...r, SizeRows: sizes, Quantity: sizes.reduce((a, s) => a + Number(s.qty || 0), 0) };
+      return next;
+    });
+  };
+
   // ---------------- ADD ROW ----------------
   const onAddRow = () => {
     if (!selectedProduct || !qty) {
@@ -234,13 +319,34 @@ const [sizeStock, setSizeStock] = useState({});
       return;
     }
 
-    if (!window.confirm("Confirm Stock Transfer?")) return;
+    const bundles = rows.reduce((a, r) => a + (r.Barcodes || []).length, 0);
+    const pcs = rows.reduce((a, r) => a + Number(r.Quantity || 0), 0);
+    if (!window.confirm(
+      `Transfer ${pcs} pcs from ${fromLocation} to ${toLocation}?` +
+      (bundles
+        ? `\n\n${bundles} scanned bundle${bundles > 1 ? "s" : ""}: full bundles move to ${toLocation} with the same label.` +
+          `\nWhere you lowered a size, only those pieces leave the bundle (they arrive without a barcode).`
+        : "")
+    )) return;
+
+    const cleanRows = rows
+      .map(r => ({
+        ...r,
+        SizeRows: (r.SizeRows || [])
+          .filter(s => Number(s.qty || 0) > 0)
+          .map(s => ({ size_code: s.size_code, qty: Number(s.qty) }))
+      }))
+      .filter(r => Number(r.Quantity || 0) > 0);
+    if (!cleanRows.length) {
+      alert("No pieces to transfer");
+      return;
+    }
 
     const payload = {
       UserName: user.username,
       FromLocation: fromLocation,
       ToLocation: toLocation,
-      Rows: rows
+      Rows: cleanRows
     };
 
 try {
@@ -256,6 +362,7 @@ try {
   if (res.data?.success) {
         alert("Stock transferred successfully");
         setRows([]);
+        setScanMsg(null);
         itemRef.current?.focus();
       }
     } catch (e) {
@@ -278,7 +385,9 @@ try {
 
       {/* HEADER */}
       <div style={{ marginBottom: 12 }}>
-        <select value={fromLocation} onChange={e => setFromLocation(e.target.value)}>
+        <select value={fromLocation} onChange={e => { setFromLocation(e.target.value); setScanMsg(null); }}
+          disabled={hasBarcodes}
+          title={hasBarcodes ? "Scanned bundles belong to this office – remove them to change it" : undefined}>
           {LOCATIONS.map(l => <option key={l}>{l}</option>)}
         </select>
 
@@ -287,6 +396,31 @@ try {
         <select value={toLocation} onChange={e => setToLocation(e.target.value)}>
           {LOCATIONS.map(l => <option key={l}>{l}</option>)}
         </select>
+      </div>
+
+      {/* SCAN BARCODE */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+        margin: "10px 0", padding: "10px 12px", background: "#f3f7ff",
+        border: "1px solid #c9d8f5", borderRadius: 8
+      }}>
+        <b>📦 Scan barcode</b>
+        <BarcodeSuggest
+          inputRef={scanRef}
+          value={scanCode}
+          onChange={setScanCode}
+          onSubmit={onScan}
+          location={fromLocation}
+          exclude={rows.flatMap(r => r.Barcodes || [])}
+          placeholder={`Scan a ${fromLocation} bundle (or type 340…)`}
+          disabled={loading || scanning}
+          style={{ width: 280, fontSize: 16, padding: "6px 8px" }}
+        />
+        {scanMsg && (
+          <span style={{ fontWeight: 600, color: scanMsg.ok ? "#2e7d32" : "#c62828" }}>
+            {scanMsg.ok ? "" : "⚠ "}{scanMsg.text}
+          </span>
+        )}
       </div>
 
       {/* ENTRY */}
@@ -441,7 +575,23 @@ Available:
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>
-              <td>{r.Item}</td>
+              <td>
+                {r.Item}
+                {(r.Barcodes || []).length > 0 && (
+                  <>
+                    <div style={{ fontSize: 12, color: "#4a6fb5" }}>📦 {r.Barcodes.join(", ")}</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                      {(r.SizeRows || []).map(s => (
+                        <label key={s.size_code} style={{ fontSize: 12 }}>
+                          {s.size_code}{" "}
+                          <input type="number" min="0" value={s.qty} style={{ width: 44 }}
+                            onChange={e => setRowSize(i, s.size_code, e.target.value)} />
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </td>
               <td>{r.SeriesName}</td>
               <td>{r.CategoryName}</td>
               <td>{r.Quantity}</td>

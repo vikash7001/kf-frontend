@@ -10,7 +10,7 @@ import BarcodeSuggest from "./BarcodeSuggest";
 // ==========================================================
 
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
-const KIND = { CREATE: "Bundle made", SALE: "Sold", REMOVE: "Taken out" };
+const KIND = { CREATE: "Bundle made", SALE: "Sold", REMOVE: "Taken out", TRANSFER: "Transfer" };
 const fmt = d => new Date(d).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export default function BarcodeLookup() {
@@ -151,7 +151,7 @@ export default function BarcodeLookup() {
                     {fmt(h.created_at)} – {KIND[h.kind] || h.kind}
                     {h.size_code ? ` ${h.qty} × ${h.size_code}` : h.note ? ` (${h.note})` : ""}
                     {h.salesid ? ` · sale #${h.salesid}${h.customer ? " – " + h.customer : ""}` : ""}
-                    {h.kind === "REMOVE" && h.note ? ` · ${h.note}` : ""}
+                    {(h.kind === "REMOVE" || h.kind === "TRANSFER") && h.note && h.size_code ? ` · ${h.note}` : ""}
                     {h.username ? ` · ${h.username}` : ""}
                   </li>
                 ))}
