@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api, createBarcode } from "../services/api";
 import { printLabels, toLabel, syncLabelSettings } from "../utils/barcodeLabels";
+import BusyOverlay from "./BusyOverlay";
 
 // ==========================================================
 // CREATE BARCODE – bundle stock that is already in a location
@@ -20,6 +21,8 @@ export default function CreateBarcode() {
   const [sizeQty, setSizeQty] = useState({});
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState([]);   // bundles made in this session (for printing)
+  const [picked, setPicked] = useState({});     // designs ticked for "make barcodes"
+  const [progress, setProgress] = useState(null); // {done, total} while creating
 
   const loadStock = async loc => {
     try {
@@ -27,6 +30,7 @@ export default function CreateBarcode() {
       setSelected(null);
       const res = await api.get(`/barcode/stock/${encodeURIComponent(loc)}`);
       setRows(res.data?.rows || []);
+      setPicked({});
     } catch (e) {
       setRows([]);
       alert(e?.response?.data?.error || "Failed to load stock");
@@ -78,34 +82,43 @@ export default function CreateBarcode() {
     return plan;
   };
 
-  const makeAll = async () => {
-    const plan = planBundles(selected);
-    if (!plan.length) return;
-    const describe = b => Object.entries(b).map(([z, n]) => (n > 1 ? `${z}×${n}` : z)).join(" ");
-    const sum = b => Object.values(b).reduce((a, n) => a + n, 0);
-    const extra = plan.length > 1 && describe(plan[plan.length - 1]) !== describe(plan[0]) ? 1 : 0;
-    if (!window.confirm(
-      `Make ${plan.length} bundle${plan.length > 1 ? "s" : ""} of ${selected.item}?\n\n` +
-      `${plan.length - extra} × (${describe(plan[0])}) = ${sum(plan[0])} pcs each` +
-      (extra ? `\n1 × (${describe(plan[plan.length - 1])}) = ${sum(plan[plan.length - 1])} pcs (what is left)` : "")
-    )) return;
-    setCreating(true);
+  const describe = b => Object.entries(b).map(([z, n]) => (n > 1 ? `${z}×${n}` : z)).join(" ");
+  const canAuto = r => r.sizes_tracked && r.unbarcoded_qty > 0 && planBundles(r).length > 0;
+
+  // make every bundle of every given design, one after another
+  const makeFor = async designs => {
+    const jobs = [], lines = [];
+    designs.forEach(row => {
+      const plan = planBundles(row);
+      if (!plan.length) return;
+      plan.forEach(b => jobs.push({ row, b }));
+      const full = plan.filter(b => describe(b) === describe(plan[0])).length;
+      lines.push(`${row.item}: ${full} × (${describe(plan[0])})` +
+        (plan.length > full ? ` + 1 × (${describe(plan[plan.length - 1])})` : ""));
+    });
+    if (!jobs.length) return;
+    const shown = lines.slice(0, 12).join("\n") + (lines.length > 12 ? `\n…and ${lines.length - 12} more designs` : "");
+    if (!window.confirm(`Make ${jobs.length} barcode${jobs.length > 1 ? "s" : ""} for ${lines.length} design${lines.length > 1 ? "s" : ""} at ${location}?\n\n${shown}`)) return;
+    setProgress({ done: 0, total: jobs.length });
     const made = [];
     try {
-      for (const b of plan) {
+      for (const { row, b } of jobs) {
         const sizes = Object.entries(b).map(([size_code, qty]) => ({ size_code, qty }));
-        const res = await createBarcode({ productid: selected.productid, Location: location, incomingheaderid: null, sizes });
+        const res = await createBarcode({ productid: row.productid, Location: location, incomingheaderid: null, sizes });
         made.push(res.data.barcode);
+        setProgress({ done: made.length, total: jobs.length });
       }
     } catch (e) {
-      alert(e?.response?.data?.error || "Could not create all bundles");
+      alert(`${made.length} of ${jobs.length} barcodes were made, then it stopped:\n` +
+        (e?.response?.data?.error || "Could not create the barcode"));
     } finally {
       setCreated(list => [...made.slice().reverse(), ...list]);
       setSelected(null);
-      setCreating(false);
+      setProgress(null);
       loadStock(location);
     }
   };
+  const makeAll = () => makeFor([selected]);
 
   const total = Object.values(sizeQty).map(Number).filter(n => n > 0).reduce((a, b) => a + b, 0);
 
@@ -121,6 +134,7 @@ export default function CreateBarcode() {
     }
     try {
       setCreating(true);
+      setProgress({ done: 0, total: 1 });
       const res = await createBarcode({ productid: selected.productid, Location: location, incomingheaderid: null, sizes });
       const b = res.data.barcode;
       setCreated(list => [b, ...list]);
@@ -140,6 +154,7 @@ export default function CreateBarcode() {
       alert(e?.response?.data?.error || "Failed to create barcode");
     } finally {
       setCreating(false);
+      setProgress(null);
     }
   };
 
@@ -148,6 +163,7 @@ export default function CreateBarcode() {
 
   return (
     <div style={{ padding: 18 }}>
+      {progress && <BusyOverlay done={progress.done} total={progress.total} />}
       <h2>Create Barcode</h2>
       <p style={{ color: "#555", marginTop: -6 }}>
         For stock already in the shop. New purchases are bundled right after posting the purchase.
@@ -219,18 +235,48 @@ export default function CreateBarcode() {
         </div>
       )}
 
+      {(() => {
+        const autoRows = shown.filter(canAuto);
+        const tickRows = autoRows.filter(r => picked[r.productid]);
+        const count = tickRows.reduce((a, r) => a + planBundles(r).length, 0);
+        return !loading && autoRows.length > 0 && (
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "0 0 8px",
+                        padding: "8px 10px", background: "#fffbe6", border: "1px solid #f0d97a", borderRadius: 8 }}>
+            <span>Tick designs, then make all their barcodes in one go (full sets of 1 per size + one bundle of what is left).</span>
+            <button type="button" disabled={!tickRows.length || !!progress} onClick={() => makeFor(tickRows)}
+              style={{ fontWeight: 800, marginLeft: "auto", padding: "6px 12px" }}>
+              ⚡ Make barcodes{tickRows.length ? ` – ${count} for ${tickRows.length} design${tickRows.length > 1 ? "s" : ""}` : ""}
+            </button>
+          </div>
+        );
+      })()}
+
       {loading ? <div>Loading…</div> : (
         <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%", background: "#fff" }}>
           <thead>
             <tr>
+              <th style={{ width: 30 }}>
+                <input type="checkbox"
+                  checked={shown.some(canAuto) && shown.filter(canAuto).every(r => picked[r.productid])}
+                  onChange={e => setPicked(p => {
+                    const n = { ...p };
+                    shown.filter(canAuto).forEach(r => { n[r.productid] = e.target.checked; });
+                    return n;
+                  })} />
+              </th>
               <th>Design</th><th>Series</th><th>Stock</th><th>With barcode</th><th>Without barcode</th><th></th>
             </tr>
           </thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan="6" align="center">No stock</td></tr>
+              <tr><td colSpan="7" align="center">No stock</td></tr>
             ) : shown.map(r => (
               <tr key={r.productid} style={selected?.productid === r.productid ? { background: "#eef3ff" } : null}>
+                <td align="center">
+                  <input type="checkbox" disabled={!canAuto(r)} checked={!!picked[r.productid]}
+                    title={canAuto(r) ? "" : r.unbarcoded_qty > 0 ? "Sizes not recorded – make by hand" : "Already has barcodes"}
+                    onChange={e => setPicked(p => ({ ...p, [r.productid]: e.target.checked }))} />
+                </td>
                 <td><b>{r.item}</b></td>
                 <td>{r.seriesname}</td>
                 <td align="right">{r.total_qty}</td>

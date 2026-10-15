@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { api, postIncoming, createBarcode } from "../services/api";
 import { printLabels, toLabel, syncLabelSettings } from "../utils/barcodeLabels";
+import BusyOverlay from "./BusyOverlay";
 
 const LOCATIONS = ["Jaipur", "Kolkata", "Ahmedabad"];
 
@@ -34,7 +35,9 @@ const [sizesTouched, setSizesTouched] = useState(false);
   const [bundleSizeQty, setBundleSizeQty] = useState({});
   const [createdBundles, setCreatedBundles] = useState([]);
   const [bundlePcs, setBundlePcs] = useState("");
-  const [makingAll, setMakingAll] = useState(false);
+  const [picked, setPicked] = useState({});           // designs ticked for "make barcodes"
+  const [manualOpen, setManualOpen] = useState(false); // "one bundle by hand" box
+  const [progress, setProgress] = useState(null);      // {done, total} while creating
 
   // ---------------- BUNDLE AUTO-FILL ----------------
   // A new bundle starts as one "set": 1 piece of every size still left.
@@ -309,6 +312,7 @@ const totalQty = rows.reduce(
 
     setBarcodeSourceRows(availableRows);
     setBarcodeRowIndex(0);
+    setPicked(Object.fromEntries(availableRows.filter(r => r.SizesTracked).map(r => [r.ProductID, true])));
 
     const initialQty = oneSet(availableRows[0]);
     setBundleSizeQty(initialQty);
@@ -405,44 +409,82 @@ const totalQty = rows.reduce(
 
   // ---------------- PRINT BARCODE LABELS (2-UP) ----------------
 
-  const makeAllBundles = async () => {
-    const row = barcodeSourceRows[barcodeRowIndex];
-    if (!row?.SizesTracked) {
-      alert("Sizes were not recorded for this design – please enter each bundle by hand.");
-      return;
-    }
-    const plan = planBundles(row);
-    if (!plan.length) return;
-    const describe = b => Object.entries(b).map(([z, n]) => (n > 1 ? `${z}×${n}` : z)).join(" ");
-    const sum = b => Object.values(b).reduce((a, n) => a + n, 0);
-    const full = plan.filter(b => sum(b) === sum(plan[0]) && describe(b) === describe(plan[0])).length;
-    const extra = plan.length - full;
-    if (!window.confirm(
-      `Make ${plan.length} bundle${plan.length > 1 ? "s" : ""} for ${row.Item}?\n\n` +
-      `${full} × (${describe(plan[0])}) = ${sum(plan[0])} pcs each` +
-      (extra ? `\n1 × (${describe(plan[plan.length - 1])}) = ${sum(plan[plan.length - 1])} pcs (what is left)` : "")
-    )) return;
+  const describe = b => Object.entries(b).map(([z, n]) => (n > 1 ? `${z}×${n}` : z)).join(" ");
+  const pcsOf = b => Object.values(b).reduce((a, n) => a + Number(n), 0);
 
-    setMakingAll(true);
+  // make every bundle of every ticked design, one after another
+  const makeBundlesFor = async designRows => {
+    const jobs = [];
+    const lines = [];
+    designRows.forEach(row => {
+      const plan = planBundles(row);
+      if (!plan.length) return;
+      plan.forEach(b => jobs.push({ row, b }));
+      const full = plan.filter(b => describe(b) === describe(plan[0])).length;
+      const rest = plan.length - full;
+      lines.push(`${row.Item}: ${full} × (${describe(plan[0])})` +
+        (rest ? ` + 1 × (${describe(plan[plan.length - 1])})` : ""));
+    });
+    if (!jobs.length) return;
+    const shown = lines.slice(0, 12).join("\n") + (lines.length > 12 ? `\n…and ${lines.length - 12} more designs` : "");
+    if (!window.confirm(`Make ${jobs.length} barcode${jobs.length > 1 ? "s" : ""} for ${lines.length} design${lines.length > 1 ? "s" : ""}?\n\n${shown}`)) return;
+
+    setManualOpen(false);
+    setProgress({ done: 0, total: jobs.length });
     const made = [];
     try {
-      for (const b of plan) {
+      for (const { row, b } of jobs) {
         const sizes = Object.entries(b).map(([size_code, qty]) => ({ size_code, qty }));
         const res = await createBarcode({ productid: row.ProductID, Location: location, incomingheaderid: incomingId, sizes });
         made.push({
           barcode: res.data.barcode.barcode, item: row.Item, seriesname: row.SeriesName,
           categoryname: row.CategoryName, location, incomingheaderid: incomingId, sizes
         });
+        setProgress({ done: made.length, total: jobs.length });
       }
     } catch (err) {
-      alert(err?.response?.data?.error || "Could not create all bundles");
+      alert(`${made.length} of ${jobs.length} barcodes were made, then it stopped:\n` +
+        (err?.response?.data?.error || "Could not create the barcode"));
     } finally {
       setCreatedBundles(prev => [...prev, ...made]);
-      const availableRows = await loadBarcodeAvailability(incomingId);
-      setBarcodeRowIndex(0);
-      setBundleSizeQty(oneSet(availableRows[0]));
+      try {
+        const availableRows = await loadBarcodeAvailability(incomingId);
+        setBundleSizeQty(oneSet(availableRows[0]));
+      } catch { /* list refreshes next time */ }
       setBundlePcs("");
-      setMakingAll(false);
+      setProgress(null);
+    }
+  };
+
+  // one bundle typed by hand
+  const createOneBundle = async () => {
+    const selected = barcodeSourceRows[barcodeRowIndex];
+    const sizes = Object.entries(bundleSizeQty)
+      .filter(([, q]) => Number(q || 0) > 0)
+      .map(([size_code, q]) => ({ size_code, qty: Number(q) }));
+    if (!selected?.ProductID) return alert("Product information is missing for this design.");
+    if (!sizes.length) return alert("Enter at least one size quantity for the bundle.");
+    setProgress({ done: 0, total: 1 });
+    try {
+      const res = await createBarcode({ productid: selected.ProductID, Location: location, incomingheaderid: incomingId, sizes });
+      if (!res.data?.success) throw new Error("failed");
+      setCreatedBundles(prev => [...prev, {
+        barcode: res.data.barcode.barcode, item: selected.Item, seriesname: selected.SeriesName,
+        categoryname: selected.CategoryName, location, incomingheaderid: incomingId, sizes
+      }]);
+      const availableRows = await loadBarcodeAvailability(incomingId);
+      const same = availableRows.findIndex(r => r.ProductID === selected.ProductID);
+      if (same >= 0) {
+        setBarcodeRowIndex(same);
+        setBundleSizeQty(oneSet(availableRows[same]));
+      } else {
+        setManualOpen(false);
+      }
+      setBundlePcs("");
+    } catch (err) {
+      alert(err?.response?.data?.message || err?.response?.data?.error || "Barcode creation failed.");
+    } finally {
+      setProgress(null);
     }
   };
 
@@ -770,6 +812,7 @@ return (
                 setBundleSizeQty(initialQty);
                 setBundlePcs("");
                 setCreatedBundles([]);
+                setManualOpen(false);
                 setShowBarcodePrompt(false);
                 setShowBundleComposer(true);
               }}
@@ -781,308 +824,159 @@ return (
       </div>
     )}
 
-    {showBundleComposer && (
-      <div className="confirm-overlay">
+    {showBundleComposer && (() => {
+      const sel = barcodeSourceRows[barcodeRowIndex];
+      const autoRows = barcodeSourceRows.filter(r => r.SizesTracked);
+      const pickedRows = autoRows.filter(r => picked[r.ProductID]);
+      const pickedBundles = pickedRows.reduce((a, r) => a + planBundles(r).length, 0);
+      const allTicked = autoRows.length > 0 && pickedRows.length === autoRows.length;
+      const cell = { padding: "5px 7px", borderBottom: "1px solid #eee", verticalAlign: "middle" };
+      return (
+      <div className="confirm-overlay" style={{ zIndex: 1000 }}>
         <div
           className="confirm-box"
-          style={{ maxWidth: 720, width: "92%" }}
+          style={{ maxWidth: 860, width: "94%", maxHeight: "92vh", display: "flex", flexDirection: "column", padding: 0 }}
         >
-          <h3>Create Physical Bundles</h3>
-
-          <div style={{ marginBottom: 6 }}>
-            <strong>Purchase ID:</strong> {incomingId}
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <strong>Location:</strong> {location}
-          </div>
-
-          <div
-            style={{
-              padding: 10,
-              marginBottom: 16,
-              background: "#f7f7f7",
-              border: "1px solid #ddd",
-              borderRadius: 6
-            }}
-          >
-            Create <strong>one barcode per physical bundle</strong>.
-            The same design can have multiple bundles/barcodes.
-            Choose the quantities that actually go into each physical package.
-          </div>
-
-          {createdBundles.length > 0 && (
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ marginBottom: 8 }}>
-                <strong>Bundles created in this purchase</strong>
-              </div>
-
-              {createdBundles.map((b, i) => (
-                <div
-                  key={`${b.barcode}-${i}`}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "7px 9px",
-                    border: "1px solid #ddd",
-                    borderRadius: 4,
-                    marginBottom: 6
-                  }}
-                >
-                  <span>
-                    <strong>{b.barcode}</strong> — {b.item}
-                  </span>
-                  <span>
-                    {b.sizes.map(s => `${s.size_code}: ${s.qty}`).join(", ")}
-                  </span>
-                </div>
-              ))}
+          {/* header */}
+          <div style={{ padding: "14px 18px 10px", borderBottom: "1px solid #ddd" }}>
+            <h3 style={{ margin: 0 }}>Create Barcodes</h3>
+            <div style={{ color: "#555", marginTop: 4 }}>
+              Purchase <b>#{incomingId}</b> · <b>{location}</b> · one barcode = one physical bundle
             </div>
-          )}
+          </div>
 
-          {barcodeSourceRows.length === 0 ? (
-            <div style={{ padding: 12 }}>
-              All purchased quantities for this purchase have been assigned
-              to active bundles.
-            </div>
-          ) : (
-            <>
-              <div style={{ marginBottom: 8 }}>
-                <strong>Remaining unbundled stock</strong>
-              </div>
-
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  marginBottom: 18
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: "left", padding: 7 }}>Design</th>
-                    <th style={{ textAlign: "left", padding: 7 }}>Remaining by size</th>
-                    <th style={{ textAlign: "right", padding: 7 }}>Pieces</th>
-                    <th style={{ padding: 7 }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {barcodeSourceRows.map((r, i) => (
-                    <tr key={r.ProductID || i}>
-                      <td style={{ padding: 7 }}>
-                        {r.Item} — {r.SeriesName} — {r.CategoryName}
-                      </td>
-                      <td style={{ padding: 7 }}>
-                        {r.SizesTracked
-                          ? r.SizeRows.map(s => `${s.size_code}: ${s.qty}`).join("  |  ")
-                          : "sizes not recorded – any size"}
-                      </td>
-                      <td style={{ padding: 7, textAlign: "right" }}>
-                        {r.Quantity}
-                      </td>
-                      <td style={{ padding: 7, textAlign: "right" }}>
-                        <button
-                          onClick={() => {
-                            const index = barcodeSourceRows.findIndex(
-                              x => x.ProductID === r.ProductID
-                            );
-                            const initialQty = oneSet(r);
-                            setBarcodeRowIndex(index >= 0 ? index : i);
-                            setBundleSizeQty(initialQty);
-                setBundlePcs("");
-                          }}
-                        >
-                          Select Design
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {barcodeSourceRows[barcodeRowIndex] && (
-                <div
-                  style={{
-                    borderTop: "1px solid #ddd",
-                    paddingTop: 14
-                  }}
-                >
-                  <div style={{ marginBottom: 10 }}>
-                    <strong>New Physical Bundle</strong>
-                  </div>
-
-                  <div style={{ marginBottom: 12 }}>
-                    {barcodeSourceRows[barcodeRowIndex].Item} — {barcodeSourceRows[barcodeRowIndex].SeriesName} — {barcodeSourceRows[barcodeRowIndex].CategoryName}
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
-                    <button type="button" onClick={() => setBundleSizeQty(oneSet(barcodeSourceRows[barcodeRowIndex]))}>1 of each size</button>
-                    <button type="button" onClick={() => setBundleSizeQty(allLeft(barcodeSourceRows[barcodeRowIndex]))}>All remaining</button>
-                    <button type="button" onClick={() => setBundleSizeQty({})}>Clear</button>
-                    <span style={{ marginLeft: 6 }}>
-                      Pieces in bundle{" "}
-                      <input type="number" min="0" value={bundlePcs} style={{ width: 60 }}
-                        onChange={e => {
-                          setBundlePcs(e.target.value);
-                          setBundleSizeQty(spread(barcodeSourceRows[barcodeRowIndex], e.target.value));
-                        }} />
-                    </span>
-                    {barcodeSourceRows[barcodeRowIndex].SizesTracked && (
-                      <button type="button" disabled={makingAll || loading} onClick={makeAllBundles}
-                        style={{ marginLeft: "auto", fontWeight: 700 }}>
-                        {makingAll ? "Making bundles…" : "⚡ Make all bundles for this design"}
-                      </button>
-                    )}
-                  </div>
-
-                  {(barcodeSourceRows[barcodeRowIndex].SizeRows || []).map(s => (
-                    <div
-                      key={s.size_code}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: 8
-                      }}
-                    >
-                      <span>
-                        {s.size_code}{s.qty !== null ? ` (remaining: ${s.qty})` : ""}
-                      </span>
-
-                      <input
-                        type="number"
-                        min="0"
-                        max={s.qty ?? barcodeSourceRows[barcodeRowIndex].Quantity}
-                        value={bundleSizeQty[s.size_code] || ""}
-                        onChange={e =>
-                          setBundleSizeQty({
-                            ...bundleSizeQty,
-                            [s.size_code]: Math.min(
-                              Number(s.qty ?? barcodeSourceRows[barcodeRowIndex].Quantity),
-                              Math.max(0, Number(e.target.value || 0))
-                            )
-                          })
-                        }
-                        style={{ width: 80 }}
-                      />
-                    </div>
-                  ))}
-
-                  <div style={{ marginTop: 12 }}>
-                    <strong>
-                      Bundle pieces: {Object.values(bundleSizeQty)
-                        .map(Number)
-                        .reduce((a, b) => a + b, 0)}
-                    </strong>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          <div className="confirm-actions" style={{ marginTop: 18 }}>
+          {/* body – scrolls inside the box */}
+          <div style={{ padding: "10px 18px", overflowY: "auto", flex: 1 }}>
             {createdBundles.length > 0 && (
-              <button
-                onClick={printCreatedBundles}
-                disabled={loading}
-              >
+              <div style={{ border: "1px solid #b7dfb9", background: "#f2fbf2", borderRadius: 6, padding: "8px 10px", marginBottom: 12 }}>
+                <b>✓ {createdBundles.length} barcode{createdBundles.length > 1 ? "s" : ""} made</b>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, maxHeight: 92, overflowY: "auto" }}>
+                  {createdBundles.map((b, i) => (
+                    <span key={`${b.barcode}-${i}`} title={b.sizes.map(s => `${s.size_code}: ${s.qty}`).join(", ")}
+                      style={{ background: "#fff", border: "1px solid #ccc", borderRadius: 12, padding: "1px 8px", fontSize: 13 }}>
+                      <b>{b.barcode}</b> {b.item} · {b.sizes.reduce((a, s) => a + Number(s.qty), 0)} pcs
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {barcodeSourceRows.length === 0 ? (
+              <div style={{ padding: 12, fontWeight: 600, color: "#2e7d32" }}>
+                Everything in this purchase has a barcode. Print the labels and you're done.
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 6, color: "#333" }}>
+                  Tick the designs → <b>Make barcodes</b>. Each design is packed as full sets
+                  (1 of every size), and what is left goes into one last bundle.
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ background: "#f3f6fb", position: "sticky", top: -10 }}>
+                      <th style={{ ...cell, width: 30 }}>
+                        <input type="checkbox" checked={allTicked} disabled={!autoRows.length}
+                          onChange={e => setPicked(e.target.checked ? Object.fromEntries(autoRows.map(r => [r.ProductID, true])) : {})} />
+                      </th>
+                      <th style={{ ...cell, textAlign: "left" }}>Design</th>
+                      <th style={{ ...cell, textAlign: "left" }}>Sizes left</th>
+                      <th style={{ ...cell, textAlign: "right" }}>Pcs</th>
+                      <th style={{ ...cell, textAlign: "left" }}>Will make</th>
+                      <th style={cell}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {barcodeSourceRows.map((r, i) => {
+                      const plan = r.SizesTracked ? planBundles(r) : [];
+                      return (
+                        <tr key={r.ProductID || i} style={manualOpen && i === barcodeRowIndex ? { background: "#eef3ff" } : null}>
+                          <td style={{ ...cell, textAlign: "center" }}>
+                            <input type="checkbox" disabled={!r.SizesTracked} checked={!!picked[r.ProductID]}
+                              onChange={e => setPicked(p => ({ ...p, [r.ProductID]: e.target.checked }))} />
+                          </td>
+                          <td style={cell}><b>{r.Item}</b> <span style={{ color: "#666" }}>{r.SeriesName}</span></td>
+                          <td style={{ ...cell, color: "#444" }}>
+                            {r.SizesTracked ? r.SizeRows.map(s => `${s.size_code}×${s.qty}`).join(" ") : <i>sizes not recorded</i>}
+                          </td>
+                          <td style={{ ...cell, textAlign: "right" }}>{r.Quantity}</td>
+                          <td style={{ ...cell, color: "#444" }}>
+                            {r.SizesTracked ? `${plan.length} bundle${plan.length > 1 ? "s" : ""}` : "by hand"}
+                          </td>
+                          <td style={{ ...cell, textAlign: "right" }}>
+                            <button type="button" style={{ fontSize: 12 }} onClick={() => {
+                              setBarcodeRowIndex(i);
+                              setBundleSizeQty(oneSet(r));
+                              setBundlePcs("");
+                              setManualOpen(true);
+                            }}>One bundle by hand</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {manualOpen && sel && (
+                  <div style={{ border: "1px solid #9bb3e0", borderRadius: 6, padding: "10px 12px", marginTop: 12, background: "#fafcff" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                      <b>One bundle of {sel.Item}</b>
+                      <button type="button" onClick={() => setBundleSizeQty(oneSet(sel))}>1 of each</button>
+                      {sel.SizesTracked && <button type="button" onClick={() => setBundleSizeQty(allLeft(sel))}>All left</button>}
+                      <button type="button" onClick={() => setBundleSizeQty({})}>Clear</button>
+                      <span>Pieces{" "}
+                        <input type="number" min="0" value={bundlePcs} style={{ width: 55 }}
+                          onChange={e => { setBundlePcs(e.target.value); setBundleSizeQty(spread(sel, e.target.value)); }} />
+                      </span>
+                      <button type="button" style={{ marginLeft: "auto" }} onClick={() => setManualOpen(false)}>✕</button>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {(sel.SizeRows || []).map(s => (
+                        <div key={s.size_code} style={{ textAlign: "center" }}>
+                          <div style={{ fontWeight: 700 }}>{s.size_code}</div>
+                          {s.qty !== null && <div style={{ fontSize: 11, color: "#777" }}>left {s.qty}</div>}
+                          <input type="number" min="0" style={{ width: 54 }}
+                            max={s.qty ?? sel.Quantity}
+                            value={bundleSizeQty[s.size_code] || ""}
+                            onChange={e => setBundleSizeQty({
+                              ...bundleSizeQty,
+                              [s.size_code]: Math.min(Number(s.qty ?? sel.Quantity), Math.max(0, Number(e.target.value || 0)))
+                            })} />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10 }}>
+                      <b>Bundle: {Object.values(bundleSizeQty).map(Number).reduce((a, b) => a + b, 0)} pcs</b>
+                      <button type="button" onClick={createOneBundle} style={{ fontWeight: 700 }}>Create this barcode</button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* footer – always visible */}
+          <div className="confirm-actions" style={{ margin: 0, padding: "10px 18px", borderTop: "1px solid #ddd", alignItems: "center" }}>
+            {barcodeSourceRows.length > 0 && (
+              <button type="button" disabled={!pickedRows.length || !!progress} onClick={() => makeBundlesFor(pickedRows)}
+                style={{ fontWeight: 800, marginRight: "auto", padding: "7px 14px" }}>
+                ⚡ Make barcodes{pickedRows.length ? ` – ${pickedBundles} for ${pickedRows.length} design${pickedRows.length > 1 ? "s" : ""}` : ""}
+              </button>
+            )}
+            {createdBundles.length > 0 && (
+              <button onClick={printCreatedBundles} disabled={!!progress}>
                 🖨 Print {createdBundles.length} label{createdBundles.length > 1 ? "s" : ""}
               </button>
             )}
-
-            <button
-              onClick={() => {
-                setShowBundleComposer(false);
-                setCreatedBundles([]);
-              }}
-            >
+            <button onClick={() => { setShowBundleComposer(false); setCreatedBundles([]); setManualOpen(false); }}>
               Done
             </button>
-
-            {barcodeSourceRows.length > 0 && barcodeSourceRows[barcodeRowIndex] && (
-              <button
-                onClick={async () => {
-                  const selected = barcodeSourceRows[barcodeRowIndex];
-                  const sizes = Object.entries(bundleSizeQty)
-                    .filter(([, q]) => Number(q || 0) > 0)
-                    .map(([size_code, q]) => ({
-                      size_code,
-                      qty: Number(q)
-                    }));
-
-                  if (!selected?.ProductID) {
-                    alert("Product information is missing for this design.");
-                    return;
-                  }
-
-                  if (!sizes.length) {
-                    alert("Enter at least one size quantity for the bundle.");
-                    return;
-                  }
-
-                  try {
-                    setLoading(true);
-
-                    const res = await createBarcode({
-                      productid: selected.ProductID,
-                      Location: location,
-                      incomingheaderid: incomingId,
-                      sizes
-                    });
-
-                    if (res.data?.success) {
-                      setCreatedBundles(prev => [
-                        ...prev,
-                        {
-                          barcode: res.data.barcode.barcode,
-                          item: selected.Item,
-                          seriesname: selected.SeriesName,
-                          categoryname: selected.CategoryName,
-                          location,
-                          incomingheaderid: incomingId,
-                          sizes
-                        }
-                      ]);
-
-                      const availableRows = await loadBarcodeAvailability(incomingId);
-
-                      if (availableRows.length === 0) {
-                        setBarcodeRowIndex(0);
-                        setBundleSizeQty({});
-                      } else {
-                        const sameDesignIndex = availableRows.findIndex(
-                          r => r.ProductID === selected.ProductID
-                        );
-                        const nextIndex =
-                          sameDesignIndex >= 0 ? sameDesignIndex : 0;
-                        const initialQty = oneSet(availableRows[nextIndex]);
-                        setBarcodeRowIndex(nextIndex);
-                        setBundleSizeQty(initialQty);
-                setBundlePcs("");
-                      }
-
-
-                    } else {
-                      alert("Barcode creation failed.");
-                    }
-                  } catch (err) {
-                    alert(
-                      err?.response?.data?.message ||
-                      err?.response?.data?.error ||
-                      "Barcode creation failed."
-                    );
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                Create Barcode for This Bundle
-              </button>
-            )}
           </div>
         </div>
       </div>
-    )}
+      );
+    })()}
+
+    {progress && <BusyOverlay done={progress.done} total={progress.total} />}
 
     {loading && (
       <div className="loading-overlay">
