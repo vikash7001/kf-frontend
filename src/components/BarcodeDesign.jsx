@@ -154,6 +154,16 @@ export default function BarcodeDesign() {
             {pnum("offsetY", "Move down (− = up)", 0.25, undefined)}
             {pnum("module", "Barcode bar width", 0.001, "0.25 for 203 dpi (TVS) · 0.254 for 300 dpi")}
             {pnum("barHeight", "Barcode height", 0.5, undefined)}
+            <div style={row}>
+              <span style={{ width: 210 }}>Turn labels</span>
+              <select value={Number(printer.rotate) || 0} onChange={e => setP("rotate", e.target.value)}>
+                <option value={0}>No turn</option>
+                <option value={90}>Turn right ↻ 90°</option>
+                <option value={270}>Turn left ↺ 90°</option>
+                <option value={180}>Upside down 180°</option>
+              </select>
+              <span style={{ color: "#777", fontSize: 12 }}>only if the printer prints labels sideways</span>
+            </div>
             <button type="button" onClick={() => { dirty.current = true; setPrinter(DEFAULT_PRINTER); }}>
               Reset printer setup
             </button>

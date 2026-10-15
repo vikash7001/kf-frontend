@@ -53,7 +53,8 @@ export const DEFAULT_PRINTER = {
   offsetX: 0,         // mm nudge (+ right)
   offsetY: 0,         // mm nudge (+ down)
   module: 0.25,       // mm per barcode bar unit (0.25 = 2 dots @203dpi, 0.254 = 3 dots @300dpi)
-  barHeight: 10       // mm
+  barHeight: 10,      // mm
+  rotate: 0           // turn each label 0 / 90 / 180 / 270° (some drivers turn the print)
 };
 
 function readJson(key, defaults) {
@@ -243,6 +244,19 @@ export function labelCss(p = readPrinter()) {
   .bct { font-weight:800; letter-spacing:1px; line-height:1; margin-top:0.4mm; }`;
 }
 
+// turn one label inside its slot (for printers whose driver turns the print)
+function turned(html, p) {
+  const deg = ((Number(p.rotate) || 0) % 360 + 360) % 360;
+  if (!deg) return html;
+  const w = Number(p.labelWidth), h = Number(p.labelHeight);
+  const side = deg === 90 || deg === 270;
+  // for 90/270 the label is drawn h wide × w high, then turned into the w × h slot
+  const lw = side ? h : w, lh = side ? w : h;
+  return `<div style="position:absolute;left:${(w - lw) / 2}mm;top:${(h - lh) / 2}mm;width:${lw}mm;height:${lh}mm;` +
+    `transform:rotate(${deg}deg);transform-origin:50% 50%">` +
+    html.replace('<div class="label">', `<div class="label" style="width:${lw}mm;height:${lh}mm">`) + `</div>`;
+}
+
 /** Full printable HTML: one page per row of labels across the roll. */
 export function sheetHtml(labels, opts = {}) {
   const office = labels[0]?.location;
@@ -259,7 +273,7 @@ export function sheetHtml(labels, opts = {}) {
       const x = Number(p.leftMargin) + c * (Number(p.labelWidth) + Number(p.gapX)) + Number(p.offsetX);
       const lab = row[c];
       cells.push(`<div class="slot${test ? " test" : ""}" style="left:${x}mm;top:${Number(p.offsetY)}mm">${
-        lab ? labelHtml(lab, design, p) : ""}</div>`);
+        lab ? turned(labelHtml(lab, design, p), p) : ""}</div>`);
     }
     return `<div class="page">${cells.join("")}</div>`;
   });
