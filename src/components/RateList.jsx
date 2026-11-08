@@ -34,6 +34,8 @@ export default function RateList({ onExit }) {
   const [savingSeries, setSavingSeries] = useState(null);
   const [search, setSearch] = useState('');
   const [msg, setMsg] = useState(null);            // { series, ok, text }
+  const [pushing, setPushing] = useState(false);
+  const [pushMsg, setPushMsg] = useState(null);    // { ok, text }
 
   useEffect(() => {
     loadSeries();
@@ -66,15 +68,47 @@ export default function RateList({ onExit }) {
     RATES.forEach(({ key }) => { body[key] = clean(r[key]); });
 
     try {
-      await api.put('/series/rate', body);
+      const res = await api.put('/series/rate', body);
+      const w = res.data?.website;
       // lock saved values into state
       setRows(prev => prev.map(x => (x.SeriesName === r.SeriesName ? { ...x, ...body } : x)));
       setSaved(prev => ({ ...prev, [r.SeriesName]: { ...r, ...body } }));
-      setMsg({ series: r.SeriesName, ok: true, text: '✓ Saved' });
+      setMsg({
+        series: r.SeriesName,
+        ok: !w || w.ok,
+        text: !w ? '✓ Saved'
+          : w.ok ? `✓ Saved · website updated (${w.products} design${w.products === 1 ? '' : 's'})`
+          : `✓ Saved · ⚠ website not updated: ${w.error}`
+      });
     } catch (e) {
       setMsg({ series: r.SeriesName, ok: false, text: e?.response?.data?.error || 'Not saved' });
     } finally {
       setSavingSeries(null);
+    }
+  }
+
+  // one-time: send every saved Vitrino rate to the website
+  async function pushAll() {
+    if (!window.confirm('Send the saved Vitrino rate of every series to the website (vitrino.in) as its selling price?\nMRP is not changed.')) return;
+    setPushing(true);
+    setPushMsg(null);
+    try {
+      const res = await api.post('/series/rate/website', {});
+      const w = res.data?.website;
+      if (!res.data?.sent) setPushMsg({ ok: false, text: 'No series has a Vitrino rate yet.' });
+      else if (!w?.ok) setPushMsg({ ok: false, text: `Website not updated: ${w?.error || 'unknown error'}` });
+      else {
+        const missing = (w.results || []).filter(x => !x.products).map(x => x.series);
+        setPushMsg({
+          ok: true,
+          text: `✓ ${res.data.sent} series sent · ${w.products} designs updated on the website` +
+            (missing.length ? ` · not on website: ${missing.slice(0, 8).join(', ')}${missing.length > 8 ? '…' : ''}` : '')
+        });
+      }
+    } catch (e) {
+      setPushMsg({ ok: false, text: e?.response?.data?.error || 'Could not send' });
+    } finally {
+      setPushing(false);
     }
   }
 
@@ -85,12 +119,23 @@ export default function RateList({ onExit }) {
     <div>
       <h3>Rate List</h3>
 
-      <input
-        placeholder="Search series"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        style={{ marginBottom: 10, width: 220 }}
-      />
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+        <input
+          placeholder="Search series"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ width: 220 }}
+        />
+        <button onClick={pushAll} disabled={pushing}>
+          {pushing ? 'Sending…' : '🌐 Send all Vitrino rates to website'}
+        </button>
+        {pushMsg && (
+          <span style={{ fontWeight: 600, color: pushMsg.ok ? '#2e7d32' : '#c62828' }}>{pushMsg.text}</span>
+        )}
+      </div>
+      <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+        Saving a Vitrino rate also updates that series' selling price on vitrino.in (MRP stays as it is).
+      </div>
 
       <table border="1" cellPadding="6" style={{ borderCollapse: 'collapse' }}>
         <thead>
