@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 
 import { BASE } from "../services/api";
+import FabricPicker from "./FabricPicker";
 
 const API = BASE;
 
@@ -71,7 +72,10 @@ export default function ManageImages({ onExit }) {
         <thead>
           <tr>
             <th>Design</th>
-            <th>Fabric</th>
+            <th>
+              Fabric
+              <div style={{ fontSize: 11, color: "#777" }}>(saves when you pick)</div>
+            </th>
             <th>
               Rate
               <div style={{ fontSize: 11, color: "#777" }}>
@@ -89,13 +93,11 @@ export default function ManageImages({ onExit }) {
               <td><b>{row.Item}</b></td>
 
               <td>
-                <input
-                  type="text"
-                  value={row.Fabric || ""}
-                  onChange={e =>
-                    handleChange(index, "Fabric", e.target.value)
-                  }
-                  style={{ width: "100%" }}
+                {/* saves straight away, same list as the Stock page */}
+                <FabricPicker
+                  productId={row.ProductID}
+                  value={row.Fabric}
+                  onSaved={f => handleChange(index, "Fabric", f)}
                 />
               </td>
 

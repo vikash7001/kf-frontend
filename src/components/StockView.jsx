@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import ShareOnWhatsApp from "./ShareOnWhatsApp";
 import ReelMaker, { loadReelJob } from "./ReelMaker";
+import FabricPicker from "./FabricPicker";
 
 /* ------------------------------
    localStorage helpers
@@ -69,11 +70,17 @@ export default function StockView({ user }) {
   const [seriesFilter, setSeriesFilter] = useState(saved.series || []);
   const [categoryFilter, setCategoryFilter] = useState(saved.category || []);
   const [originFilter, setOriginFilter] = useState(saved.origin || []);
+  const [fabricFilter, setFabricFilter] = useState(saved.fabric || []);
 
   const [showProduct, setShowProduct] = useState(false);
   const [showSeries, setShowSeries] = useState(false);
   const [showCategory, setShowCategory] = useState(false);
   const [showOrigin, setShowOrigin] = useState(false);
+  const [showFabric, setShowFabric] = useState(false);
+
+  // staff can change the fabric right here
+  const roleKey = String(user?.Role || "ADMIN").toUpperCase();
+  const canEditFabric = roleKey === "ADMIN" || roleKey === "USER";
 
   // Stock view / order selection
   const [removeZeroStock, setRemoveZeroStock] = useState(false);
@@ -97,9 +104,10 @@ export default function StockView({ user }) {
       product: productFilter,
       series: seriesFilter,
       category: categoryFilter,
-      origin: originFilter
+      origin: originFilter,
+      fabric: fabricFilter
     });
-  }, [productFilter, seriesFilter, categoryFilter, originFilter]);
+  }, [productFilter, seriesFilter, categoryFilter, originFilter, fabricFilter]);
 
   function toggleFilter(setter, value) {
     setter(prev =>
@@ -156,6 +164,7 @@ export default function StockView({ user }) {
     setSeriesFilter([]);
     setCategoryFilter([]);
     setOriginFilter([]);
+    setFabricFilter([]);
     setRemoveZeroStock(false);
     setOrderMode(false);
     setOrderApplied(false);
@@ -363,7 +372,8 @@ export default function StockView({ user }) {
         ahmedabadqty: Number(r.AhmedabadQty || 0),
         totalqty: Number(r.TotalQty || 0),
 totalpcs: Number(r.TotalPcs || 0),
-lastmovementdate: r.LastMovementDate
+lastmovementdate: r.LastMovementDate,
+        fabric: String(r.Fabric || "").toUpperCase().replace(/\s+/g, " ").trim()
       }));
 
       setStock(normalized);
@@ -381,6 +391,7 @@ lastmovementdate: r.LastMovementDate
       (seriesFilter.length === 0 || seriesFilter.includes(s.seriesname)) &&
       (categoryFilter.length === 0 || categoryFilter.includes(s.categoryname)) &&
       (originFilter.length === 0 || originFilter.includes(s.origin)) &&
+      (fabricFilter.length === 0 || fabricFilter.includes(s.fabric)) &&
       (!removeZeroStock || s.totalqty !== 0) &&
       (!orderApplied || selectedItems.includes(getRowKey(s)))
     )
@@ -400,6 +411,14 @@ lastmovementdate: r.LastMovementDate
 
   const seriesList = [...new Set(stock.map(s => s.seriesname))].sort();
   const originList = [...new Set(stock.map(s => s.origin))].sort();
+  // "" = designs with no fabric yet (listed last)
+  const fabricList = [...new Set(stock.map(s => s.fabric))]
+    .sort((a, b) => (a === "") - (b === "") || a.localeCompare(b));
+
+  // fabric saved from a row → update every row of that design
+  function setRowFabric(productid, fabric) {
+    setStock(prev => prev.map(r => (r.productid === productid ? { ...r, fabric } : r)));
+  }
 
   return (
     <div style={{ padding: 16 }}>
@@ -410,7 +429,7 @@ lastmovementdate: r.LastMovementDate
 
       {!loading && stock.length > 0 && (
         <>
-          <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 12, marginBottom: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
             <FilterSection
               title="Products"
               open={showProduct}
@@ -458,6 +477,23 @@ lastmovementdate: r.LastMovementDate
                     checked={categoryFilter.includes(c)}
                     onChange={() => toggleFilter(setCategoryFilter, c)}
                   /> {c}
+                </label>
+              ))}
+            </FilterSection>
+
+            <FilterSection
+              title="Fabric"
+              open={showFabric}
+              onToggle={() => setShowFabric(v => !v)}
+              activeCount={fabricFilter.length}
+            >
+              {fabricList.map(f => (
+                <label key={f || "(none)"} style={{ display: "block" }}>
+                  <input
+                    type="checkbox"
+                    checked={fabricFilter.includes(f)}
+                    onChange={() => toggleFilter(setFabricFilter, f)}
+                  /> {f || <i style={{ color: "#888" }}>No fabric yet</i>}
                 </label>
               ))}
             </FilterSection>
@@ -606,6 +642,10 @@ lastmovementdate: r.LastMovementDate
       Category{sortArrow("categoryname")}
     </th>
 
+    <th onClick={() => handleSort("fabric")}>
+      Fabric{sortArrow("fabric")}
+    </th>
+
     <th onClick={() => handleSort("origin")}>
       Origin{sortArrow("origin")}
     </th>
@@ -651,6 +691,15 @@ lastmovementdate: r.LastMovementDate
                   <td>{s.item}</td>
                   <td>{s.seriesname}</td>
                   <td>{s.categoryname}</td>
+                  <td>
+                    {canEditFabric ? (
+                      <FabricPicker
+                        productId={s.productid}
+                        value={s.fabric}
+                        onSaved={f => setRowFabric(s.productid, f)}
+                      />
+                    ) : (s.fabric || "")}
+                  </td>
                   <td>{s.origin}</td>
                   <td align="right">{s.jaipurqty}</td>
                   <td align="right">{s.kolkataqty}</td>
