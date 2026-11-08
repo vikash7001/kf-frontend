@@ -14,12 +14,12 @@ const RATES = [
   { key: 'Vitrino', label: 'Vitrino' }
 ];
 
-// Vitrino = WSP x 2.7, rounded to the nearest price ending in 5 or 9
+// Vitrino = WSP x 1.9, rounded to the nearest price ending in 5 or 9
 // (exactly in the middle → the higher one). Same rule as the SQL.
 export function vitrinoFromWsp(wsp) {
   const w = Number(wsp);
   if (wsp === '' || wsp === null || wsp === undefined || !Number.isFinite(w) || w <= 0) return null;
-  const x = w * 2.7, b = Math.floor(x / 10) * 10;
+  const x = w * 1.9, b = Math.floor(x / 10) * 10;
   return [b - 1, b + 5, b + 9]
     .map(c => ({ c, d: Math.abs(x - c) }))
     .sort((p, q) => p.d - q.d || q.c - p.c)[0].c;
@@ -99,7 +99,7 @@ export default function RateList({ onExit }) {
             {RATES.map(({ key, label }) => (
               <th key={key}>
                 {label}
-                {key === 'Vitrino' && <div style={{ fontSize: 11, fontWeight: 400, color: '#777' }}>2.7 × WSP</div>}
+                {key === 'Vitrino' && <div style={{ fontSize: 11, fontWeight: 400, color: '#777' }}>1.9 × WSP</div>}
               </th>
             ))}
             <th></th>
