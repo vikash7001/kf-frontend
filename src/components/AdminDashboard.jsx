@@ -9,6 +9,7 @@ import ManageImages from './ManageImages';
 import StockTransfer from './StockTransfer';
 import ViewIncoming from './ViewIncoming';
 import ViewSales from './ViewSales';
+import CustomerReport from './CustomerReport';
 import ViewTransfers from './ViewTransfers';
 import RateList from './RateList';
 
@@ -85,6 +86,7 @@ export default function AdminDashboard({ user }) {
     // REPORTS
     viewIncoming: <ViewIncoming />,
     viewSales: <ViewSales />,
+    customerReport: <CustomerReport />,
     viewTransfers: <ViewTransfers />,
     itemDetails: (
       <ItemDetails
@@ -150,6 +152,7 @@ export default function AdminDashboard({ user }) {
       items: [
         { key: 'viewIncoming', label: 'View Purchase' },
         { key: 'viewSales', label: 'View Sales' },
+        { key: 'customerReport', label: 'Customer' },
         { key: 'viewTransfers', label: 'Stock Transfers' },
         { key: 'itemDetails', label: 'Item Details' },
       ]
