@@ -14,12 +14,13 @@ const RATES = [
   { key: 'Vitrino', label: 'Vitrino' }
 ];
 
-// Vitrino = WSP x 1.9, rounded to the nearest price ending in 5 or 9
-// (exactly in the middle → the higher one). Same rule as the SQL.
+// Vitrino = WSP x 2 (Nov 2026; was 1.9), rounded to the nearest price
+// ending in 5 or 9 (exactly in the middle → the higher one).
+export const VITRINO_FACTOR = 2;
 export function vitrinoFromWsp(wsp) {
   const w = Number(wsp);
   if (wsp === '' || wsp === null || wsp === undefined || !Number.isFinite(w) || w <= 0) return null;
-  const x = w * 1.9, b = Math.floor(x / 10) * 10;
+  const x = w * VITRINO_FACTOR, b = Math.floor(x / 10) * 10;
   return [b - 1, b + 5, b + 9]
     .map(c => ({ c, d: Math.abs(x - c) }))
     .sort((p, q) => p.d - q.d || q.c - p.c)[0].c;
@@ -87,6 +88,33 @@ export default function RateList({ onExit }) {
     }
   }
 
+  // recalculate every series' Vitrino rate from its WSP (2 x WSP) and save
+  // the ones that changed. Each save also updates the website price.
+  const [recalc, setRecalc] = useState(null);      // { done, total, failed }
+
+  async function recalcAll() {
+    const todo = rows
+      .map(r => ({ r, v: vitrinoFromWsp(r.WSP) }))
+      .filter(({ r, v }) => v !== null && clean(r.Vitrino) !== v);
+    if (!todo.length) { setRecalc({ done: 0, total: 0, failed: 0 }); return; }
+    if (!window.confirm(`Set the Vitrino rate of ${todo.length} series to ${VITRINO_FACTOR} × WSP (rounded to end in 5 or 9) and save?\nThe website selling prices change too. MRP is not changed.`)) return;
+    let done = 0, failed = 0;
+    setRecalc({ done, total: todo.length, failed });
+    for (const { r, v } of todo) {
+      const body = { SeriesName: r.SeriesName };
+      RATES.forEach(({ key }) => { body[key] = clean(key === 'Vitrino' ? v : r[key]); });
+      try {
+        await api.put('/series/rate', body);
+        setRows(prev => prev.map(x => (x.SeriesName === r.SeriesName ? { ...x, Vitrino: v } : x)));
+        setSaved(prev => ({ ...prev, [r.SeriesName]: { ...r, ...body } }));
+      } catch {
+        failed++;
+      }
+      done++;
+      setRecalc({ done, total: todo.length, failed });
+    }
+  }
+
   // one-time: send every saved Vitrino rate to the website
   async function pushAll() {
     if (!window.confirm('Send the saved Vitrino rate of every series to the website (vitrino.in) as its selling price?\nMRP is not changed.')) return;
@@ -129,6 +157,15 @@ export default function RateList({ onExit }) {
         <button onClick={pushAll} disabled={pushing}>
           {pushing ? 'Sending…' : '🌐 Send all Vitrino rates to website'}
         </button>
+        <button onClick={recalcAll} disabled={!!recalc && recalc.done < recalc.total}>
+          {`Recalculate all Vitrino rates (${VITRINO_FACTOR} × WSP)`}
+        </button>
+        {recalc && (
+          <span style={{ fontWeight: 600, color: recalc.failed ? '#c62828' : '#2e7d32' }}>
+            {recalc.total === 0 ? '✓ All Vitrino rates already match'
+              : `${recalc.done} of ${recalc.total} series saved${recalc.failed ? ` · ${recalc.failed} failed` : ''}`}
+          </span>
+        )}
         {pushMsg && (
           <span style={{ fontWeight: 600, color: pushMsg.ok ? '#2e7d32' : '#c62828' }}>{pushMsg.text}</span>
         )}
@@ -144,7 +181,7 @@ export default function RateList({ onExit }) {
             {RATES.map(({ key, label }) => (
               <th key={key}>
                 {label}
-                {key === 'Vitrino' && <div style={{ fontSize: 11, fontWeight: 400, color: '#777' }}>1.9 × WSP</div>}
+                {key === 'Vitrino' && <div style={{ fontSize: 11, fontWeight: 400, color: '#777' }}>{VITRINO_FACTOR} × WSP</div>}
               </th>
             ))}
             <th></th>
